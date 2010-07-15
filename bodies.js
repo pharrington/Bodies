@@ -177,6 +177,9 @@ function Bodies(width, height) {
 		this.bottom = b;
 
 		this.insert = function(item, depth) {
+			var items = this.items,
+			    itemsLength = items.length;
+
 			// lets bail
 			if (!this.contains(item.x, item.y, item.right, item.bottom)) {
 				return;
@@ -196,7 +199,7 @@ function Bodies(width, height) {
 
 			// lets split
 			if (!this.isPartitioned &&
-			    (this.items.length >= this.maxItems)  &&
+			    (itemsLength >= this.maxItems)  &&
 			    !this.stradlesNodes(item) &&
 			    (depth < this.maxDepth)) {
 				this.createNodes();
@@ -208,18 +211,19 @@ function Bodies(width, height) {
 
 			// add the item to this node
 			item.collisionNode = this;
-			this.items.push(item);
+			items[itemsLength] = item;
 		};
 
 		this.createNodes = function() {
 			var cX = (this.left + this.right) / 2,
-			    cY = (this.top + this.bottom) / 2;
+			    cY = (this.top + this.bottom) / 2,
+			    nodes = [];
 
-			this.nodes = [];
-			this.nodes[0] = new Bodies.CollisionTrie(this.left, this.top, cX, cY);
-			this.nodes[1] = new Bodies.CollisionTrie(cX, this.top, this.right, cY);
-			this.nodes[2] = new Bodies.CollisionTrie(this.left, cY, cX, this.bottom);
-			this.nodes[3] = new Bodies.CollisionTrie(cX, cY, this.right, this.bottom);
+			nodes[0] = new Bodies.CollisionTrie(this.left, this.top, cX, cY);
+			nodes[1] = new Bodies.CollisionTrie(cX, this.top, this.right, cY);
+			nodes[2] = new Bodies.CollisionTrie(this.left, cY, cX, this.bottom);
+			nodes[3] = new Bodies.CollisionTrie(cX, cY, this.right, this.bottom);
+			this.nodes = nodes;
 			this.redistribute();
 			this.isPartitioned = true;
 		};
@@ -257,7 +261,7 @@ function Bodies(width, height) {
 			    b = rect.bottom;
 
 			if (this.contains(x, y, r, b)) {
-				nodes.push(this);
+				nodes[nodes.length] = this;
 			}
 			
 			if (this.isPartitioned) {

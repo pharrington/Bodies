@@ -34,7 +34,7 @@ function draw(collection) {
 window.addEventListener("load", function() {
 	var width = 1500,
 	    height = 1100,
-	    BALL_COUNT = 200,
+	    BALL_COUNT = 400,
 	    balls = [];
 
 	document.getElementById("pause").addEventListener("click", function () {
