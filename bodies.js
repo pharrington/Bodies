@@ -91,8 +91,7 @@ function Bodies(width, height) {
 		    pixels1, pixels2,
 		    offset1, offset2,
 		    dataWidth1, dataWidth2,
-		    s1Width = s1.width,
-		    s2Width = s2.width,
+		    s1Width, s2Width,
 		    s1Left = s1.left, s1Right = s1.right,
 		    s1Top = s1.top, s1Bottom = s1.bottom,
 		    s2Left = s2.left, s2Right = s2.right,
@@ -110,8 +109,11 @@ function Bodies(width, height) {
 		width = (Math.min(s1Right, s2Right) - left) * 4 // four ints per pixel;
 		height = Math.min(s1Bottom, s2Bottom) - top;
 
+		s1Width = s1.width,
+		s2Width = s2.width,
 		pixels1 = s1.pixels;
 		pixels2 = s2.pixels;
+
 
 		offset1 = (((top - s1.top) * s1Width) + (left - s1Left)) * 4 + 3;
 		offset2 = (((top - s2.top) * s2Width) + (left - s2Left)) * 4 + 3;
