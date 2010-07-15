@@ -1,3 +1,7 @@
+/* a miserable pile of Javascript
+ *
+ */
+
 function Bodies(width, height) {
 	var selector = "field",
 	    canvas = null,
