@@ -193,6 +193,7 @@ function Bodies(width, height) {
 				depth = 0;
 			}
 
+			// for our posterity
 			if (this.isPartitioned &&
 			    !this.stradlesNodes(item)) {
 				for (var i = 0; i < 4; i++) {
@@ -234,15 +235,16 @@ function Bodies(width, height) {
 
 		this.redistribute = function () {
 			var i = 0,
-			    item = this.items[i];
+			    item = this.items[i],
+			    nodes = this.nodes;
 
 			while (item) {
 				if (!this.stradlesNodes(item)) {
 					this.deleteItem(item);
-					this.nodes[0].insert(item);
-					this.nodes[1].insert(item);
-					this.nodes[2].insert(item);
-					this.nodes[3].insert(item);
+					nodes[0].insert(item);
+					nodes[1].insert(item);
+					nodes[2].insert(item);
+					nodes[3].insert(item);
 				} else {
 					i++;
 				}
