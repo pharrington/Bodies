@@ -285,11 +285,12 @@ function Bodies(width, height) {
 		};
 
 		this.deleteItem = function (item) {
-			var index;
-			if ((index = this.items.indexOf(item)) == -1) {
+			var index,
+			    items = this.items;
+			if ((index = items.indexOf(item)) == -1) {
 				return;
 			}
-			this.items.splice(index, 1);
+			items.splice(index, 1);
 		};
 	};
 
