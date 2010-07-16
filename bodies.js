@@ -147,12 +147,18 @@ function Bodies(width, height) {
 		this.right = null;
 		this.bottom = null;
 		this.imageData = null;
+		this.rotation = 0;
 
 		this.canvas = document.createElement("canvas");
 		this.context = this.canvas.getContext("2d");
-		this.canvas.width = this.width = image.width;
-		this.canvas.height = this.height = image.height;
+		this.baseCanvas = document.createElement("canvas");
+		this.baseContext = this.baseCanvas.getContext("2d");
+		this.canvas.width = this.baseCanvas.width = this.width = this.baseWidth = image.width;
+		this.canvas.height = this.baseCanvas.height = this.height = this.baseHeight = image.height;
+		this.halfBaseWidth = this.baseWidth / 2;
+		this.halfBaseHeight = this.baseHeight / 2;
 		this.context.drawImage(image, 0, 0);
+		this.baseContext.drawImage(image, 0, 0);
 		this.imageData = this.context.getImageData(0, 0, this.width, this.height);
 		this.pixels = this.imageData.data;
 
@@ -163,6 +169,28 @@ function Bodies(width, height) {
 			this.top = Math.floor(y);
 			this.right = this.left + this.width;
 			this.bottom = this.top + this.height;
+		};
+
+		this.rotate = function (angle) {
+			var newWidth, newHeight,
+			    baseWidth = this.baseWidth, baseHeight = this.baseHeight,
+			    halfBaseWidth = this.halfBaseWidth, halfBaseHeight = this.halfBaseHeight,
+			    sinTheta, cosTheta;
+
+			this.rotation += angle;
+			sinTheta = Math.abs(Math.sin(this.rotation));
+			cosTheta = Math.abs(Math.cos(this.rotation));
+			newWidth  = baseWidth * cosTheta + baseHeight * sinTheta;
+			newHeight = baseWidth * sinTheta + baseHeight * cosTheta;
+			this.canvas.width = newWidth;
+			this.canvas.height = newHeight;
+			this.context.translate(halfBaseWidth, halfBaseHeight);
+			this.context.rotate(this.rotation);
+			this.context.translate(-halfBaseWidth, -halfBaseHeight);
+			this.context.drawImage(this.baseCanvas, 0, 0);
+			this.width = newWidth;
+			this.height = newHeight;
+
 		};
 
 		this.draw = function () {
