@@ -23,10 +23,10 @@ function Bodies(width, height) {
 
 	Bodies.loadImage = function (name, path) {
 		var image = new Image();
-		loadingImages++;
+		loadingImages += 1;
 		image.onload = function () {
-			loadingImages--;
-		}
+			loadingImages -= 1;
+		};
 		image.src = path;
 		images[name] = image;
 	};
@@ -36,12 +36,12 @@ function Bodies(width, height) {
 	};
 
 	Bodies.loaded = function (callback) {
-		if (loadingImages == 0) {
-			callback();
-		} else {
-			window.setTimeout(function() {
-				Bodies.loaded(callback)
+		if (loadingImages) {
+			setTimeout(function () {
+				Bodies.loaded(callback);
 			}, 100);
+		} else {
+			callback();
 		}
 	};
 
@@ -65,26 +65,27 @@ function Bodies(width, height) {
 	};
 
 	function mouseMove(e) {
-		var point = Bodies.coordinates(e);
+		var point = Bodies.coordinates(e),
+		    mmCallbacks;
 
-		if (callbacks["mousemove"]) {
-			var mmCallbacks = callbacks["mousemove"];
+		if (callbacks.mousemove) {
+			mmCallbacks = callbacks.mousemove;
 			for (var i = 0; i < mmCallbacks.length; i++) {
 				mmCallbacks[i](point.x, point.y);
 			}
 		}
 	}
 
-	Bodies.refresh = function(callback) {
+	Bodies.refresh = function (callback) {
 		callbacks.refresh = callback;
-		window.setInterval(reDraw, 25);
+		setInterval(reDraw, 25);
 	};
 
 	Bodies.mouseMove = function (callback) {
-		if (callbacks["mousemove"] === undefined) {
-			callbacks["mousemove"] = [];
+		if (!callbacks.mousemove) {
+			callbacks.mousemove = [];
 		}
-		callbacks["mousemove"].push(callback);
+		callbacks.mousemove.push(callback);
 	};
 
 	Bodies.testCollision = function testCollision(s1, s2) {
@@ -110,11 +111,11 @@ function Bodies(width, height) {
 
 		left = Math.max(s1Left, s2Left);
 		top = Math.max(s1Top, s2Top);
-		width = (Math.min(s1Right, s2Right) - left) * 4 // four ints per pixel;
+		width = (Math.min(s1Right, s2Right) - left) * 4; // four "ints" per pixel;
 		height = Math.min(s1Bottom, s2Bottom) - top;
 
-		s1Width = s1.width,
-		s2Width = s2.width,
+		s1Width = s1.width;
+		s2Width = s2.width;
 		pixels1 = s1.pixels;
 		pixels2 = s2.pixels;
 
@@ -126,7 +127,7 @@ function Bodies(width, height) {
 
 		for (var y = 0; y < height; y++) {
 			for (var x = 0; x < width; x += 4) {
-				if ((pixels1[offset1 + x] == 255) && (pixels2[offset2 + x] == 255)) {
+				if ((pixels1[offset1 + x] === 255) && (pixels2[offset2 + x] === 255)) {
 					return true;
 				}
 			}
@@ -147,7 +148,7 @@ function Bodies(width, height) {
 		this.bottom = null;
 		this.imageData = null;
 
-		this.canvas = document.createElement("canvas"),
+		this.canvas = document.createElement("canvas");
 		this.context = this.canvas.getContext("2d");
 		this.canvas.width = this.width = image.width;
 		this.canvas.height = this.height = image.height;
@@ -180,7 +181,7 @@ function Bodies(width, height) {
 		this.right = r;
 		this.bottom = b;
 
-		this.insert = function(item, depth) {
+		this.insert = function (item, depth) {
 			var items = this.items,
 			    itemsLength = items.length;
 
@@ -197,7 +198,7 @@ function Bodies(width, height) {
 			if (this.isPartitioned &&
 			    !this.stradlesNodes(item)) {
 				for (var i = 0; i < 4; i++) {
-					this.nodes[i].insert(item, depth+1);
+					this.nodes[i].insert(item, depth + 1);
 				}
 				return;
 			}
@@ -209,7 +210,7 @@ function Bodies(width, height) {
 			    (depth < this.maxDepth)) {
 				this.createNodes();
 				for (var i = 0; i < 4; i++) {
-					this.nodes[i].insert(item, depth+1);
+					this.nodes[i].insert(item, depth + 1);
 				}
 				return;
 			}
@@ -219,7 +220,7 @@ function Bodies(width, height) {
 			items[itemsLength] = item;
 		};
 
-		this.createNodes = function() {
+		this.createNodes = function () {
 			var cX = (this.left + this.right) / 2,
 			    cY = (this.top + this.bottom) / 2,
 			    nodes = [];
@@ -252,7 +253,7 @@ function Bodies(width, height) {
 			}
 		};
 
-		this.stradlesNodes = function(item) {
+		this.stradlesNodes = function (item) {
 			var cX = (this.left + this.right) / 2,
 			    cY = (this.top + this.bottom) / 2;
 
@@ -260,7 +261,7 @@ function Bodies(width, height) {
 				((item.y < cY) && (item.bottom > cY)));
 		};
 
-		this.queryNodes = function(rect, nodes) {
+		this.queryNodes = function (rect, nodes) {
 			var x = rect.x,
 			    y = rect.y,
 			    r = rect.right,
@@ -277,7 +278,7 @@ function Bodies(width, height) {
 			}
 		};
 
-		this.contains = function(x, y, r, b) {
+		this.contains = function (x, y, r, b) {
 			return ((x >= this.left) &&
 				(r <= this.right) &&
 				(y >= this.top) &&
@@ -287,7 +288,7 @@ function Bodies(width, height) {
 		this.deleteItem = function (item) {
 			var index,
 			    items = this.items;
-			if ((index = items.indexOf(item)) == -1) {
+			if ((index = items.indexOf(item)) === -1) {
 				return;
 			}
 			items.splice(index, 1);
@@ -296,4 +297,4 @@ function Bodies(width, height) {
 
 	initCanvas();
 	canvas.addEventListener("mousemove", mouseMove, false);
-};
+}
