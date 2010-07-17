@@ -97,8 +97,8 @@ function Bodies(width, height) {
 		    offset1, offset2,
 		    dataWidth1, dataWidth2,
 		    s1Width, s2Width,
-		    s1Left = s1.left, s1Right = s1.right,
-		    s1Top = s1.top, s1Bottom = s1.bottom,
+		    s1Left = s1.left - s1.dx, s1Right = s1.right - s1.dx,
+		    s1Top = s1.top - s1.dy, s1Bottom = s1.bottom - s1.dy,
 		    s2Left = s2.left, s2Right = s2.right,
 		    s2Top = s2.top, s2Bottom = s2.bottom;
 
@@ -120,8 +120,8 @@ function Bodies(width, height) {
 		pixels2 = s2.pixels;
 
 
-		offset1 = (((top - s1.top) * s1Width) + (left - s1Left)) * 4 + 3;
-		offset2 = (((top - s2.top) * s2Width) + (left - s2Left)) * 4 + 3;
+		offset1 = (((top - s1Top) * s1Width) + (left - s1Left)) * 4 + 3;
+		offset2 = (((top - s2Top) * s2Width) + (left - s2Left)) * 4 + 3;
 		dataWidth1 = s1Width * 4;
 		dataWidth2 = s2Width * 4;
 
@@ -146,8 +146,7 @@ function Bodies(width, height) {
 		this.top = null;
 		this.right = null;
 		this.bottom = null;
-		this.imageData = null;
-		this.rotation = 0;
+		this.rotation = this.dx = this.dy = 0;
 
 		this.canvas = document.createElement("canvas");
 		this.context = this.canvas.getContext("2d");
@@ -175,26 +174,36 @@ function Bodies(width, height) {
 			var newWidth, newHeight,
 			    baseWidth = this.baseWidth, baseHeight = this.baseHeight,
 			    halfBaseWidth = this.halfBaseWidth, halfBaseHeight = this.halfBaseHeight,
-			    sinTheta, cosTheta;
+			    sinTheta, cosTheta,
+			    oX, oY;
 
 			this.rotation += angle;
 			sinTheta = Math.abs(Math.sin(this.rotation));
 			cosTheta = Math.abs(Math.cos(this.rotation));
 			newWidth  = baseWidth * cosTheta + baseHeight * sinTheta;
 			newHeight = baseWidth * sinTheta + baseHeight * cosTheta;
+
+			oX = newWidth / 2;
+			oY = newHeight / 2;
+
 			this.canvas.width = newWidth;
 			this.canvas.height = newHeight;
-			this.context.translate(halfBaseWidth, halfBaseHeight);
+
+			this.context.translate(oX, oY);
 			this.context.rotate(this.rotation);
 			this.context.translate(-halfBaseWidth, -halfBaseHeight);
 			this.context.drawImage(this.baseCanvas, 0, 0);
-			this.width = newWidth;
-			this.height = newHeight;
 
+			this.width = Math.floor(newWidth);
+			this.height = Math.floor(newHeight);
+			this.dx = Math.floor(oX - halfBaseWidth);
+			this.dy = Math.floor(oY - halfBaseHeight);
+			this.imageData = this.context.getImageData(0, 0, this.width, this.height);
+			this.pixels = this.imageData.data;
 		};
 
 		this.draw = function () {
-			context.drawImage(this.canvas, this.x, this.y);
+			context.drawImage(this.canvas, this.x - this.dx, this.y - this.dy);
 		};
 	};
 
