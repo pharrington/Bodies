@@ -99,8 +99,8 @@ function Bodies(width, height) {
 		    s1Width, s2Width,
 		    s1Left = s1.left - s1.dx, s1Right = s1.right - s1.dx,
 		    s1Top = s1.top - s1.dy, s1Bottom = s1.bottom - s1.dy,
-		    s2Left = s2.left, s2Right = s2.right,
-		    s2Top = s2.top, s2Bottom = s2.bottom;
+		    s2Left = s2.left - s2.dx, s2Right = s2.right - s2.dx,
+		    s2Top = s2.top - s2.dy, s2Bottom = s2.bottom - s2.dy;
 
 		if (s1Right < s2Left ||
 		    s1Left > s2Right ||
