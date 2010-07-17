@@ -10,6 +10,8 @@ function Bodies(width, height) {
 	    images = {},
 	    loadingImages = 0;
 
+	Bodies.Keys = [];
+
 	function initCanvas() {
 		canvas = document.getElementById(selector);
 		canvas.width = width;
@@ -74,6 +76,14 @@ function Bodies(width, height) {
 				mmCallbacks[i](point.x, point.y);
 			}
 		}
+	}
+
+	function keyDown(e) {
+		Bodies.Keys[e.keyCode] = true;
+	}
+
+	function keyUp(e) {
+		Bodies.Keys[e.keyCode] = false;
 	}
 
 	Bodies.refresh = function (callback) {
@@ -170,14 +180,14 @@ function Bodies(width, height) {
 			this.bottom = this.top + this.height;
 		};
 
-		this.rotate = function (angle) {
+		this.rotateTo = function (angle) {
 			var newWidth, newHeight,
 			    baseWidth = this.baseWidth, baseHeight = this.baseHeight,
 			    halfBaseWidth = this.halfBaseWidth, halfBaseHeight = this.halfBaseHeight,
 			    sinTheta, cosTheta,
 			    oX, oY;
 
-			this.rotation += angle;
+			this.rotation = angle;
 			sinTheta = Math.abs(Math.sin(this.rotation));
 			cosTheta = Math.abs(Math.cos(this.rotation));
 			newWidth  = baseWidth * cosTheta + baseHeight * sinTheta;
@@ -200,6 +210,11 @@ function Bodies(width, height) {
 			this.dy = Math.floor(oY - halfBaseHeight);
 			this.imageData = this.context.getImageData(0, 0, this.width, this.height);
 			this.pixels = this.imageData.data;
+		}
+
+		this.rotate = function (angle) {
+			this.rotation += angle;
+			this.rotateTo(this.rotation);
 		};
 
 		this.draw = function () {
@@ -334,4 +349,6 @@ function Bodies(width, height) {
 
 	initCanvas();
 	canvas.addEventListener("mousemove", mouseMove, false);
+	addEventListener("keydown", keyDown, false);
+	addEventListener("keyup", keyUp, false);
 }
