@@ -67,7 +67,7 @@ addEventListener("load", function () {
 			}
 		}
 		ship.moveTo(ship.x + ship.vx, ship.y + ship.vy);
-		angle = Math.atan2(py - ship.y, px - ship.x);
+		angle = Math.atan2(py - (ship.y + ship.height / 2), px - (ship.x + ship.width / 2));
 		ship.rotateTo(angle + Math.PI / 2);
 		context.clearRect(0, 0, width, height);
 		ship.draw();
