@@ -171,17 +171,8 @@ function Bodies(width, height) {
 
 
 		// the actual image canvas will be larger, to handle rotations
-		if (image.width === image.height) {
-			theta = Math.PI / 4;
-			maxLength = image.width;
-			sinTheta = Math.abs(Math.sin(theta));
-			cosTheta = Math.abs(Math.cos(theta));
-			this.width  = Math.floor(maxLength * cosTheta + maxLength * sinTheta);
-			this.height = Math.floor(maxLength * sinTheta + maxLength * cosTheta);
-		} else {
-			maxLength = Math.max(image.width, image.height);
-			this.width = this.height = maxLength;
-		}
+		maxLength = Math.sqrt(Math.pow(image.width, 2) + Math.pow(image.height, 2));
+		this.width = this.height = Math.floor(maxLength);
 		this.canvas.width = this.width;
 		this.canvas.height = this.height;
 		this.dx = Math.floor(this.width / 2 - this.halfBaseWidth);
