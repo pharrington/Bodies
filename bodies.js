@@ -132,8 +132,8 @@ function Bodies(width, height) {
 
 		offset1 = (((top - s1Top) * s1Width) + (left - s1Left)) * 4 + 3;
 		offset2 = (((top - s2Top) * s2Width) + (left - s2Left)) * 4 + 3;
-		dataWidth1 = s1Width * 4;
-		dataWidth2 = s2Width * 4;
+		dataWidth1 = s1.scanWidth;
+		dataWidth2 = s2.scanWidth;
 
 		for (var y = 0; y < height; y++) {
 			for (var x = 0; x < width; x += 4) {
@@ -148,7 +148,9 @@ function Bodies(width, height) {
 	};
 
 	Bodies.Sprite = function (imageName) {
-		var image = Bodies.resource(imageName);
+		var image = Bodies.resource(imageName),
+		    maxLength,
+		    theta;
 
 		this.x = null;
 		this.y = null;
@@ -162,14 +164,34 @@ function Bodies(width, height) {
 		this.context = this.canvas.getContext("2d");
 		this.baseCanvas = document.createElement("canvas");
 		this.baseContext = this.baseCanvas.getContext("2d");
-		this.canvas.width = this.baseCanvas.width = this.width = this.baseWidth = image.width;
-		this.canvas.height = this.baseCanvas.height = this.height = this.baseHeight = image.height;
+		this.baseCanvas.width = this.baseWidth = image.width;
+		this.baseCanvas.height = this.baseHeight = image.height;
 		this.halfBaseWidth = this.baseWidth / 2;
 		this.halfBaseHeight = this.baseHeight / 2;
-		this.context.drawImage(image, 0, 0);
+
+
+		// the actual image canvas will be larger, to handle rotations
+		if (image.width === image.height) {
+			theta = Math.PI / 4;
+			maxLength = image.width;
+			sinTheta = Math.abs(Math.sin(theta));
+			cosTheta = Math.abs(Math.cos(theta));
+			this.width  = Math.floor(maxLength * cosTheta + maxLength * sinTheta);
+			this.height = Math.floor(maxLength * sinTheta + maxLength * cosTheta);
+		} else {
+			maxLength = Math.max(image.width, image.height);
+			this.width = this.height = maxLength;
+		}
+		this.canvas.width = this.width;
+		this.canvas.height = this.height;
+		this.dx = Math.floor(this.width / 2 - this.halfBaseWidth);
+		this.dy = Math.floor(this.height / 2 - this.halfBaseHeight);
+
 		this.baseContext.drawImage(image, 0, 0);
+		this.context.drawImage(image, this.dx, this.dy);
 		this.imageData = this.context.getImageData(0, 0, this.width, this.height);
 		this.pixels = this.imageData.data;
+		this.scanWidth = this.width * 4;
 
 		this.moveTo = function (x, y) {
 			this.x = x;
@@ -188,26 +210,20 @@ function Bodies(width, height) {
 			    oX, oY;
 
 			this.rotation = angle;
-			sinTheta = Math.abs(Math.sin(this.rotation));
-			cosTheta = Math.abs(Math.cos(this.rotation));
-			newWidth  = baseWidth * cosTheta + baseHeight * sinTheta;
-			newHeight = baseWidth * sinTheta + baseHeight * cosTheta;
 
-			oX = newWidth / 2;
-			oY = newHeight / 2;
+			oX = this.width / 2;
+			oY = this.height / 2;
 
-			this.canvas.width = newWidth;
-			this.canvas.height = newHeight;
-
+			this.context.clearRect(0, 0, this.width, this.height);
+			this.context.save();
 			this.context.translate(oX, oY);
 			this.context.rotate(this.rotation);
 			this.context.translate(-halfBaseWidth, -halfBaseHeight);
 			this.context.drawImage(this.baseCanvas, 0, 0);
+			this.context.restore();
 
-			this.width = Math.floor(newWidth);
-			this.height = Math.floor(newHeight);
-			this.dx = Math.floor(oX - halfBaseWidth);
-			this.dy = Math.floor(oY - halfBaseHeight);
+			// ImageData/CanvasPixelArray allocations get out of control with the next line.
+			// The alternative would be to create and store a seperate collision mask for the sprite, and manually rotate that :(
 			this.imageData = this.context.getImageData(0, 0, this.width, this.height);
 			this.pixels = this.imageData.data;
 		}
@@ -345,6 +361,38 @@ function Bodies(width, height) {
 			}
 			items.splice(index, 1);
 		};
+	};
+
+	Bodies.World = function (imageName) {
+		var image = Bodies.resource(imageName),
+		    pixels,
+		    sector;
+
+		this.resolution = 20;
+		this.width = image.width;
+		this.height = image.height;
+		this.rows = Math.ceil(this.height / this.resolution);
+		this.columns = Math.ceil(this.width / this.resolution);
+		this.canvas = document.createElement("canvas");
+		this.canvas.width = this.width;
+		this.canvas.height = this.height;
+		this.context = this.canvas.getContext("2d");
+		this.context.drawImage(image, 0, 0);
+		this.pixels = this.context.getImageData(0, 0, this.width, this.height);
+		this.quadtree = new Bodies.CollisionTrie(0, 0, this.width, this.height);
+		this.grid = [];
+		for (var i = 0; i < this.rows; i++) {
+			for (var j = 0; j < this.columns; j++) {
+				sector = {};
+				sector.width = sector.height = this.resolution;
+				sector.x = sector.left = j * this.resolution;
+				sector.y = sector.top = i * this.resolution;
+				sector.right = sector.x + sector.width;
+				sector.bottom = sector.y + sector.height;
+				sector.pixels = this.pixels;
+				sector.scanWidth = this.width * 4;
+			}
+		}
 	};
 
 	initCanvas();
