@@ -99,6 +99,7 @@ function Bodies(width, height) {
 	};
 
 	Bodies.testCollision = function testCollision(s1, s2) {
+		if (s1 === s2) { return false; }
 		var left,
 		    top,
 		    width,
@@ -124,14 +125,14 @@ function Bodies(width, height) {
 		width = (Math.min(s1Right, s2Right) - left) * 4; // four "ints" per pixel;
 		height = Math.min(s1Bottom, s2Bottom) - top;
 
-		s1Width = s1.width;
-		s2Width = s2.width;
+		s1Width = s1.imageWidth;
+		s2Width = s2.imageWidth;
 		pixels1 = s1.pixels;
 		pixels2 = s2.pixels;
 
 
-		offset1 = (((top - s1Top) * s1Width) + (left - s1Left)) * 4 + 3;
-		offset2 = (((top - s2Top) * s2Width) + (left - s2Left)) * 4 + 3;
+		offset1 = (((top - s1Top + s1.imageOffsetY) * s1Width) + (left - s1Left + s1.imageOffsetX)) * 4 + 3;
+		offset2 = (((top - s2Top + s2.imageOffsetY) * s2Width) + (left - s2Left + s2.imageOffsetX)) * 4 + 3;
 		dataWidth1 = s1.scanWidth;
 		dataWidth2 = s2.scanWidth;
 
@@ -158,7 +159,10 @@ function Bodies(width, height) {
 		this.top = null;
 		this.right = null;
 		this.bottom = null;
-		this.rotation = this.dx = this.dy = 0;
+		this.rotation = 0;
+		this.dx = this.dy = 0;
+		this.imageOffsetX = 0;
+		this.imageOffsetY = 0;
 
 		this.canvas = document.createElement("canvas");
 		this.context = this.canvas.getContext("2d");
@@ -172,7 +176,7 @@ function Bodies(width, height) {
 
 		// the actual image canvas will be larger, to handle rotations
 		maxLength = Math.sqrt(Math.pow(image.width, 2) + Math.pow(image.height, 2));
-		this.width = this.height = Math.floor(maxLength);
+		this.width = this.height = this.imageWidth = this.imageHeight = Math.floor(maxLength);
 		this.canvas.width = this.width;
 		this.canvas.height = this.height;
 		this.dx = Math.floor(this.width / 2 - this.halfBaseWidth);
@@ -232,8 +236,8 @@ function Bodies(width, height) {
 	Bodies.CollisionTrie = function (x, y, r, b) {
 		this.isPartitioned = false;
 		this.nodes = null;
-		this.maxItems = 20;
-		this.maxDepth = 5;
+		this.maxItems = 15;
+		this.maxDepth = 3;
 		this.items = [];
 		this.left = x;
 		this.top = y;
@@ -357,11 +361,14 @@ function Bodies(width, height) {
 	Bodies.World = function (imageName) {
 		var image = Bodies.resource(imageName),
 		    pixels,
-		    sector;
+		    region,
+		    offset,
+		    width, height;
 
 		this.resolution = 20;
 		this.width = image.width;
 		this.height = image.height;
+		this.scanWidth = image.width * 4;
 		this.rows = Math.ceil(this.height / this.resolution);
 		this.columns = Math.ceil(this.width / this.resolution);
 		this.canvas = document.createElement("canvas");
@@ -369,22 +376,85 @@ function Bodies(width, height) {
 		this.canvas.height = this.height;
 		this.context = this.canvas.getContext("2d");
 		this.context.drawImage(image, 0, 0);
-		this.pixels = this.context.getImageData(0, 0, this.width, this.height);
+		this.imageData = this.context.getImageData(0, 0, this.width, this.height);
+		this.pixels = this.imageData.data;
 		this.quadtree = new Bodies.CollisionTrie(0, 0, this.width, this.height);
-		this.grid = [];
-		for (var i = 0; i < this.rows; i++) {
-			for (var j = 0; j < this.columns; j++) {
-				sector = {};
-				sector.width = sector.height = this.resolution;
-				sector.x = sector.left = j * this.resolution;
-				sector.y = sector.top = i * this.resolution;
-				sector.right = sector.x + sector.width;
-				sector.bottom = sector.y + sector.height;
-				sector.pixels = this.pixels;
-				sector.scanWidth = this.width * 4;
+		this.actors = [];
+
+		// check the pixels to see if we need to add this sector to the collision map
+		for (var y = 0; y < this.height; y += this.resolution) {
+			height = (y > this.height - this.resolution) ? this.height - y : this.resolution;
+			for (var x = 0; x < this.width; x += this.resolution) {
+				width = (x > this.width - this.resolution) ? this.width - x : this.resolution;
+				if (isOpaque(this.pixels, this.scanWidth, x, y, width, height)) {
+					region = {};
+					region.dx = region.dy = 0;
+					region.x = x;
+					region.y = y;
+					region.width = width;
+					region.height = height;
+					region.right = region.x + region.width;
+					region.bottom = region.y + region.height;
+					region.imageOffsetX = x;
+					region.imageOffsetY = y;
+					region.imageWidth = image.width;
+					region.imageHeight = image.height;
+					region.scanWidth = this.scanWidth;
+					region.pixels = this.pixels;
+					this.quadtree.insert(region);
+				}
 			}
 		}
+
+		this.draw = function () {
+			context.drawImage(this.canvas, 0, 0);
+		};
+
+		this.insert = function (item) {
+			this.actors.push(item);
+			this.quadtree.insert(item);
+		};
+
+		this.update = function () {
+                	for (var i = 0; i < this.actors.length; i++) {
+                        	var actor = this.actors[i],
+                            	region = actor.collisionNode,
+                            	collisionRegions = [];
+	
+                        	// update quadtree
+                        	this.quadtree.queryNodes(actor, collisionRegions);
+                        	if (collisionRegions[collisionRegions.length-1] != region) {
+                                	region.deleteItem(actor);
+                                	this.quadtree.insert(actor);
+                        	}
+	
+                        	// collide
+                        	for (var j = 0; j < collisionRegions.length; j++ ) {
+                                	var r = collisionRegions[j];
+                                	for (var k = 0; k < r.items.length; k++) {
+                                        	var other = r.items[k];
+                                        	if (Bodies.testCollision(actor, other)) {
+							alert([other.x, other.y, other.right, other.bottom].join(", "));
+                                        	}
+                                	}
+                        	}
+                	}
+ 
+		};
 	};
+
+	function isOpaque(pixels, scanWidth, x, y, w, h) {
+		offset = x * y * 4 + 3;
+		for (var i = 0; i < h; i++) {
+			for (var j = 0; j < w * 4; j += 4) {
+				if (pixels[offset + j] === 255) {
+					return true
+				}
+			}
+			offset += scanWidth;
+		}
+		return false;
+	}
 
 	initCanvas();
 	canvas.addEventListener("mousemove", mouseMove, false);

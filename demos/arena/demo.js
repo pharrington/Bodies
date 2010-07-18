@@ -1,9 +1,34 @@
+function mark(red) {
+	if (mark.marked === undefined) { mark.marked = false; }
+	if ((red && mark.marked) || (!red && !mark.marked)) { return; }
+	mark.marked = red;
+	var color = red ? [255, 0, 0, 255] : [0, 0, 0, 255],
+	    pixels = this.imageData.data;
+
+	for (var p = 0; p < this.width * this.height; p++) {
+		var index = p * 4;
+		if (pixels[index + 3] > 0) {
+			for (var i = 0; i < 3; i++) {
+				pixels[index + i] = color[i];
+			}
+		}
+	}
+	this.context.putImageData(this.imageData, 0, 0);
+}
+
 var ship,
+    arena,
     width = 900, height = 600,
-    px = 0; py = 0,
-    angle = 0;
+    px = 0, py = 0,
+    angle = 0,
+    paused = false;
+
 
 addEventListener("load", function () {
+	document.getElementById("pause").addEventListener("click", function () {
+		paused = !paused;
+	}, false);
+
 	Bodies(width, height);
 	Bodies.mouseMove(function (x, y) {
 		px = x;
@@ -11,14 +36,18 @@ addEventListener("load", function () {
 	});
 
 	Bodies.loadImage("moth", "moth-small.png");
+	Bodies.loadImage("ring", "ring.png");
 	Bodies.loaded(function () {
 		ship = new Bodies.Sprite("moth");
-		ship.moveTo(400, 200);
+		ship.moveTo(280, 240);
 		ship.ax = 0;
 		ship.ay = 0;
 		ship.vx = 0;
 		ship.vy = 0;
 		ship.vMax = 10;
+
+		arena = new Bodies.World("ring");
+		arena.insert(ship);
 	});
 
 	Bodies.refresh(function (context) {
@@ -26,6 +55,8 @@ addEventListener("load", function () {
 		    accel = 0.25;
 
 		ship.ax = ship.ay = -2;
+
+		if (!paused) {
 
 		if (Bodies.Keys[65]) { // A, Left
 			ship.ax = -accel;
@@ -69,7 +100,10 @@ addEventListener("load", function () {
 		ship.moveTo(ship.x + ship.vx, ship.y + ship.vy);
 		angle = Math.atan2(py - (ship.y + ship.height / 2), px - (ship.x + ship.width / 2));
 		ship.rotateTo(angle + Math.PI / 2);
+		arena.update();
 		context.clearRect(0, 0, width, height);
+		arena.draw();
 		ship.draw();
+		} //pause
 	});
 }, false);
