@@ -19,7 +19,7 @@ function mark(red) {
 var square, oval;
 window.addEventListener("load", function() {
 	Bodies(600, 600);
-	Bodies.loadImage("square", "square.jpg");
+	Bodies.loadImage("shape", "shape.png");
 	Bodies.loadImage("oval", "oval.gif");
 
 	Bodies.mouseMove(function (x, y) {
@@ -27,7 +27,7 @@ window.addEventListener("load", function() {
 	});
 
 	Bodies.loaded(function () {
-		square = new Bodies.Sprite("square");
+		square = new Bodies.Sprite("shape");
 		oval = new Bodies.Sprite("oval");
 		square.moveTo(153, 232);
 		oval.moveTo(200, 200);

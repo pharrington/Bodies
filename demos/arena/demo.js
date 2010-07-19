@@ -1,21 +1,3 @@
-function mark(red) {
-	if (mark.marked === undefined) { mark.marked = false; }
-	if ((red && mark.marked) || (!red && !mark.marked)) { return; }
-	mark.marked = red;
-	var color = red ? [255, 0, 0, 255] : [0, 0, 0, 255],
-	    pixels = this.imageData.data;
-
-	for (var p = 0; p < this.width * this.height; p++) {
-		var index = p * 4;
-		if (pixels[index + 3] > 0) {
-			for (var i = 0; i < 3; i++) {
-				pixels[index + i] = color[i];
-			}
-		}
-	}
-	this.context.putImageData(this.imageData, 0, 0);
-}
-
 var ship,
     arena,
     width = 900, height = 600,
@@ -23,6 +5,19 @@ var ship,
     angle = 0,
     paused = false;
 
+
+function redraw(context) {
+	context.clearRect(0, 0, width, height);
+	arena.draw();
+	ship.draw();
+};
+
+function contains(rect) {
+	return ((rect.x >= this.left) &&
+		(rect.right <= this.right) &&
+		(rect.y >= this.top) &&
+		(rect.bottom <= this.bottom));
+}
 
 addEventListener("load", function () {
 	document.getElementById("pause").addEventListener("click", function () {
@@ -39,12 +34,13 @@ addEventListener("load", function () {
 	Bodies.loadImage("ring", "ring.png");
 	Bodies.loaded(function () {
 		ship = new Bodies.Sprite("moth");
-		ship.moveTo(280, 240);
+		ship.moveTo(400, 300);
 		ship.ax = 0;
 		ship.ay = 0;
 		ship.vx = 0;
 		ship.vy = 0;
 		ship.vMax = 10;
+		ship.rotateTo(angle + Math.PI / 2);
 
 		arena = new Bodies.World("ring");
 		arena.insert(ship);
@@ -100,10 +96,9 @@ addEventListener("load", function () {
 		ship.moveTo(ship.x + ship.vx, ship.y + ship.vy);
 		angle = Math.atan2(py - (ship.y + ship.height / 2), px - (ship.x + ship.width / 2));
 		ship.rotateTo(angle + Math.PI / 2);
-		arena.update();
-		context.clearRect(0, 0, width, height);
-		arena.draw();
-		ship.draw();
+		arena.update(function (a, b) {
+		});
+		redraw(context);
 		} //pause
 	});
 }, false);

@@ -236,8 +236,8 @@ function Bodies(width, height) {
 	Bodies.CollisionTrie = function (x, y, r, b) {
 		this.isPartitioned = false;
 		this.nodes = null;
-		this.maxItems = 15;
-		this.maxDepth = 3;
+		this.maxItems = 12;
+		this.maxDepth = 4;
 		this.items = [];
 		this.left = x;
 		this.top = y;
@@ -249,6 +249,7 @@ function Bodies(width, height) {
 			    itemsLength = items.length;
 
 			// lets bail
+
 			if (!this.contains(item.x, item.y, item.right, item.bottom)) {
 				return;
 			}
@@ -330,7 +331,7 @@ function Bodies(width, height) {
 			    r = rect.right,
 			    b = rect.bottom;
 
-			if (this.contains(x, y, r, b)) {
+			if (this.touches(x, y, r, b)) {
 				nodes[nodes.length] = this;
 			}
 			
@@ -346,6 +347,13 @@ function Bodies(width, height) {
 				(r <= this.right) &&
 				(y >= this.top) &&
 				(b <= this.bottom));
+		};
+
+		this.touches = function (x, y, r, b) {
+			return !(x > this.right ||
+				r < this.left ||
+				y > this.bottom ||
+				b < this.top);
 		};
 
 		this.deleteItem = function (item) {
@@ -381,7 +389,7 @@ function Bodies(width, height) {
 		this.quadtree = new Bodies.CollisionTrie(0, 0, this.width, this.height);
 		this.actors = [];
 
-		// check the pixels to see if we need to add this sector to the collision map
+		// check the pixels to see if we need to add this region to the collision map
 		for (var y = 0; y < this.height; y += this.resolution) {
 			height = (y > this.height - this.resolution) ? this.height - y : this.resolution;
 			for (var x = 0; x < this.width; x += this.resolution) {
@@ -389,8 +397,8 @@ function Bodies(width, height) {
 				if (isOpaque(this.pixels, this.scanWidth, x, y, width, height)) {
 					region = {};
 					region.dx = region.dy = 0;
-					region.x = x;
-					region.y = y;
+					region.x = region.left = x;
+					region.y = region.top = y;
 					region.width = width;
 					region.height = height;
 					region.right = region.x + region.width;
@@ -415,7 +423,7 @@ function Bodies(width, height) {
 			this.quadtree.insert(item);
 		};
 
-		this.update = function () {
+		this.update = function (callback) {
                 	for (var i = 0; i < this.actors.length; i++) {
                         	var actor = this.actors[i],
                             	region = actor.collisionNode,
@@ -423,7 +431,7 @@ function Bodies(width, height) {
 	
                         	// update quadtree
                         	this.quadtree.queryNodes(actor, collisionRegions);
-                        	if (collisionRegions[collisionRegions.length-1] != region) {
+                        	if (collisionRegions[collisionRegions.length-1] !== region) {
                                 	region.deleteItem(actor);
                                 	this.quadtree.insert(actor);
                         	}
@@ -434,7 +442,7 @@ function Bodies(width, height) {
                                 	for (var k = 0; k < r.items.length; k++) {
                                         	var other = r.items[k];
                                         	if (Bodies.testCollision(actor, other)) {
-							alert([other.x, other.y, other.right, other.bottom].join(", "));
+							callback(actor, other);
                                         	}
                                 	}
                         	}
