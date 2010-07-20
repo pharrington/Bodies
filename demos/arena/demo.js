@@ -31,11 +31,11 @@ function ejection(item, walls) {
 	oldX = ship.x;
 	oldY = ship.y;
 
-	normalX = collisionArea(ship.moveTo(oldX + 1, oldY), walls) -
-		  collisionArea(ship.moveTo(oldX - 1, oldY), walls);
-	normalY = collisionArea(ship.moveTo(oldX, oldY + 1), walls) -
-		  collisionArea(ship.moveTo(oldX, oldY - 1), walls);
-	ship.moveTo(oldX + -normalX, oldY + -normalY);
+	normalX = collisionArea(ship.moveTo(oldX - 1, oldY), walls) -
+		  collisionArea(ship.moveTo(oldX + 1, oldY), walls);
+	normalY = collisionArea(ship.moveTo(oldX, oldY - 1), walls) -
+		  collisionArea(ship.moveTo(oldX, oldY + 1), walls);
+	ship.moveTo(oldX + normalX, oldY + normalY);
 }
 
 function collisionArea(item, walls) {
