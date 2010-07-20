@@ -98,7 +98,7 @@ function Bodies(width, height) {
 		callbacks.mousemove.push(callback);
 	};
 
-	Bodies.testCollision = function testCollision(s1, s2) {
+	Bodies.testCollision = function (s1, s2) {
 		if (s1 === s2) { return false; }
 		var left,
 		    top,
@@ -148,6 +148,60 @@ function Bodies(width, height) {
 		return false;
 	};
 
+	/**
+	 * determine the area of collisions between two objects
+	 */
+
+	Bodies.collisionArea = function (s1, s2) {
+		if (s1 === s2) { return 0; } // for consistency with the fact that an object can't collide with itself
+		var left,
+		    top,
+		    width,
+		    height,
+		    pixels1, pixels2,
+		    offset1, offset2,
+		    dataWidth1, dataWidth2,
+		    s1Width, s2Width,
+		    s1Left = s1.left - s1.dx, s1Right = s1.right - s1.dx,
+		    s1Top = s1.top - s1.dy, s1Bottom = s1.bottom - s1.dy,
+		    s2Left = s2.left - s2.dx, s2Right = s2.right - s2.dx,
+		    s2Top = s2.top - s2.dy, s2Bottom = s2.bottom - s2.dy,
+		    area = 0;
+
+		if (s1Right < s2Left ||
+		    s1Left > s2Right ||
+		    s1Bottom < s2Top ||
+		    s1Top > s2Bottom) {
+			return 0;
+		}
+
+		left = Math.max(s1Left, s2Left);
+		top = Math.max(s1Top, s2Top);
+		width = (Math.min(s1Right, s2Right) - left) * 4; // four "ints" per pixel;
+		height = Math.min(s1Bottom, s2Bottom) - top;
+
+		s1Width = s1.imageWidth;
+		s2Width = s2.imageWidth;
+		pixels1 = s1.pixels;
+		pixels2 = s2.pixels;
+
+
+		offset1 = (((top - s1Top + s1.imageOffsetY) * s1Width) + (left - s1Left + s1.imageOffsetX)) * 4 + 3;
+		offset2 = (((top - s2Top + s2.imageOffsetY) * s2Width) + (left - s2Left + s2.imageOffsetX)) * 4 + 3;
+		dataWidth1 = s1.scanWidth;
+		dataWidth2 = s2.scanWidth;
+
+		for (var y = 0; y < height; y++) {
+			for (var x = 0; x < width; x += 4) {
+				if ((pixels1[offset1 + x] === 255) && (pixels2[offset2 + x] === 255)) {
+					area++;
+				}
+			}
+			offset1 += dataWidth1;
+			offset2 += dataWidth2;
+		}
+		return area;
+	};
 	Bodies.Sprite = function (imageName) {
 		var image = Bodies.resource(imageName),
 		    maxLength,
@@ -195,6 +249,7 @@ function Bodies(width, height) {
 			this.top = Math.floor(y);
 			this.right = this.left + this.width;
 			this.bottom = this.top + this.height;
+			return this;
 		};
 
 		this.rotateTo = function (angle) {
@@ -424,9 +479,14 @@ function Bodies(width, height) {
 		};
 
 		this.update = function (callback) {
+			var actor,
+			    region,
+			    collisionRegions,
+			    collisions;
                 	for (var i = 0; i < this.actors.length; i++) {
-                        	var actor = this.actors[i],
+                        	actor = this.actors[i],
                             	region = actor.collisionNode,
+				collisions = [];
                             	collisionRegions = [];
 	
                         	// update quadtree
@@ -442,10 +502,15 @@ function Bodies(width, height) {
                                 	for (var k = 0; k < r.items.length; k++) {
                                         	var other = r.items[k];
                                         	if (Bodies.testCollision(actor, other)) {
-							callback(actor, other);
+							if (collisions.indexOf(other) === -1) {
+								collisions[collisions.length] = other;
+							}
                                         	}
                                 	}
                         	}
+				if (collisions.length) {
+					callback(actor, collisions);
+				}
                 	}
  
 		};

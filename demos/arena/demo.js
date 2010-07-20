@@ -19,6 +19,34 @@ function contains(rect) {
 		(rect.bottom <= this.bottom));
 }
 
+/**
+ * wall sliding routine.
+ * hopefully.
+ */
+
+function ejection(item, walls) {
+	var oldX, oldY,
+	    normalX, normalY;
+
+	oldX = ship.x;
+	oldY = ship.y;
+
+	normalX = collisionArea(ship.moveTo(oldX + 1, oldY), walls) -
+		  collisionArea(ship.moveTo(oldX - 1, oldY), walls);
+	normalY = collisionArea(ship.moveTo(oldX, oldY + 1), walls) -
+		  collisionArea(ship.moveTo(oldX, oldY - 1), walls);
+	ship.moveTo(oldX + -normalX, oldY + -normalY);
+}
+
+function collisionArea(item, walls) {
+	var area = 0;
+	for (var i = 0; i < walls.length; i++) {
+		wall = walls[i];
+		area += Bodies.collisionArea(item, wall);
+	}
+	return area;
+}
+
 addEventListener("load", function () {
 	document.getElementById("pause").addEventListener("click", function () {
 		paused = !paused;
@@ -39,7 +67,7 @@ addEventListener("load", function () {
 		ship.ay = 0;
 		ship.vx = 0;
 		ship.vy = 0;
-		ship.vMax = 10;
+		ship.vMax = 7;
 		ship.rotateTo(angle + Math.PI / 2);
 
 		arena = new Bodies.World("ring");
@@ -96,8 +124,7 @@ addEventListener("load", function () {
 		ship.moveTo(ship.x + ship.vx, ship.y + ship.vy);
 		angle = Math.atan2(py - (ship.y + ship.height / 2), px - (ship.x + ship.width / 2));
 		ship.rotateTo(angle + Math.PI / 2);
-		arena.update(function (a, b) {
-		});
+		arena.update(ejection);
 		redraw(context);
 		} //pause
 	});
