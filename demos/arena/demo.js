@@ -26,16 +26,38 @@ function contains(rect) {
 
 function ejection(item, walls) {
 	var oldX, oldY,
-	    normalX, normalY;
+	    normalX, normalY,
+	    dx, dy,
+	    length = 1,
+	    angle,
+	    cos, sin,
+	    colliding = true;
 
 	oldX = ship.x;
 	oldY = ship.y;
+
 
 	normalX = collisionArea(ship.moveTo(oldX - 1, oldY), walls) -
 		  collisionArea(ship.moveTo(oldX + 1, oldY), walls);
 	normalY = collisionArea(ship.moveTo(oldX, oldY - 1), walls) -
 		  collisionArea(ship.moveTo(oldX, oldY + 1), walls);
-	ship.moveTo(oldX + normalX, oldY + normalY);
+
+	angle = Math.atan2(normalY, normalX);
+	cos = Math.cos(angle);
+	sin = Math.sin(angle);
+
+	while (colliding) {
+		colliding = false;
+		dx = length * cos;
+		dy = length * sin;
+		ship.moveTo(oldX + dx, oldY + dy);
+		for (var i = 0; i < walls.length && !colliding; i++) {
+			if (Bodies.testCollision(ship, walls[i])) {
+				colliding = true;
+			}
+		}
+		length += 1;
+	}
 }
 
 function collisionArea(item, walls) {
