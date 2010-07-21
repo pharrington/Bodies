@@ -231,6 +231,8 @@ function Bodies(width, height) {
 		// the actual image canvas will be larger, to handle rotations
 		maxLength = Math.sqrt(Math.pow(image.width, 2) + Math.pow(image.height, 2));
 		this.width = this.height = this.imageWidth = this.imageHeight = Math.floor(maxLength);
+		this.halfWidth = maxLength / 2;
+		this.halfHeight = maxLength / 2;
 		this.canvas.width = this.width;
 		this.canvas.height = this.height;
 		this.dx = Math.floor(this.width / 2 - this.halfBaseWidth);
@@ -253,28 +255,22 @@ function Bodies(width, height) {
 		};
 
 		this.rotateTo = function (angle) {
-			var newWidth, newHeight,
-			    baseWidth = this.baseWidth, baseHeight = this.baseHeight,
-			    halfBaseWidth = this.halfBaseWidth, halfBaseHeight = this.halfBaseHeight,
-			    sinTheta, cosTheta,
-			    oX, oY;
+			var width = this.width, height = this.height,
+			    context = this.context;
 
 			this.rotation = angle;
 
-			oX = this.width / 2;
-			oY = this.height / 2;
-
-			this.context.clearRect(0, 0, this.width, this.height);
-			this.context.save();
-			this.context.translate(oX, oY);
-			this.context.rotate(this.rotation);
-			this.context.translate(-halfBaseWidth, -halfBaseHeight);
-			this.context.drawImage(this.baseCanvas, 0, 0);
-			this.context.restore();
+			context.clearRect(0, 0, width, height);
+			context.save();
+			context.translate(this.halfWidth, this.halfHeight);
+			context.rotate(angle);
+			context.translate(-this.halfBaseWidth, -this.halfBaseHeight);
+			context.drawImage(this.baseCanvas, 0, 0);
+			context.restore();
 
 			// ImageData/CanvasPixelArray allocations get out of control with the next line.
-			// The alternative would be to create and store a seperate collision mask for the sprite, and manually rotate that :(
-			this.imageData = this.context.getImageData(0, 0, this.width, this.height);
+			// The alternative would be to create and store a seperate collision mask for the sprite, and manually rotate that - MAD slow :(
+			this.imageData = context.getImageData(0, 0, width, height);
 			this.pixels = this.imageData.data;
 		}
 
@@ -509,11 +505,56 @@ function Bodies(width, height) {
                                 	}
                         	}
 				if (collisions.length) {
-					callback(actor, collisions);
+					eject(actor, collisions);
 				}
                 	}
  
 		};
+
+		function eject(actor, walls) {
+			var oldX, oldY,
+	    		normalX, normalY,
+	    		dx, dy,
+	    		length = 1,
+	    		angle,
+	    		cos, sin,
+	    		colliding = true;
+		
+			oldX = actor.x;
+			oldY = actor.y;
+		
+		
+			normalX = collisionArea(actor.moveTo(oldX - 1, oldY), walls) -
+		  		collisionArea(actor.moveTo(oldX + 1, oldY), walls);
+			normalY = collisionArea(actor.moveTo(oldX, oldY - 1), walls) -
+		  		collisionArea(actor.moveTo(oldX, oldY + 1), walls);
+		
+			angle = Math.atan2(normalY, normalX);
+			cos = Math.cos(angle);
+			sin = Math.sin(angle);
+		
+			while (colliding) {
+				colliding = false;
+				dx = length * cos;
+				dy = length * sin;
+				actor.moveTo(oldX + dx, oldY + dy);
+				for (var i = 0; i < walls.length && !colliding; i++) {
+					if (Bodies.testCollision(actor, walls[i])) {
+						colliding = true;
+					}
+				}
+				length += 1;
+			}
+		}
+		
+		function collisionArea(item, walls) {
+			var area = 0;
+			for (var i = 0; i < walls.length; i++) {
+				wall = walls[i];
+				area += Bodies.collisionArea(item, wall);
+			}
+			return area;
+		}
 	};
 
 	function isOpaque(pixels, scanWidth, x, y, w, h) {

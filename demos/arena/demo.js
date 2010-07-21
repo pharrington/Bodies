@@ -24,50 +24,6 @@ function contains(rect) {
  * hopefully.
  */
 
-function ejection(item, walls) {
-	var oldX, oldY,
-	    normalX, normalY,
-	    dx, dy,
-	    length = 1,
-	    angle,
-	    cos, sin,
-	    colliding = true;
-
-	oldX = ship.x;
-	oldY = ship.y;
-
-
-	normalX = collisionArea(ship.moveTo(oldX - 1, oldY), walls) -
-		  collisionArea(ship.moveTo(oldX + 1, oldY), walls);
-	normalY = collisionArea(ship.moveTo(oldX, oldY - 1), walls) -
-		  collisionArea(ship.moveTo(oldX, oldY + 1), walls);
-
-	angle = Math.atan2(normalY, normalX);
-	cos = Math.cos(angle);
-	sin = Math.sin(angle);
-
-	while (colliding) {
-		colliding = false;
-		dx = length * cos;
-		dy = length * sin;
-		ship.moveTo(oldX + dx, oldY + dy);
-		for (var i = 0; i < walls.length && !colliding; i++) {
-			if (Bodies.testCollision(ship, walls[i])) {
-				colliding = true;
-			}
-		}
-		length += 1;
-	}
-}
-
-function collisionArea(item, walls) {
-	var area = 0;
-	for (var i = 0; i < walls.length; i++) {
-		wall = walls[i];
-		area += Bodies.collisionArea(item, wall);
-	}
-	return area;
-}
 
 addEventListener("load", function () {
 	document.getElementById("pause").addEventListener("click", function () {
@@ -146,7 +102,7 @@ addEventListener("load", function () {
 		ship.moveTo(ship.x + ship.vx, ship.y + ship.vy);
 		angle = Math.atan2(py - (ship.y + ship.height / 2), px - (ship.x + ship.width / 2));
 		ship.rotateTo(angle + Math.PI / 2);
-		arena.update(ejection);
+		arena.update();
 		redraw(context);
 		} //pause
 	});
