@@ -110,5 +110,5 @@ addEventListener("load", function () {
 		arena.update();
 		redraw($.context);
 		} //pause
-	}, 25);
+	}, 50);
 }, false);
