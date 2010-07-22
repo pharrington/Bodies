@@ -19,18 +19,12 @@ function contains(rect) {
 		(rect.bottom <= this.bottom));
 }
 
-/**
- * wall sliding routine.
- * hopefully.
- */
-
-
 addEventListener("load", function () {
 	document.getElementById("pause").addEventListener("click", function () {
 		paused = !paused;
 	}, false);
 
-	Bodies(width, height);
+	Bodies.init("field", width, height);
 	Bodies.mouseMove(function (x, y) {
 		px = x;
 		py = y;
@@ -45,29 +39,29 @@ addEventListener("load", function () {
 		ship.ay = 0;
 		ship.vx = 0;
 		ship.vy = 0;
-		ship.vMax = 7;
+		ship.vMax = 350;
 		ship.rotateTo(angle + Math.PI / 2);
 
 		arena = new Bodies.World("ring");
 		arena.insert(ship);
 	});
 
-	Bodies.refresh(function (context) {
+	Bodies.refresh(function (elapsed) {
 		var vx, vy,
-		    accel = 0.25;
+		    accel = 12.5;
 
-		ship.ax = ship.ay = -2;
+		ship.ax = ship.ay = -100;
 
 		if (!paused) {
 
-		if (Bodies.Keys[65]) { // A, Left
+		if (Bodies.keys[65]) { // A, Left
 			ship.ax = -accel;
-		} else if (Bodies.Keys[68]) { // D, Right
+		} else if (Bodies.keys[68]) { // D, Right
 			ship.ax = accel;
 		}
-		if (Bodies.Keys[87]) { // W, Up
+		if (Bodies.keys[87]) { // W, Up
 			ship.ay = -accel;
-		} else if (Bodies.Keys[83]) { // S, Down
+		} else if (Bodies.keys[83]) { // S, Down
 			ship.ay = accel;
 		}
 	
@@ -99,11 +93,13 @@ addEventListener("load", function () {
 				ship.vy = -ship.vMax;
 			}
 		}
+		ship.vx *= elapsed / 1000;
+		ship.vy *= elapsed / 1000;
 		ship.moveTo(ship.x + ship.vx, ship.y + ship.vy);
 		angle = Math.atan2(py - (ship.y + ship.height / 2), px - (ship.x + ship.width / 2));
 		ship.rotateTo(angle + Math.PI / 2);
 		arena.update();
-		redraw(context);
+		redraw($.context);
 		} //pause
 	});
 }, false);

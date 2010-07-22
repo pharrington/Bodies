@@ -1,0 +1,2 @@
+window.Bodies = window.$ = Bodies;
+}());
