@@ -1,3 +1,10 @@
+function drawRect(rect) {
+	var c = $.context;
+	c.strokeStyle = "red";
+	c.lineWidth = 1;
+	c.strokeRect(rect.left - rect.dx, rect.top - rect.dy, rect.width, rect.height);
+}
+
 var ship,
     arena,
     width = 900, height = 600,
@@ -34,7 +41,7 @@ addEventListener("load", function () {
 	Bodies.loadImage("ring", "ring.png");
 	Bodies.loaded(function () {
 		ship = new Bodies.Sprite("moth");
-		ship.moveTo(400, 300);
+		ship.moveTo(400, 350);
 		ship.ax = 0;
 		ship.ay = 0;
 		ship.vx = 0;
@@ -42,7 +49,7 @@ addEventListener("load", function () {
 		ship.vMax = 250;
 		ship.rotateTo(angle + Math.PI / 2);
 
-		arena = new Bodies.World("ring", 100);
+		arena = new Bodies.World("ring", 20);
 		arena.insert(ship);
 	});
 

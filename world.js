@@ -56,6 +56,7 @@ $.World.prototype.insert = function (item) {
 };
 
 $.World.prototype.update = function (callback) {
+	debugfu = [];
 	var actor,
 	    region,
 	    collisionRegions,
@@ -78,6 +79,8 @@ $.World.prototype.update = function (callback) {
                               	var r = collisionRegions[j];
                               	for (var k = 0; k < r.items.length; k++) {
                                       	var other = r.items[k];
+					paused = true;
+					debugfu.push(other);
                                       	if ($.testCollision(actor, other)) {
 						if (collisions.indexOf(other) === -1) {
 							collisions[collisions.length] = other;
@@ -89,6 +92,7 @@ $.World.prototype.update = function (callback) {
 			eject(actor, collisions);
 		}
 	}
+	console.log(debugfu);
 };
 
 function eject(actor, walls) {
