@@ -137,7 +137,7 @@ function wallCollisionArea(item, walls) {
 }
 
 function isOpaque(pixels, scanWidth, x, y, w, h) {
-	offset = x * y * 4 + 3;
+	offset = y * scanWidth + x * 4 + 3;
 	for (var i = 0; i < h; i++) {
 		for (var j = 0; j < w * 4; j += 4) {
 			if (pixels[offset + j] === 255) {
