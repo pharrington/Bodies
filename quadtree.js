@@ -1,8 +1,8 @@
 $.Quadtree = function (x, y, r, b) {
 	this.isPartitioned = false;
 	this.nodes = null;
-	this.maxItems = 12;
-	this.maxDepth = 4;
+	this.maxItems = 10;
+	this.maxDepth = 3;
 	this.items = [];
 	this.left = x;
 	this.top = y;
