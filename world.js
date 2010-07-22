@@ -1,16 +1,15 @@
-$.World = function (imageName) {
+$.World = function (imageName, resolution) {
 	var image = $.resource(imageName),
 	    pixels,
 	    region,
 	    offset,
 	    width, height;
 
-	this.resolution = 20;
 	this.width = image.width;
 	this.height = image.height;
 	this.scanWidth = image.width * 4;
-	this.rows = Math.ceil(this.height / this.resolution);
-	this.columns = Math.ceil(this.width / this.resolution);
+	this.rows = Math.ceil(this.height / resolution);
+	this.columns = Math.ceil(this.width / resolution);
 	this.canvas = document.createElement("canvas");
 	this.canvas.width = this.width;
 	this.canvas.height = this.height;
@@ -22,10 +21,10 @@ $.World = function (imageName) {
 	this.actors = [];
 
 	// check the pixels to see if we need to add this region to the collision map
-	for (var y = 0; y < this.height; y += this.resolution) {
-		height = (y > this.height - this.resolution) ? this.height - y : this.resolution;
-		for (var x = 0; x < this.width; x += this.resolution) {
-			width = (x > this.width - this.resolution) ? this.width - x : this.resolution;
+	for (var y = 0; y < this.height; y += resolution) {
+		height = (y > this.height - resolution) ? this.height - y : resolution;
+		for (var x = 0; x < this.width; x += resolution) {
+			width = (x > this.width - resolution) ? this.width - x : resolution;
 			if (isOpaque(this.pixels, this.scanWidth, x, y, width, height)) {
 				region = {};
 				region.dx = region.dy = 0;
@@ -80,9 +79,9 @@ $.World.prototype.update = function (callback) {
                               	for (var k = 0; k < r.items.length; k++) {
                                       	var other = r.items[k];
                                       	if ($.testCollision(actor, other)) {
-					if (collisions.indexOf(other) === -1) {
-						collisions[collisions.length] = other;
-					}
+						if (collisions.indexOf(other) === -1) {
+							collisions[collisions.length] = other;
+						}
                                       	}
                               	}
                       	}

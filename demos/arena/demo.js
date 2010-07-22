@@ -39,18 +39,20 @@ addEventListener("load", function () {
 		ship.ay = 0;
 		ship.vx = 0;
 		ship.vy = 0;
-		ship.vMax = 350;
+		ship.vMax = 250;
 		ship.rotateTo(angle + Math.PI / 2);
 
-		arena = new Bodies.World("ring");
+		arena = new Bodies.World("ring", 100);
 		arena.insert(ship);
 	});
 
 	Bodies.refresh(function (elapsed) {
 		var vx, vy,
-		    accel = 12.5;
+		    accel = 25,
+		    stopAccel = -100,
+		    dt = elapsed / 1000;
 
-		ship.ax = ship.ay = -100;
+		ship.ax = ship.ay = stopAccel;
 
 		if (!paused) {
 
@@ -68,7 +70,7 @@ addEventListener("load", function () {
 		ship.vx += ship.ax;
 		ship.vy += ship.ay;
 
-		if (ship.ax === -2) { // no X axis movement
+		if (ship.ax === stopAccel) { // no X axis movement
 			if (ship.vx < 0) {
 				ship.vx = 0;
 			}
@@ -81,7 +83,7 @@ addEventListener("load", function () {
 			}
 		}
 
-		if (ship.ay === -2) { // no Y axis movement
+		if (ship.ay === stopAccel) { // no Y axis movement
 			if (ship.vy < 0) {
 				ship.vy = 0;
 			}
@@ -93,13 +95,13 @@ addEventListener("load", function () {
 				ship.vy = -ship.vMax;
 			}
 		}
-		ship.vx *= elapsed / 1000;
-		ship.vy *= elapsed / 1000;
-		ship.moveTo(ship.x + ship.vx, ship.y + ship.vy);
-		angle = Math.atan2(py - (ship.y + ship.height / 2), px - (ship.x + ship.width / 2));
+		vx = ship.vx * dt;
+		vy = ship.vy * dt;
+		ship.moveTo(ship.x + vx, ship.y + vy);
+		angle = Math.atan2(py - (ship.y + 12), px - (ship.x + 40));
 		ship.rotateTo(angle + Math.PI / 2);
 		arena.update();
 		redraw($.context);
 		} //pause
-	});
+	}, 25);
 }, false);
