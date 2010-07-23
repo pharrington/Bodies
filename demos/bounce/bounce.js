@@ -20,9 +20,9 @@ function clickField(balls, x, y) {
 }
 
 function drawRect(x, y, w, h, context) {
-	context.lineWidth = 5;
-	context.strokeStyle = "red";
-	context.strokeRect(x, y, w, h);
+	$.context.lineWidth = 5;
+	$.context.strokeStyle = "red";
+	$.context.strokeRect(x, y, w, h);
 }
 
 function draw(collection) {
@@ -60,9 +60,9 @@ window.addEventListener("load", function() {
 		c.insert(ball);
 	}, false);
 
-	Bodies(width, height);
+	Bodies.init("field", width, height);
 	Bodies.loadImage("circle", "circle.png");
-	c = new Bodies.CollisionTrie(0, 0, width, height);
+	c = new Bodies.Quadtree(0, 0, width, height);
 
 	Bodies.loaded(function() {
 		for (var i = 0; i < BALL_COUNT; i++) {
@@ -82,9 +82,9 @@ window.addEventListener("load", function() {
 		}
 	});
 	
-	Bodies.refresh(function (context) {
+	Bodies.refresh(function () {
 		if (!paused) {
-			context.clearRect(0, 0, width, height);
+			$.context.clearRect(0, 0, width, height);
 		}
 		for (var i = 0; i < balls.length; i++) {
 			var ball = balls[i],
