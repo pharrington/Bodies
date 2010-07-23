@@ -1,6 +1,7 @@
 var c,
     paused = false,
-    debug;
+    debug,
+    viewport;
 
 function clickField(balls, x, y) {
 	Bodies.context.clearRect(0, 0, 800, 600);
@@ -27,15 +28,16 @@ function drawRect(x, y, w, h, context) {
 
 function draw(collection) {
 	for (var i = 0; i < collection.length; i++) {
-		collection[i].draw();
+		viewport.draw(collection[i]);
 	}
 }
 
 window.addEventListener("load", function() {
-	var width = 1500,
-	    height = 1100,
+	var width = 2000,
+	    height = 2000,
 	    BALL_COUNT = 400,
-	    balls = [];
+	    balls = [],
+            x = 600, y = 600;
 
 	document.getElementById("pause").addEventListener("click", function () {
 		paused = !paused;
@@ -60,9 +62,10 @@ window.addEventListener("load", function() {
 		c.insert(ball);
 	}, false);
 
-	Bodies.init("field", width, height);
+	Bodies.init("field", 500, 500);
 	Bodies.loadImage("circle", "circle.png");
 	c = new Bodies.Quadtree(0, 0, width, height);
+        viewport = new Bodies.Viewport(500, 500, width, height);
 
 	Bodies.loaded(function() {
 		for (var i = 0; i < BALL_COUNT; i++) {
@@ -86,6 +89,11 @@ window.addEventListener("load", function() {
 		if (!paused) {
 			$.context.clearRect(0, 0, width, height);
 		}
+                if (Bodies.keys[37]) { x--; }
+                if (Bodies.keys[38]) { y--; }
+                if (Bodies.keys[39]) { x++; }
+                if (Bodies.keys[40]) { y++; }
+                viewport.scrollTo(x, y);
 		for (var i = 0; i < balls.length; i++) {
 			var ball = balls[i],
 		    	    region = ball.collisionNode,
