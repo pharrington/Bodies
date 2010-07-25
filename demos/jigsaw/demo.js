@@ -76,15 +76,15 @@ function calculateEdge(offset, length, cells, callback) {
 
 window.addEventListener("load", function () {
 	var width = 500,
-	    height = 500,
-	    cellSize = 100,
+	    height = 300,
+	    cellSize = 50,
 	    cx = Math.floor(width / cellSize),
 	    cy = Math.floor(height / cellSize);
 	$.init("board", 800, 500);
-	for (var x = 1; x < cx; x++) {
-		hline(cellSize * x, width, cy);
-	}
 	for (var y = 1; y < cy; y++) {
-		vline(cellSize * y, height, cx);
+		hline(cellSize * y, width, cx);
+	}
+	for (var x = 1; x < cx; x++) {
+		vline(cellSize * x, height, cy);
 	}
 }, false);
