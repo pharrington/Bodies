@@ -23,7 +23,6 @@ function hline(oy, width, cells) {
 			x4 = x + cellWidth + Math.floor(Math.random() * 10 - 5);
 			y = Math.floor(Math.random() * 10 - 5) + oy;
 		} else {
-			//x = Math.max(cellWidth * i + Math.floor(Math.random() * 10 - 5), 0);
 			x = x4;
 			x4 = i * cellWidth + cellWidth + Math.floor(Math.random() * 10 - 5);
 			y = y4;
