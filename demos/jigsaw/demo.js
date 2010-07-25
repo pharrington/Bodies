@@ -1,18 +1,42 @@
 function random(low, high) {
 	return Math.random(high - low) + low;
 }
+
 function hline(oy, width, cells) {
-	var y = oy,
-	    cellWidth = width / cells,
+	var c = $.context;
+	c.beginPath();
+	calculateEdge(oy, width, cells, function (x, y, x2, y2, x3, y3, x4, y4, cx1, cy1, cx2, cy2, cx3, cy3, cx4, cy4) {
+		c.moveTo(x, y);
+		c.bezierCurveTo(cx1, cy1, cx1, cy1, x2, y2);
+		c.bezierCurveTo(cx2, cy2, cx3, cy3, x3, y3);
+		c.bezierCurveTo(cx4, cy4, cx4, cy4, x4, y4);
+	});
+	c.stroke();
+}
+
+function vline(ox, height, cells) {
+	var c = $.context;
+	c.beginPath();
+	calculateEdge(ox, height, cells, function (y, x, y2, x2, y3, x3, y4, x4, cy1, cx1, cy2, cx2, cy3, cx3, cy4, cx4) {
+		c.moveTo(x, y);
+		c.bezierCurveTo(cx1, cy1, cx1, cy1, x2, y2);
+		c.bezierCurveTo(cx2, cy2, cx3, cy3, x3, y3);
+		c.bezierCurveTo(cx4, cy4, cx4, cy4, x4, y4);
+	});
+	c.stroke();
+}
+
+function calculateEdge(offset, length, cells, callback) {
+	var y = offset,
+	    cellWidth = length / cells,
 	    holeWidth,
 	    xm, x,
 	    dy = cellWidth / 6,
 	    rx, ry,
 	    x2, y2, x3, y3, x4, y4,
 	    cx1, cy1, cx2, cy2, cx3, cy3, cx4, cy4,
-	    direction,
-	    c = $.context;
-	c.beginPath();
+	    direction;
+
 	for (var i = 0; i < cells; i++) {
 		holeWidth = cellWidth / 4 + random(-5, 5);
 		rx = random(5, 10);
@@ -24,7 +48,7 @@ function hline(oy, width, cells) {
 		} else if (i === 0) {
 			x = 0;
 			x4 = x + cellWidth + random(-5, 5);
-			y = Math.random() * 10 - 5 + oy;
+			y = Math.random() * 10 - 5 + offset;
 		} else {
 			x = x4;
 			x4 = i * cellWidth + cellWidth + random(-5, 5);
@@ -37,7 +61,7 @@ function hline(oy, width, cells) {
 		y2 = y - dy;
 		x3 = xm + cellWidth / 5;
 		y3 = y - dy;
-		y4 = oy + ry;
+		y4 = offset + ry;
 		cx1 = x2 + rx + 5;
 		cy1 = y + ry - 2;
 		cx2 = x2;
@@ -46,63 +70,9 @@ function hline(oy, width, cells) {
 		cy3 = cy2;
 		cx4 = x3 - rx - 5;
 		cy4 = cy1;
-		c.moveTo(x, y);
-		c.bezierCurveTo(cx1, cy1, cx1, cy1, x2, y2);
-		c.bezierCurveTo(cx2, cy2, cx3, cy3, x3, y3);
-		c.bezierCurveTo(cx4, cy4, cx4, cy4, x4, y4);
+		callback(x, y, x2, y2, x3, y3, x4, y4,
+			 cx1, cy1, cx2, cy2, cx3, cy3, cx4, cy4);
 	}
-	c.stroke();
-}
-
-function vline(ox, height, cells) {
-	var x = ox,
-	    cellHeight = height / cells,
-	    ym, y,
-	    dx = cellHeight / 6,
-	    rx, ry,
-	    x2, y2, x3, y3, x4, y4,
-	    cx1, cy1, cx2, cy2, cx3, cy3, cx4, cy4,
-	    direction,
-	    c = $.context;
-	c.beginPath();
-	for (var i = 0; i < cells; i++) {
-		ry = Math.random() * 5 + 5;
-		rx = Math.random() * 5 - 2.5;
-		if (i === cells) {
-			y = y4;
-			y4 = width - 1;
-			x = x4;
-		} else if (i === 0) {
-			y = 0;
-			y4 = y + cellHeight + Math.random() * 10 - 5;
-			x = Math.random() * 10 - 5 + ox;
-		} else {
-			y = y4;
-			y4 = i * cellHeight + cellHeight + Math.random() * 10 - 5;
-			x = x4;
-		}
-		ym = y + cellHeight / 2;
-		direction = Math.round(Math.random()) ? 1 : -1;
-		dx *= direction;
-		y2 = ym - cellHeight / 5;
-		x2 = x - dx;
-		y3 = ym + cellHeight / 5;
-		x3 = x - dx;
-		x4 = ox + rx;
-		cy1 = y2 + ry + 5;
-		cx1 = x + rx - 2;
-		cy2 = y2;
-		cx2 = x2 - dx;
-		cy3 = y3;
-		cx3 = cx2;
-		cy4 = y3 - ry - 5;
-		cx4 = cx1;
-		c.moveTo(x, y);
-		c.bezierCurveTo(cx1, cy1, cx1, cy1, x2, y2);
-		c.bezierCurveTo(cx2, cy2, cx3, cy3, x3, y3);
-		c.bezierCurveTo(cx4, cy4, cx4, cy4, x4, y4);
-	}
-	c.stroke();
 }
 
 window.addEventListener("load", function () {
