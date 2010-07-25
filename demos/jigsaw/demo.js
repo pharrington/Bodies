@@ -29,29 +29,28 @@ function vline(ox, height, cells) {
 function calculateEdge(offset, length, cells, callback) {
 	var y = offset,
 	    cellWidth = length / cells,
-	    holeWidth,
 	    xm, x,
 	    dy = cellWidth / 6,
-	    rx, ry,
+	    range = cellWidth / 20, rx, ry, rx4,
 	    x2, y2, x3, y3, x4, y4,
 	    cx1, cy1, cx2, cy2, cx3, cy3, cx4, cy4,
 	    direction;
 
 	for (var i = 0; i < cells; i++) {
-		holeWidth = cellWidth / 4 + random(-5, 5);
-		rx = random(5, 10);
-		ry = random(-2.5, 2.5);
+		rx = random(range, range * 2);
+		ry = random(-range/2, range/2);
+		rx4 = random(-range, range);
 		if (i === cells) {
 			x = x4;
 			x4 = width - 1;
 			y = y4;
 		} else if (i === 0) {
 			x = 0;
-			x4 = x + cellWidth + random(-5, 5);
+			x4 = x + cellWidth + rx4;
 			y = Math.random() * 10 - 5 + offset;
 		} else {
 			x = x4;
-			x4 = i * cellWidth + cellWidth + random(-5, 5);
+			x4 = i * cellWidth + cellWidth + rx4;
 			y = y4;
 		}
 		xm = x + cellWidth / 2;
@@ -62,13 +61,13 @@ function calculateEdge(offset, length, cells, callback) {
 		x3 = xm + cellWidth / 5;
 		y3 = y - dy;
 		y4 = offset + ry;
-		cx1 = x2 + rx + 5;
-		cy1 = y + ry - 2;
+		cx1 = x2 + rx + range;
+		cy1 = y + ry - range / 2.5;
 		cx2 = x2;
 		cy2 = y2 - dy;
 		cx3 = x3;
 		cy3 = cy2;
-		cx4 = x3 - rx - 5;
+		cx4 = x3 - rx - range;
 		cy4 = cy1;
 		callback(x, y, x2, y2, x3, y3, x4, y4,
 			 cx1, cy1, cx2, cy2, cx3, cy3, cx4, cy4);
