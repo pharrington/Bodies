@@ -1,3 +1,6 @@
+function random(low, high) {
+	return Math.random(high - low) + low;
+}
 function hline(oy, width, cells) {
 	var y = oy,
 	    cellWidth = width / cells,
@@ -11,20 +14,20 @@ function hline(oy, width, cells) {
 	    c = $.context;
 	c.beginPath();
 	for (var i = 0; i < cells; i++) {
-		holeWidth = cellWidth / 4 + Math.random() * 10 - 5;
-		rx = Math.random() * 5 + 5;
-		ry = Math.random() * 5 - 2.5;
+		holeWidth = cellWidth / 4 + random(-5, 5);
+		rx = random(5, 10);
+		ry = random(-2.5, 2.5);
 		if (i === cells) {
 			x = x4;
 			x4 = width - 1;
 			y = y4;
 		} else if (i === 0) {
 			x = 0;
-			x4 = x + cellWidth + Math.random() * 10 - 5;
+			x4 = x + cellWidth + random(-5, 5);
 			y = Math.random() * 10 - 5 + oy;
 		} else {
 			x = x4;
-			x4 = i * cellWidth + cellWidth + Math.random() * 10 - 5;
+			x4 = i * cellWidth + cellWidth + random(-5, 5);
 			y = y4;
 		}
 		xm = x + cellWidth / 2;
@@ -103,9 +106,16 @@ function vline(ox, height, cells) {
 }
 
 window.addEventListener("load", function () {
+	var width = 500,
+	    height = 500,
+	    cellSize = 100,
+	    cx = Math.floor(width / cellSize),
+	    cy = Math.floor(height / cellSize);
 	$.init("board", 800, 500);
-	for (var i = 1; i < 10; i++) {
-		hline(80 * i, 800, 10);
-		vline(80 * i, 800, 10);
+	for (var x = 1; x < cx; x++) {
+		hline(cellSize * x, width, cy);
+	}
+	for (var y = 1; y < cy; y++) {
+		vline(cellSize * y, height, cx);
 	}
 }, false);
