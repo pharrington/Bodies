@@ -11,7 +11,7 @@ function hline(oy, width, cells) {
 	    c = $.context;
 	c.beginPath();
 	for (var i = 0; i < cells; i++) {
-		holeWidth = Math.floor(cellWidth / 4) + Math.floor(Math.random() * 10 - 5);
+		holeWidth = cellWidth / 4 + Math.random() * 10 - 5;
 		rx = Math.random() * 5 + 5;
 		ry = Math.random() * 5 - 2.5;
 		if (i === cells) {
@@ -20,11 +20,11 @@ function hline(oy, width, cells) {
 			y = y4;
 		} else if (i === 0) {
 			x = 0;
-			x4 = x + cellWidth + Math.floor(Math.random() * 10 - 5);
-			y = Math.floor(Math.random() * 10 - 5) + oy;
+			x4 = x + cellWidth + Math.random() * 10 - 5;
+			y = Math.random() * 10 - 5 + oy;
 		} else {
 			x = x4;
-			x4 = i * cellWidth + cellWidth + Math.floor(Math.random() * 10 - 5);
+			x4 = i * cellWidth + cellWidth + Math.random() * 10 - 5;
 			y = y4;
 		}
 		xm = x + cellWidth / 2;
@@ -71,11 +71,11 @@ function vline(ox, height, cells) {
 			x = x4;
 		} else if (i === 0) {
 			y = 0;
-			y4 = y + cellHeight + Math.floor(Math.random() * 10 - 5);
-			x = Math.floor(Math.random() * 10 - 5) + ox;
+			y4 = y + cellHeight + Math.random() * 10 - 5;
+			x = Math.random() * 10 - 5 + ox;
 		} else {
 			y = y4;
-			y4 = i * cellHeight + cellHeight + Math.floor(Math.random() * 10 - 5);
+			y4 = i * cellHeight + cellHeight + Math.random() * 10 - 5;
 			x = x4;
 		}
 		ym = y + cellHeight / 2;
