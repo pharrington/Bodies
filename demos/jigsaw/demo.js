@@ -1,3 +1,15 @@
+function Bounds() {};
+Bounds.prototype.left = 10000;
+Bounds.prototype.top = 10000;
+Bounds.prototype.right = 0;
+Bounds.prototype.bottom = 0;
+
+var px = [0], py = [0],
+    pixels, imageData,
+    img = new Image(),
+    imgCanvas, imgContext;
+
+
 function random(low, high) {
 	return Math.random(high - low) + low;
 }
@@ -6,6 +18,7 @@ function hline(oy, width, cells) {
 	var c = $.context;
 	c.beginPath();
 	calculateEdge(oy, width, cells, function (x, y, x2, y2, x3, y3, x4, y4, cx1, cy1, cx2, cy2, cx3, cy3, cx4, cy4) {
+		if (px.length < cells) { px.push(x4) }
 		c.moveTo(x, y);
 		c.bezierCurveTo(cx1, cy1, cx1, cy1, x2, y2);
 		c.bezierCurveTo(cx2, cy2, cx3, cy3, x3, y3);
@@ -18,6 +31,7 @@ function vline(ox, height, cells) {
 	var c = $.context;
 	c.beginPath();
 	calculateEdge(ox, height, cells, function (y, x, y2, x2, y3, x3, y4, x4, cy1, cx1, cy2, cx2, cy3, cx3, cy4, cx4) {
+		if (py.length < cells) { py.push(y4) }
 		c.moveTo(x, y);
 		c.bezierCurveTo(cx1, cy1, cx1, cy1, x2, y2);
 		c.bezierCurveTo(cx2, cy2, cx3, cy3, x3, y3);
@@ -74,17 +88,97 @@ function calculateEdge(offset, length, cells, callback) {
 	}
 }
 
-window.addEventListener("load", function () {
-	var width = 500,
-	    height = 300,
-	    cellSize = 50,
-	    cx = Math.floor(width / cellSize),
-	    cy = Math.floor(height / cellSize);
-	$.init("board", 800, 500);
-	for (var y = 1; y < cy; y++) {
+function floodFill(x, y, coords, bounds) {
+	if (!clear(x, y) || oob(x, y)) { return; };
+	if (x < bounds.left) { bounds.left = x; }
+	else if (x > bounds.right) { bounds.right = x; }
+	if (y < bounds.top) { bounds.top = y; }
+	else if (y > bounds.bottom) { bounds.bottom = y; }
+	set(x, y);
+	coords.push({x: x, y: y});
+	floodFill(x+1, y, coords, bounds);
+	floodFill(x-1, y, coords, bounds);
+	floodFill(x, y+1, coords, bounds);
+	floodFill(x, y-1, coords, bounds);
+}
+
+function oob(x, y) {
+	return (x < 0 || y < 0 || x >= $.width || y >= $.height);
+}
+
+function clear(x, y) {
+	return (pixels[y * $.width * 4 + x * 4 + 3] === 0); // close enough
+}
+
+function set(x, y) {
+	var i = y * $.width * 4 + x * 4;
+	pixels[i] = 0;
+	pixels[i+1] = 0;
+	pixels[i+2] = 0;
+	pixels[i+3] = 255;
+}
+
+function init(width, height, imagePixels) {
+	var cellSize = 65,
+	    cx = width / cellSize,
+	    cy = height / cellSize,
+	    x, y,
+	    piece,
+	    pw, ph,
+	    coords = [],
+	    b = new Bounds();
+
+	$.init("board", width, height);
+	for (y = 1; y < cy; y++) {
 		hline(cellSize * y, width, cx);
 	}
-	for (var x = 1; x < cx; x++) {
+	for (x = 1; x < cx; x++) {
 		vline(cellSize * x, height, cy);
 	}
+	px.push(width);
+	py.push(height);
+
+	imageData = $.context.getImageData(0, 0, width, height);
+	pixels = imageData.data;
+
+	// cut image via jigsaws
+	x = px.length - 4;
+	y = 1;
+	tx = Math.floor((px[x] + px[x+1]) / 2);
+	ty = Math.floor((py[y] + py[y+1]) / 2);
+	floodFill(tx, ty, coords, b);
+	pw = b.right - b.left;
+	ph = b.bottom - b.top;
+	piece = document.createElement("canvas");
+	piece.width = pw;
+	piece.height = ph;
+	var c = piece.getContext("2d");
+	var id = c.getImageData(0, 0, pw, ph);
+	var p = id.data;
+	var ip, ii;
+	var point;
+	console.log(b);
+	for (var i = 0; i < coords.length; i++) {
+		point = coords[i];
+		ii = point.y * img.width * 4 + point.x * 4;
+		ip = (point.y - b.top) * pw * 4 + (point.x - b.left) * 4;
+		for (var j = 0; j < 4; j++) {
+			p[ip + j] = imagePixels[ii + j];
+		}
+	}
+	$.context.putImageData(imageData, 0, 0);
+	$.context.putImageData(id, 0, 0);
+}
+
+
+window.addEventListener("load", function () {
+	img.onload = function () {
+		imgCanvas = document.createElement("canvas");
+		imgCanvas.width = this.width;
+		imgCanvas.height = this.height;
+		imgContext = imgCanvas.getContext("2d");
+		imgContext.drawImage(this, 0, 0);
+		init(this.width, this.height, imgContext.getImageData(0, 0, this.width, this.height).data);
+	};
+	img.src = "padbury.gif";
 }, false);
