@@ -210,6 +210,6 @@ window.addEventListener("load", function () {
 		canvas.height = image.height;
 		context.drawImage(image, 0, 0);
 		data = context.getImageData(0, 0, image.width, image.height);
-		init(image.width, image.height, context.getImageData(0, 0, image.width, image.height));
+		init(image.width, image.height, data);
 	});
 }, false);
