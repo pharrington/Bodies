@@ -1,21 +1,82 @@
+function random(low, high) {
+	return Math.random(high - low) + low;
+}
+
 function Bounds() {};
 Bounds.prototype.left = 10000;
 Bounds.prototype.top = 10000;
 Bounds.prototype.right = 0;
 Bounds.prototype.bottom = 0;
 
-var px = [0], py = [0],
-    pixels, imageData,
-    img = new Image(),
-    imgCanvas, imgContext;
+function Jigsaw(width, height) {
+	var cellSize = 65,
+	    cx = width / cellSize,
+	    cy = height / cellSize,
+	    canvas = document.createElement("canvas");;
 
+	canvas.width = width;
+	canvas.height = height;
+	this.width = width;
+	this.height = height;
+	this.context = canvas.getContext("2d");
 
-function random(low, high) {
-	return Math.random(high - low) + low;
+	for (y = 1; y < cy; y++) {
+		this.hline(cellSize * y, width, cx);
+	}
+	for (x = 1; x < cx; x++) {
+		this.vline(cellSize * x, height, cy);
+	}
+	this.px.push(width);
+	this.py.push(height);
+	this.pixels = this.context.getImageData(0, 0, width, height).data;
 }
 
-function hline(oy, width, cells) {
-	var c = $.context;
+Jigsaw.prototype.px = [0];
+Jigsaw.prototype.py = [0];
+
+Jigsaw.prototype.cutPiece = function (imageData, col, row) {
+	var piece,
+	    coords = [],
+	    b = new Bounds();
+	tx = Math.floor((this.px[col] + this.px[col+1]) / 2);
+	ty = Math.floor((this.py[row] + this.py[row+1]) / 2);
+	this.floodFill(tx, ty, coords, b);
+	return new Piece(imageData, b, coords);
+};
+
+Jigsaw.prototype.floodFill = function (x, y, coords, bounds) {
+	if (!this.isClear(x, y) || this.oob(x, y)) { return; };
+	if (x < bounds.left) { bounds.left = x; }
+	else if (x > bounds.right) { bounds.right = x; }
+	if (y < bounds.top) { bounds.top = y; }
+	else if (y > bounds.bottom) { bounds.bottom = y; }
+	this.set(x, y);
+	coords.push({x: x, y: y});
+	this.floodFill(x+1, y, coords, bounds);
+	this.floodFill(x-1, y, coords, bounds);
+	this.floodFill(x, y+1, coords, bounds);
+	this.floodFill(x, y-1, coords, bounds);
+};
+
+Jigsaw.prototype.oob = function (x, y) {
+	return (x < 0 || y < 0 || x >= this.width || y >= this.height);
+};
+
+Jigsaw.prototype.isClear = function (x, y) {
+	return (this.pixels[y * this.width * 4 + x * 4 + 3] === 0);
+};
+
+Jigsaw.prototype.set = function (x, y) {
+	var i = y * this.width * 4 + x * 4;
+	this.pixels[i] = 0;
+	this.pixels[i+1] = 0;
+	this.pixels[i+2] = 0;
+	this.pixels[i+3] = 255;
+};
+
+Jigsaw.prototype.hline = function (oy, width, cells) {
+	var c = this.context,
+	    px = this.px;
 	c.beginPath();
 	calculateEdge(oy, width, cells, function (x, y, x2, y2, x3, y3, x4, y4, cx1, cy1, cx2, cy2, cx3, cy3, cx4, cy4) {
 		if (px.length < cells) { px.push(x4) }
@@ -25,10 +86,11 @@ function hline(oy, width, cells) {
 		c.bezierCurveTo(cx4, cy4, cx4, cy4, x4, y4);
 	});
 	c.stroke();
-}
+};
 
-function vline(ox, height, cells) {
-	var c = $.context;
+Jigsaw.prototype.vline = function (ox, height, cells) {
+	var c = this.context,
+	    py = this.py;
 	c.beginPath();
 	calculateEdge(ox, height, cells, function (y, x, y2, x2, y3, x3, y4, x4, cy1, cx1, cy2, cx2, cy3, cx3, cy4, cx4) {
 		if (py.length < cells) { py.push(y4) }
@@ -38,7 +100,7 @@ function vline(ox, height, cells) {
 		c.bezierCurveTo(cx4, cy4, cx4, cy4, x4, y4);
 	});
 	c.stroke();
-}
+};
 
 function calculateEdge(offset, length, cells, callback) {
 	var y = offset,
@@ -88,99 +150,45 @@ function calculateEdge(offset, length, cells, callback) {
 	}
 }
 
-function floodFill(x, y, coords, bounds) {
-	if (!clear(x, y) || oob(x, y)) { return; };
-	if (x < bounds.left) { bounds.left = x; }
-	else if (x > bounds.right) { bounds.right = x; }
-	if (y < bounds.top) { bounds.top = y; }
-	else if (y > bounds.bottom) { bounds.bottom = y; }
-	set(x, y);
-	coords.push({x: x, y: y});
-	floodFill(x+1, y, coords, bounds);
-	floodFill(x-1, y, coords, bounds);
-	floodFill(x, y+1, coords, bounds);
-	floodFill(x, y-1, coords, bounds);
-}
+function init(width, height, imageData) {
+	var jigsaw = new Jigsaw(width, height),
+	    piece;
 
-function oob(x, y) {
-	return (x < 0 || y < 0 || x >= $.width || y >= $.height);
-}
-
-function clear(x, y) {
-	return (pixels[y * $.width * 4 + x * 4 + 3] === 0);
-}
-
-function set(x, y) {
-	var i = y * $.width * 4 + x * 4;
-	pixels[i] = 0;
-	pixels[i+1] = 0;
-	pixels[i+2] = 0;
-	pixels[i+3] = 255;
-}
-
-function init(width, height, imagePixels) {
-	var cellSize = 65,
-	    cx = width / cellSize,
-	    cy = height / cellSize,
-	    x, y,
-	    piece,
-	    pw, ph,
-	    coords = [],
-	    b = new Bounds();
-
-	$.init("board", width, height);
-	for (y = 1; y < cy; y++) {
-		hline(cellSize * y, width, cx);
-	}
-	for (x = 1; x < cx; x++) {
-		vline(cellSize * x, height, cy);
-	}
-	px.push(width);
-	py.push(height);
-
-	imageData = $.context.getImageData(0, 0, width, height);
-	pixels = imageData.data;
+	$.init("board", 800, 600);
 
 	// cut image via jigsaws
-	x = px.length - 4;
-	y = 1;
-	tx = Math.floor((px[x] + px[x+1]) / 2);
-	ty = Math.floor((py[y] + py[y+1]) / 2);
-	floodFill(tx, ty, coords, b);
-	c.putImageData(id, 0, 0);
-	$.context.drawImage(piece, 0, 0);
+	piece = jigsaw.cutPiece(imageData, 4, 1);
+	piece.sprite.moveTo(0, 0);
+	piece.sprite.draw();
 }
 
-function Piece(image, bounds, coords) {
-	this.canvas = document.createElement("canvas");
-	this.context = piece.getContext("2d");
-	var id = c.getImageData(0, 0, pw, ph);
-	var p = id.data;
-	var ip, ii;
-	var point;
+function Piece(imageData, bounds, coords) {
+	this.sprite = new $.Sprite(bounds.right - bounds.left + 1, bounds.bottom - bounds.top + 1);
+	this.sprite.updatePixels(function (width, height, pixels) {
+		var pieceOffset, imageOffset,
+		    point;
 
-	pw = b.right - b.left + 1;
-	ph = b.bottom - b.top + 1;
-	piece.width = pw;
-	piece.height = ph;
-	for (var i = 0; i < coords.length; i++) {
-		point = coords[i];
-		ii = point.y * img.width * 4 + point.x * 4;
-		ip = (point.y - b.top) * pw * 4 + (point.x - b.left) * 4;
-		for (var j = 0; j < 4; j++) {
-			p[ip + j] = imagePixels[ii + j];
+		for (var i = 0; i < coords.length; i++) {
+			point = coords[i];
+			imageOffset = point.y * imageData.width * 4 + point.x * 4;
+			pieceOffset = (point.y - bounds.top) * width * 4 + (point.x - bounds.left) * 4;
+			for (var j = 0; j < 4; j++) {
+				pixels[pieceOffset + j] = imageData.data[imageOffset + j];
+			}
 		}
-	}
+	});
 }
 
 window.addEventListener("load", function () {
+	var img = new Image();
 	img.onload = function () {
-		imgCanvas = document.createElement("canvas");
+		var imgCanvas = document.createElement("canvas"),
+		    imgContext;
 		imgCanvas.width = this.width;
 		imgCanvas.height = this.height;
 		imgContext = imgCanvas.getContext("2d");
 		imgContext.drawImage(this, 0, 0);
-		init(this.width, this.height, imgContext.getImageData(0, 0, this.width, this.height).data);
+		init(this.width, this.height, imgContext.getImageData(0, 0, this.width, this.height));
 	};
 	img.src = "padbury.gif";
 }, false);
