@@ -168,7 +168,7 @@ function calculateEdge(offset, length, cells, callback) {
 
 function init(width, height, imageData) {
 	var jigsaw = new Jigsaw(width, height),
-	    piece;
+	    pieces = [], piece;
 
 	// cut image via jigsaws
 	for (var y = 0; y < jigsaw.rows; y++) {
@@ -176,8 +176,10 @@ function init(width, height, imageData) {
 			piece = jigsaw.cutPiece(imageData, x, y);
 			piece.sprite.moveTo(100*x, 100*y);
 			piece.sprite.draw();
+			//pieces.push(piece);
 		}
 	}
+	console.log(pieces.length);
 }
 
 function Piece(imageData, bounds, coords) {
@@ -199,15 +201,15 @@ function Piece(imageData, bounds, coords) {
 
 window.addEventListener("load", function () {
 	$.init("board", 1000, 700);
-	var img = new Image();
-	img.onload = function () {
-		var imgCanvas = document.createElement("canvas"),
-		    imgContext;
-		imgCanvas.width = this.width;
-		imgCanvas.height = this.height;
-		imgContext = imgCanvas.getContext("2d");
-		imgContext.drawImage(this, 0, 0);
-		init(this.width, this.height, imgContext.getImageData(0, 0, this.width, this.height));
-	};
-	img.src = "padbury.gif";
+	$.loadImage("puzzle", "padbury.gif");
+	$.loaded(function () {
+		var image = $.resource("puzzle"),
+		    canvas = document.createElement("canvas"),
+		    context = canvas.getContext("2d");
+		canvas.width = image.width;
+		canvas.height = image.height;
+		context.drawImage(image, 0, 0);
+		context.getImageData(0, 0, image.width, image.height);
+		init(image.width, image.height, context.getImageData(0, 0, image.width, image.height));
+	});
 }, false);
