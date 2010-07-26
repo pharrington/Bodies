@@ -2,29 +2,43 @@ function random(low, high) {
 	return Math.random(high - low) + low;
 }
 
-function Bounds() {};
+function Bounds(left, top, right, bottom) {
+	this.left = left;
+	this.top = top;
+	this.right = right;
+	this.bottom = bottom;
+};
 Bounds.prototype.left = 10000;
 Bounds.prototype.top = 10000;
 Bounds.prototype.right = 0;
 Bounds.prototype.bottom = 0;
 
 function Jigsaw(width, height) {
-	var cellSize = 65,
+	var cellSize = 80,
+	    hSize, vSize,
 	    cx = width / cellSize,
-	    cy = height / cellSize,
+	    cy  = height / cellSize,
 	    canvas = document.createElement("canvas");;
+
+	this.canvas = canvas;
+	/* Try to divide rows and columns evenly, as close to the given cell size as possible */
+	hSize = width / Math.ceil(cx);
+	vSize = height / Math.ceil(cy);
+	this.columns = cx = Math.ceil(width / hSize);
+	this.rows = cy = Math.ceil(height / vSize);
 
 	canvas.width = width;
 	canvas.height = height;
 	this.width = width;
 	this.height = height;
 	this.context = canvas.getContext("2d");
+	this.context.strokeRect(0, 0, width, height);
 
 	for (y = 1; y < cy; y++) {
-		this.hline(cellSize * y, width, cx);
+		this.hline(vSize * y, width, cx);
 	}
 	for (x = 1; x < cx; x++) {
-		this.vline(cellSize * x, height, cy);
+		this.vline(hSize * x, height, cy);
 	}
 	this.px.push(width);
 	this.py.push(height);
@@ -33,19 +47,23 @@ function Jigsaw(width, height) {
 
 Jigsaw.prototype.px = [0];
 Jigsaw.prototype.py = [0];
+Jigsaw.prototype.rows = 0;
+Jigsaw.prototype.columns = 0;
 
 Jigsaw.prototype.cutPiece = function (imageData, col, row) {
 	var piece,
 	    coords = [],
-	    b = new Bounds();
+	    b;
 	tx = Math.floor((this.px[col] + this.px[col+1]) / 2);
 	ty = Math.floor((this.py[row] + this.py[row+1]) / 2);
+	b = new Bounds(tx, ty, tx, ty);
+
 	this.floodFill(tx, ty, coords, b);
 	return new Piece(imageData, b, coords);
 };
 
 Jigsaw.prototype.floodFill = function (x, y, coords, bounds) {
-	if (!this.isClear(x, y) || this.oob(x, y)) { return; };
+	if (this.oob(x, y) || !this.isClear(x, y)) { return; };
 	if (x < bounds.left) { bounds.left = x; }
 	else if (x > bounds.right) { bounds.right = x; }
 	if (y < bounds.top) { bounds.top = y; }
@@ -63,7 +81,7 @@ Jigsaw.prototype.oob = function (x, y) {
 };
 
 Jigsaw.prototype.isClear = function (x, y) {
-	return (this.pixels[y * this.width * 4 + x * 4 + 3] === 0);
+	return this.pixels[y * this.width * 4 + x * 4 + 3] === 0;
 };
 
 Jigsaw.prototype.set = function (x, y) {
@@ -116,9 +134,9 @@ function calculateEdge(offset, length, cells, callback) {
 		rx = random(range, range * 2);
 		ry = random(-range/2, range/2);
 		rx4 = random(-range, range);
-		if (i === cells) {
+		if (i === cells - 1) {
 			x = x4;
-			x4 = width - 1;
+			x4 = length;
 			y = y4;
 		} else if (i === 0) {
 			x = 0;
@@ -150,16 +168,19 @@ function calculateEdge(offset, length, cells, callback) {
 	}
 }
 
+var d;
 function init(width, height, imageData) {
 	var jigsaw = new Jigsaw(width, height),
 	    piece;
 
-	$.init("board", 800, 600);
-
 	// cut image via jigsaws
-	piece = jigsaw.cutPiece(imageData, 4, 1);
-	piece.sprite.moveTo(0, 0);
-	piece.sprite.draw();
+	for (var y = 0; y < jigsaw.rows; y++) {
+		for (var x = 0; x < jigsaw.columns; x++) {
+			piece = jigsaw.cutPiece(imageData, x, y);
+			piece.sprite.moveTo(100*x, 100*y);
+			piece.sprite.draw();
+		}
+	}
 }
 
 function Piece(imageData, bounds, coords) {
@@ -180,6 +201,7 @@ function Piece(imageData, bounds, coords) {
 }
 
 window.addEventListener("load", function () {
+	$.init("board", 1000, 700);
 	var img = new Image();
 	img.onload = function () {
 		var imgCanvas = document.createElement("canvas"),
