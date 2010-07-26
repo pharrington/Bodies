@@ -176,10 +176,9 @@ function init(width, height, imageData) {
 			piece = jigsaw.cutPiece(imageData, x, y);
 			piece.sprite.moveTo(100*x, 100*y);
 			piece.sprite.draw();
-			//pieces.push(piece);
+			pieces.push(piece);
 		}
 	}
-	console.log(pieces.length);
 }
 
 function Piece(imageData, bounds, coords) {
@@ -205,11 +204,12 @@ window.addEventListener("load", function () {
 	$.loaded(function () {
 		var image = $.resource("puzzle"),
 		    canvas = document.createElement("canvas"),
-		    context = canvas.getContext("2d");
+		    context = canvas.getContext("2d"),
+		    data;
 		canvas.width = image.width;
 		canvas.height = image.height;
 		context.drawImage(image, 0, 0);
-		context.getImageData(0, 0, image.width, image.height);
+		data = context.getImageData(0, 0, image.width, image.height);
 		init(image.width, image.height, context.getImageData(0, 0, image.width, image.height));
 	});
 }, false);
