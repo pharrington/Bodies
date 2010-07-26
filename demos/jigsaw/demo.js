@@ -14,13 +14,12 @@ Bounds.prototype.right = 0;
 Bounds.prototype.bottom = 0;
 
 function Jigsaw(width, height) {
-	var cellSize = 80,
+	var cellSize = 70,
 	    hSize, vSize,
 	    cx = width / cellSize,
 	    cy  = height / cellSize,
 	    canvas = document.createElement("canvas");;
 
-	this.canvas = canvas;
 	/* Try to divide rows and columns evenly, as close to the given cell size as possible */
 	hSize = width / Math.ceil(cx);
 	vSize = height / Math.ceil(cy);
@@ -32,7 +31,6 @@ function Jigsaw(width, height) {
 	this.width = width;
 	this.height = height;
 	this.context = canvas.getContext("2d");
-	this.context.strokeRect(0, 0, width, height);
 
 	for (y = 1; y < cy; y++) {
 		this.hline(vSize * y, width, cx);
@@ -168,7 +166,6 @@ function calculateEdge(offset, length, cells, callback) {
 	}
 }
 
-var d;
 function init(width, height, imageData) {
 	var jigsaw = new Jigsaw(width, height),
 	    piece;
