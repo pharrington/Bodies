@@ -107,7 +107,7 @@ function oob(x, y) {
 }
 
 function clear(x, y) {
-	return (pixels[y * $.width * 4 + x * 4 + 3] === 0); // close enough
+	return (pixels[y * $.width * 4 + x * 4 + 3] === 0);
 }
 
 function set(x, y) {
@@ -147,17 +147,22 @@ function init(width, height, imagePixels) {
 	tx = Math.floor((px[x] + px[x+1]) / 2);
 	ty = Math.floor((py[y] + py[y+1]) / 2);
 	floodFill(tx, ty, coords, b);
-	pw = b.right - b.left;
-	ph = b.bottom - b.top;
-	piece = document.createElement("canvas");
-	piece.width = pw;
-	piece.height = ph;
-	var c = piece.getContext("2d");
+	c.putImageData(id, 0, 0);
+	$.context.drawImage(piece, 0, 0);
+}
+
+function Piece(image, bounds, coords) {
+	this.canvas = document.createElement("canvas");
+	this.context = piece.getContext("2d");
 	var id = c.getImageData(0, 0, pw, ph);
 	var p = id.data;
 	var ip, ii;
 	var point;
-	console.log(b);
+
+	pw = b.right - b.left + 1;
+	ph = b.bottom - b.top + 1;
+	piece.width = pw;
+	piece.height = ph;
 	for (var i = 0; i < coords.length; i++) {
 		point = coords[i];
 		ii = point.y * img.width * 4 + point.x * 4;
@@ -166,10 +171,7 @@ function init(width, height, imagePixels) {
 			p[ip + j] = imagePixels[ii + j];
 		}
 	}
-	$.context.putImageData(imageData, 0, 0);
-	$.context.putImageData(id, 0, 0);
 }
-
 
 window.addEventListener("load", function () {
 	img.onload = function () {
