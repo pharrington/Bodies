@@ -35,11 +35,15 @@ $.Sprite = function (imageName, height) {
 
 	if (image !== undefined) {
 		this.oContext.drawImage(image, 0, 0);
-		this.context.drawImage(image, this.dx, this.dy);
-		this.imageData = this.context.getImageData(0, 0, this.width, this.height);
-		this.pixels = this.imageData.data;
+		copyPixels.call(this);
 	}
 };
+
+function copyPixels() {
+	this.context.drawImage(this.oCanvas, this.dx, this.dy);
+	this.imageData = this.context.getImageData(0, 0, this.width, this.height);
+	this.pixels = this.imageData.data;
+}
 
 $.Sprite.prototype.x = null;
 $.Sprite.prototype.y = null;
@@ -88,6 +92,19 @@ $.Sprite.prototype.rotateTo = function (angle) {
 $.Sprite.prototype.rotate = function (angle) {
 	this.rotation += angle;
 	this.rotateTo(this.rotation);
+};
+
+$.Sprite.prototype.updatePixels = function (update) {
+	var context = this.oContext,
+	    data = context.getImageData(0, 0, this.oWidth, this.oHeight),
+	    pixels = data.data;
+	update(this.oWidth, this.oHeight, pixels);
+	context.putImageData(data, 0, 0);
+	if (this.rotation) {
+		this.rotateTo(this.rotation);
+	} else {
+		copyPixels.call(this);
+	}
 };
 
 $.Sprite.prototype.draw = function () {
