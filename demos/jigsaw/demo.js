@@ -1,5 +1,5 @@
 function random(low, high) {
-	return Math.random(high - low) + low;
+	return Math.random() * (high - low) + low;
 }
 
 function distance(x1, y1, x2, y2) {
@@ -400,7 +400,7 @@ function init(width, height, imageData) {
 	for (var y = 0; y < jigsaw.rows; y++) {
 		for (var x = 0; x < jigsaw.columns; x++) {
 			piece = jigsaw.cutPiece(imageData, x, y);
-			piece.moveTo(120*x, 120*y);
+			piece.moveTo(random(0, $.width - piece.width), random(0, $.height - piece.height));
 			piece.draw();
 			pieces.push(piece);
 		}
@@ -412,9 +412,9 @@ window.addEventListener("load", function () {
 	var pieces, ctree, selectedPiece,
 	    stack = new DrawStack();
 
-	$.init("board", 1000, 700);
+	$.init("board", 800, 600);
 	$.loadImage("puzzle", "padbury.gif");
-	ctree = new $.Quadtree(-250, -250, 1250, 950);
+	ctree = new $.Quadtree(-250, -250, 1050, 850);
 
 	$.mouseDown(function (x, y) {
 		var point = new Rect(x, y, x+1, y+1),
