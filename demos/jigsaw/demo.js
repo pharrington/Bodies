@@ -194,22 +194,23 @@ function Piece(imageData, bounds, coords) {
 			}
 		}
 	});
-	//this.sprite.piece = this;
 }
 
-function redraw(pieces) {
+function redraw(unselected, selected) {
 	$.context.clearRect(0, 0, $.width, $.height);
-	for (var i = 0; i < pieces.length; i++) {
-		pieces[i].sprite.draw();
-	}
+	unselected.draw();
+	selected.draw();
 }
 
 window.addEventListener("load", function () {
-	var pieces, ctree, selectedPiece;
+	var pieces, ctree, selectedPiece,
+	    unselected, selected;
 
 	$.init("board", 1000, 700);
 	$.loadImage("puzzle", "padbury.gif");
-	ctree = new $.Quadtree(0, 0, 1000, 700);
+	unselected = new $.Group();
+	selected = new $.Group();
+	ctree = new $.Quadtree(-250, -250, 1250, 950);
 
 	$.mouseDown(function (x, y) {
 		var regions = [],
@@ -224,7 +225,8 @@ window.addEventListener("load", function () {
 					selectedPiece = items[j];
 					selectedPiece.mx = x - selectedPiece.x;
 					selectedPiece.my = y - selectedPiece.y;
-					console.log(selectedPiece);
+					unselected.remove(selectedPiece);
+					selected.insert(selectedPiece);
 					break;
 				}
 			}
@@ -233,15 +235,24 @@ window.addEventListener("load", function () {
 
 	$.mouseUp(function (x, y) {
 		if (!selectedPiece) { return; }
+		selected.remove(selectedPiece);
+		unselected.insert(selectedPiece);
 		selectedPiece.mx = 0;
 		selectedPiece.my = 0;
 		selectedPiece = null;
 	});
 
 	$.mouseMove(function (x, y) {
+		var node;
+
 		if (!selectedPiece) { return; }
+		node = selectedPiece.collisionNode;
+		if (!node.contains(selectedPiece)) {
+			node.deleteItem(selectedPiece);
+			ctree.insert(selectedPiece);
+		}
 		selectedPiece.moveTo(x - selectedPiece.mx, y - selectedPiece.my);
-		redraw(pieces);
+		redraw(unselected, selected);
 	});
 
 	$.loaded(function () {
@@ -256,6 +267,7 @@ window.addEventListener("load", function () {
 		pieces = init(image.width, image.height, data);
 		for (var i = 0; i < pieces.length; i++) {
 			ctree.insert(pieces[i].sprite);
+			unselected.insert(pieces[i].sprite);
 		}
 	});
 }, false);
