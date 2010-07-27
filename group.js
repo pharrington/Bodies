@@ -13,8 +13,10 @@ $.Group.prototype.remove = function (item) {
 };
 
 $.Group.prototype.draw = function () {
-	var items = this.items;
-	for (var i = items.length - 1; i; --i) {
+	var items = this.items,
+	    i = items.length;
+	while (--i) {
 		items[i].draw();
 	}
+	items[i].draw();
 };
