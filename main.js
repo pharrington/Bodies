@@ -63,6 +63,21 @@ Bodies = $ = {
 		$.callbacks.refresh(elapsed);
 	},
 	
+	testPoint: function (point, sprite) {
+	    	var sLeft = sprite.left - sprite.dx, sRight = sprite.right - sprite.dx,
+	    	    sTop = sprite.top - sprite.dy, sBottom = sprite.bottom - sprite.dy;
+	
+		if (point.x < sLeft ||
+	    	    point.x > sRight ||
+	    	    point.y < sTop ||
+	    	    point.y > sBottom) {
+			return false;
+		}
+
+		offset = (((point.y - sTop + sprite.imageOffsetY) * sprite.imageWidth) + (point.x - sLeft + sprite.imageOffsetX)) * 4 + 3;
+		return sprite.pixels[offset] === 255;
+	},
+
 	testCollision: function (s1, s2) {
 		if (s1 === s2) { return false; }
 		var left,
@@ -188,14 +203,51 @@ Bodies = $ = {
 	},
 
 	mouseMove: function (callback) {
-		if (!$.callbacks.mousemove) {
-			$.callbacks.mousemove = [];
-		}
-		$.callbacks.mousemove.push(callback);
+		addMouseCallback("mousemove", callback);
+	},
+
+	mouseDown: function (callback) {
+		addMouseCallback("mousedown", callback);
+	},
+
+	mouseUp: function (callback) {
+		addMouseCallback("mouseup", callback);
 	}
 };
 
+function addMouseCallback(event, callback) {
+	if (!$.callbacks[event]) {
+		$.callbacks[event] = [];
+	}
+	$.callbacks[event].push(callback);
+}
+
 function attachEvents() {
+	/* superstitious use of code duplication right here */
+	$.canvas.addEventListener("mousedown", function (e) {
+		var point = $.coordinates(e),
+	    	callbacks;
+	
+		if ($.callbacks.mousedown) {
+			callbacks = $.callbacks.mousedown;
+			for (var i = 0; i < callbacks.length; i++) {
+				callbacks[i](point.x, point.y);
+			}
+		}
+	}, false);
+
+	$.canvas.addEventListener("mouseup", function (e) {
+		var point = $.coordinates(e),
+	    	callbacks;
+	
+		if ($.callbacks.mouseup) {
+			callbacks = $.callbacks.mouseup;
+			for (var i = 0; i < callbacks.length; i++) {
+				callbacks[i](point.x, point.y);
+			}
+		}
+	}, false);
+
 	$.canvas.addEventListener("mousemove", function (e) {
 		var point = $.coordinates(e),
 	    	mmCallbacks;

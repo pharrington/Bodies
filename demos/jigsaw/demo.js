@@ -2,19 +2,15 @@ function random(low, high) {
 	return Math.random(high - low) + low;
 }
 
-function Bounds(left, top, right, bottom) {
-	this.left = left;
-	this.top = top;
+function Rect(left, top, right, bottom) {
+	this.x = left;
+	this.y = top;
 	this.right = right;
 	this.bottom = bottom;
 };
-Bounds.prototype.left = 10000;
-Bounds.prototype.top = 10000;
-Bounds.prototype.right = 0;
-Bounds.prototype.bottom = 0;
 
 function Jigsaw(width, height) {
-	var cellSize = 70,
+	var cellSize = 100,
 	    hSize, vSize,
 	    cx = width / cellSize,
 	    cy  = height / cellSize,
@@ -54,7 +50,7 @@ Jigsaw.prototype.cutPiece = function (imageData, col, row) {
 	    b;
 	tx = Math.floor((this.px[col] + this.px[col+1]) / 2);
 	ty = Math.floor((this.py[row] + this.py[row+1]) / 2);
-	b = new Bounds(tx, ty, tx, ty);
+	b = new Rect(tx, ty, tx, ty);
 
 	this.floodFill(tx, ty, coords, b);
 	return new Piece(imageData, b, coords);
@@ -62,9 +58,9 @@ Jigsaw.prototype.cutPiece = function (imageData, col, row) {
 
 Jigsaw.prototype.floodFill = function (x, y, coords, bounds) {
 	if (this.oob(x, y) || !this.isClear(x, y)) { return; };
-	if (x < bounds.left) { bounds.left = x; }
+	if (x < bounds.x) { bounds.x = x; }
 	else if (x > bounds.right) { bounds.right = x; }
-	if (y < bounds.top) { bounds.top = y; }
+	if (y < bounds.y) { bounds.y = y; }
 	else if (y > bounds.bottom) { bounds.bottom = y; }
 	this.set(x, y);
 	coords.push({x: x, y: y});
@@ -174,15 +170,17 @@ function init(width, height, imageData) {
 	for (var y = 0; y < jigsaw.rows; y++) {
 		for (var x = 0; x < jigsaw.columns; x++) {
 			piece = jigsaw.cutPiece(imageData, x, y);
-			piece.sprite.moveTo(100*x, 100*y);
+			piece.sprite.moveTo(120*x, 120*y);
 			piece.sprite.draw();
 			pieces.push(piece);
 		}
 	}
+
+	return pieces;
 }
 
 function Piece(imageData, bounds, coords) {
-	this.sprite = new $.Sprite(bounds.right - bounds.left + 1, bounds.bottom - bounds.top + 1);
+	this.sprite = new $.Sprite(bounds.right - bounds.x + 1, bounds.bottom - bounds.y + 1);
 	this.sprite.updatePixels(function (width, height, pixels) {
 		var pieceOffset, imageOffset,
 		    point;
@@ -190,17 +188,62 @@ function Piece(imageData, bounds, coords) {
 		for (var i = 0; i < coords.length; i++) {
 			point = coords[i];
 			imageOffset = point.y * imageData.width * 4 + point.x * 4;
-			pieceOffset = (point.y - bounds.top) * width * 4 + (point.x - bounds.left) * 4;
+			pieceOffset = (point.y - bounds.y) * width * 4 + (point.x - bounds.x) * 4;
 			for (var j = 0; j < 4; j++) {
 				pixels[pieceOffset + j] = imageData.data[imageOffset + j];
 			}
 		}
 	});
+	//this.sprite.piece = this;
+}
+
+function redraw(pieces) {
+	$.context.clearRect(0, 0, $.width, $.height);
+	for (var i = 0; i < pieces.length; i++) {
+		pieces[i].sprite.draw();
+	}
 }
 
 window.addEventListener("load", function () {
+	var pieces, ctree, selectedPiece;
+
 	$.init("board", 1000, 700);
 	$.loadImage("puzzle", "padbury.gif");
+	ctree = new $.Quadtree(0, 0, 1000, 700);
+
+	$.mouseDown(function (x, y) {
+		var regions = [],
+		    point = new Rect(x, y, x+1, y+1),
+		    items;
+		ctree.queryNodes(point, regions);
+		for (var i = 0; i < regions.length; i++) {
+			items = regions[i].items;
+			for (var j = 0; j < items.length; j++) {
+				if ($.testPoint(point, items[j])) {
+					// select this piece
+					selectedPiece = items[j];
+					selectedPiece.mx = x - selectedPiece.x;
+					selectedPiece.my = y - selectedPiece.y;
+					console.log(selectedPiece);
+					break;
+				}
+			}
+		}
+	});
+
+	$.mouseUp(function (x, y) {
+		if (!selectedPiece) { return; }
+		selectedPiece.mx = 0;
+		selectedPiece.my = 0;
+		selectedPiece = null;
+	});
+
+	$.mouseMove(function (x, y) {
+		if (!selectedPiece) { return; }
+		selectedPiece.moveTo(x - selectedPiece.mx, y - selectedPiece.my);
+		redraw(pieces);
+	});
+
 	$.loaded(function () {
 		var image = $.resource("puzzle"),
 		    canvas = document.createElement("canvas"),
@@ -210,6 +253,9 @@ window.addEventListener("load", function () {
 		canvas.height = image.height;
 		context.drawImage(image, 0, 0);
 		data = context.getImageData(0, 0, image.width, image.height);
-		init(image.width, image.height, data);
+		pieces = init(image.width, image.height, data);
+		for (var i = 0; i < pieces.length; i++) {
+			ctree.insert(pieces[i].sprite);
+		}
 	});
 }, false);
