@@ -242,12 +242,22 @@ function Piece(imageData, bounds, coords, edges, col, row) {
 
 Piece.prototype = new $.Sprite;
 Piece.prototype.constructor = Piece;
-Piece.prototype.moveTo = function (x, y) {
+Piece.prototype.moveTo = function (x, y, independent) {
+	var dx, dy,
+	    group;
+
 	this.edges.x = this.edgeOffsets.x + x;
 	this.edges.y = this.edgeOffsets.y + y;
 	this.edges.right = this.edgeOffsets.right + x;
 	this.edges.bottom = this.edgeOffsets.bottom + y;
-	$.Sprite.prototype.moveTo.call(this, x, y);
+	if (this.group && !independent) {
+		group = this.group;
+		dx = x - this.x;
+		dy = y - this.y
+		group.moveTo(group.x + dx, group.y + dy);
+	} else {
+		$.Sprite.prototype.moveTo.call(this, x, y);
+	}
 };
 
 Piece.prototype.relationTo = function (other) {
@@ -256,6 +266,45 @@ Piece.prototype.relationTo = function (other) {
 	if (this.row === other.row + 1) { return "below"; }
 	if (this.column === other.column - 1) { return "left"; }
 	if (this.column === other.column + 1) { return "right"; }
+};
+
+Piece.prototype.groupWith = function (other) {
+	var newGroup;
+
+	if (!this.group) {
+		if (other.group) { other.group.insert(this); }
+		else { newGroup = new PieceGroup([this, other]); }
+	} else {
+		if (other.group) { other.group.merge(this.group); }
+		else { this.group.insert(other); }
+	}
+};
+
+function PieceGroup(pieces) {
+	$.Group.call(this, pieces);
+	this.resetBounds();
+}
+
+PieceGroup.prototype = new $.Group;
+PieceGroup.prototype.constructor = PieceGroup;
+
+PieceGroup.prototype.insert = function (piece) {
+	$.Group.prototype.insert.call(this, piece);
+	this.resetBounds();
+};
+
+PieceGroup.prototype.resetBounds = function () {
+	var piece,
+	    pieces = this.items;
+
+	this.x = pieces[0].x;
+	this.y = pieces[0].y;
+
+	for (var i = 1; i < pieces.length; i++) {
+		piece = pieces[i];
+		this.x = Math.min(this.x, piece.x);
+		this.y = Math.min(this.y, piece.y);
+	}
 };
 
 /* not really a stack, just a convenient way to draw the most recently selected pieces last */
@@ -287,37 +336,58 @@ function redraw(stack) {
 	stack.draw();
 }
 
+function groupSnap(group, tree) {
+	var others;
+	group.items.forEach(function (item) {
+		others = tree.queryItems(item).filter(function (piece) {
+			return (group.items.indexOf(piece) === -1);
+		});
+		snap(item, others);
+	});
+}
+
 function snap(piece, others) {
 	var pe = piece.edges, oe,
 	    other,
-	    threshold = 10;
+	    threshold = 10,
+	    snapped;
 	for (var i = 0, l = others.length; i < l; i++) {
+		snapped = false;
 		other = others[i];
 		oe = other.edges;
 		switch (piece.relationTo(other)) {
 		case "above":
 			if (distance(pe.x, pe.bottom, oe.x, oe.y) < threshold) {
+				snapped = true;
 				piece.moveTo(oe.x - piece.edgeOffsets.x,
 					     oe.y - piece.edgeOffsets.bottom);
 			}
 			break;
 		case "below":
 			if (distance(pe.x, pe.y, oe.x, oe.bottom) < threshold) {
+				snapped = true;
 				piece.moveTo(oe.x - piece.edgeOffsets.x,
 					     oe.bottom - piece.edgeOffsets.y);
 			}
 			break;
 		case "left":
 			if (distance(pe.right, pe.y, oe.x, oe.y) < threshold) {
+				snapped = true;
 				piece.moveTo(oe.x - piece.edgeOffsets.right,
 					     oe.y - piece.edgeOffsets.y);
 			}
 			break;
 		case "right":
 			if (distance(pe.x, pe.y, oe.right, oe.y) < threshold) {
+				snapped = true;
 				piece.moveTo(oe.right - piece.edgeOffsets.x,
 					     oe.y - piece.edgeOffsets.y);
 			}
+			break;
+		}
+		if (snapped) {
+			piece.groupWith(other);
+			return;
 		}
 	}
 }
@@ -348,7 +418,8 @@ window.addEventListener("load", function () {
 
 	$.mouseDown(function (x, y) {
 		var point = new Rect(x, y, x+1, y+1),
-		    items;
+		    items,
+		    moveable;
 		items = ctree.queryItems(point);
 		items.sort(function (a, b) {
 			var items = stack.items;
@@ -367,7 +438,15 @@ window.addEventListener("load", function () {
 	});
 
 	$.mouseUp(function (x, y) {
+		var group;
 		if (!selectedPiece) { return; }
+		group = selectedPiece.group;
+		if (group) {
+			groupSnap(group, ctree);
+		} else {
+			snap(selectedPiece, ctree.queryItems(selectedPiece));
+		}
+		redraw(stack);
 		selectedPiece.mx = 0;
 		selectedPiece.my = 0;
 		selectedPiece = null;
@@ -383,7 +462,6 @@ window.addEventListener("load", function () {
 			ctree.insert(selectedPiece);
 		}
 		selectedPiece.moveTo(x - selectedPiece.mx, y - selectedPiece.my);
-		snap(selectedPiece, ctree.queryItems(selectedPiece));
 		redraw(stack);
 	});
 
