@@ -19,8 +19,8 @@ function Jigsaw(width, height) {
 	/* Try to divide rows and columns evenly, as close to the given cell size as possible */
 	hSize = width / Math.ceil(cx);
 	vSize = height / Math.ceil(cy);
-	this.columns = cx = Math.ceil(width / hSize);
-	this.rows = cy = Math.ceil(height / vSize);
+	this.columns = Math.ceil(width / hSize);
+	this.rows = Math.ceil(height / vSize);
 
 	canvas.width = width;
 	canvas.height = height;
@@ -29,10 +29,10 @@ function Jigsaw(width, height) {
 	this.context = canvas.getContext("2d");
 
 	for (y = 1; y < cy; y++) {
-		this.hline(vSize * y, width, cx);
+		this.hline(vSize * y, width, this.columns);
 	}
 	for (x = 1; x < cx; x++) {
-		this.vline(hSize * x, height, cy);
+		this.vline(hSize * x, height, this.rows);
 	}
 	this.px.push(width);
 	this.py.push(height);
@@ -196,47 +196,64 @@ function Piece(imageData, bounds, coords) {
 	});
 }
 
-function redraw(unselected, selected) {
+/* not really a stack, just a convenient way to draw the most recently selected pieces last */
+function DrawStack() {
+	this.items = [];
+}
+
+DrawStack.prototype.moveToTop = function (item) {
+	var items = this.items,
+	    index = items.indexOf(item);
+	if (index === -1 || (index === items.length - 1)) { return; }
+	items.splice(index, 1);
+	items.push(item);
+};
+
+DrawStack.prototype.push = function (item) {
+	this.items.push(item);
+};
+
+DrawStack.prototype.draw = function () {
+	var items = this.items;
+	for (var i = 0; i < items.length; i++) {
+		items[i].draw();
+	}
+};
+function redraw(stack) {
 	$.context.clearRect(0, 0, $.width, $.height);
-	unselected.draw();
-	selected.draw();
+	stack.draw();
 }
 
 window.addEventListener("load", function () {
 	var pieces, ctree, selectedPiece,
-	    unselected, selected;
+	    stack = new DrawStack();
 
 	$.init("board", 1000, 700);
 	$.loadImage("puzzle", "padbury.gif");
-	unselected = new $.Group();
-	selected = new $.Group();
 	ctree = new $.Quadtree(-250, -250, 1250, 950);
 
 	$.mouseDown(function (x, y) {
-		var regions = [],
-		    point = new Rect(x, y, x+1, y+1),
+		var point = new Rect(x, y, x+1, y+1),
 		    items;
-		ctree.queryNodes(point, regions);
-		for (var i = 0; i < regions.length; i++) {
-			items = regions[i].items;
-			for (var j = 0; j < items.length; j++) {
-				if ($.testPoint(point, items[j])) {
-					// select this piece
-					selectedPiece = items[j];
-					selectedPiece.mx = x - selectedPiece.x;
-					selectedPiece.my = y - selectedPiece.y;
-					unselected.remove(selectedPiece);
-					selected.insert(selectedPiece);
-					break;
-				}
+		items = ctree.queryItems(point);
+		items.sort(function (a, b) {
+			var items = stack.items;
+			return items.indexOf(a) > items.indexOf(b) ? -1 : 1
+		});
+		for (var j = 0; j < items.length; j++) {
+			if ($.testPoint(point, items[j])) {
+				// select this piece
+				selectedPiece = items[j];
+				selectedPiece.mx = x - selectedPiece.x;
+				selectedPiece.my = y - selectedPiece.y;
+				stack.moveToTop(selectedPiece);
+				break;
 			}
 		}
 	});
 
 	$.mouseUp(function (x, y) {
 		if (!selectedPiece) { return; }
-		selected.remove(selectedPiece);
-		unselected.insert(selectedPiece);
 		selectedPiece.mx = 0;
 		selectedPiece.my = 0;
 		selectedPiece = null;
@@ -252,7 +269,7 @@ window.addEventListener("load", function () {
 			ctree.insert(selectedPiece);
 		}
 		selectedPiece.moveTo(x - selectedPiece.mx, y - selectedPiece.my);
-		redraw(unselected, selected);
+		redraw(stack);
 	});
 
 	$.loaded(function () {
@@ -267,7 +284,7 @@ window.addEventListener("load", function () {
 		pieces = init(image.width, image.height, data);
 		for (var i = 0; i < pieces.length; i++) {
 			ctree.insert(pieces[i].sprite);
-			unselected.insert(pieces[i].sprite);
+			stack.push(pieces[i].sprite);
 		}
 	});
 }, false);
