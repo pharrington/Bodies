@@ -1,4 +1,5 @@
 $.Sprite = function (imageName, height) {
+	if (imageName === undefined) { return; }
 	var image,
 	    maxLength;
 
