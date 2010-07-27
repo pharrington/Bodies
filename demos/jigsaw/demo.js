@@ -35,6 +35,7 @@ function Jigsaw(width, height) {
 	this.px = [0];
 	this.py = [0];
 	this.context = canvas.getContext("2d");
+	this.context.lineWidth = 1;
 
 	for (y = 1; y < cy; y++) {
 		this.hline(vSize * y, width, this.columns);
@@ -80,10 +81,14 @@ Jigsaw.prototype.floodFill = function (x, y, coords, bounds) {
 		for (rx = range.x; rx <= range.right; rx++) {
 			// go up
 			ry = range.y - 1;
-			if (this.isClear(rx, ry)) { this.lineFill(rx, ry, fillQueue, coords); }
+			if (this.isClear(rx, ry)) {
+				this.lineFill(rx, ry, fillQueue, coords);
+			}
 			// go down
 			ry = range.y + 1;
-			if (this.isClear(rx, ry)) { this.lineFill(rx, ry, fillQueue, coords); }
+			if (this.isClear(rx, ry)) {
+				this.lineFill(rx, ry, fillQueue, coords);
+			}
 		}
 	}
 };
@@ -100,6 +105,7 @@ Jigsaw.prototype.lineFill = function (x, y, queue, coords) {
 		dx--;
 	}
 	range.x = dx + 1;
+
 	// go right
 	dx = x + 1;
 	while (true) {
@@ -109,6 +115,7 @@ Jigsaw.prototype.lineFill = function (x, y, queue, coords) {
 		dx++;
 	}
 	range.right = dx - 1;
+
 	if ((range.x !== x + 1) && (range.right !== x)) {
 		range.y = y;
 		queue.push(range);
@@ -120,7 +127,7 @@ Jigsaw.prototype.oob = function (x, y) {
 };
 
 Jigsaw.prototype.isClear = function (x, y) {
-	return this.pixels[y * this.width * 4 + x * 4 + 3] === 0;
+	return this.pixels[y * this.width * 4 + x * 4 + 3] < 100;
 };
 
 Jigsaw.prototype.set = function (x, y) {
