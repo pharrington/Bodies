@@ -431,7 +431,13 @@ window.addEventListener("load", function () {
 				selectedPiece = items[j];
 				selectedPiece.mx = x - selectedPiece.x;
 				selectedPiece.my = y - selectedPiece.y;
-				stack.moveToTop(selectedPiece);
+				if (selectedPiece.group) {
+					selectedPiece.group.items.forEach(function (piece) {
+						stack.moveToTop(piece);
+					});
+				} else {
+					stack.moveToTop(selectedPiece);
+				}
 				break;
 			}
 		}
