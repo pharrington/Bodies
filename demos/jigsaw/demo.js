@@ -35,7 +35,6 @@ function Jigsaw(width, height) {
 	this.px = [0];
 	this.py = [0];
 	this.context = canvas.getContext("2d");
-	this.context.lineWidth = 1;
 
 	for (y = 1; y < cy; y++) {
 		this.hline(vSize * y, width, this.columns);
