@@ -2,6 +2,12 @@ function random(low, high) {
 	return Math.random(high - low) + low;
 }
 
+function distance(x1, y1, x2, y2) {
+	var dx2 = (x1 - x2) * (x1 - x2),
+	    dy2 = (y1 - y2) * (y1 - y2);
+	return Math.sqrt(dx2 + dy2);
+}
+
 function Rect(left, top, right, bottom) {
 	this.x = left;
 	this.y = top;
@@ -26,6 +32,8 @@ function Jigsaw(width, height) {
 	canvas.height = height;
 	this.width = width;
 	this.height = height;
+	this.px = [0];
+	this.py = [0];
 	this.context = canvas.getContext("2d");
 
 	for (y = 1; y < cy; y++) {
@@ -39,8 +47,6 @@ function Jigsaw(width, height) {
 	this.pixels = this.context.getImageData(0, 0, width, height).data;
 }
 
-Jigsaw.prototype.px = [0];
-Jigsaw.prototype.py = [0];
 Jigsaw.prototype.rows = 0;
 Jigsaw.prototype.columns = 0;
 
@@ -53,7 +59,11 @@ Jigsaw.prototype.cutPiece = function (imageData, col, row) {
 	b = new Rect(tx, ty, tx, ty);
 
 	this.floodFill(tx, ty, coords, b);
-	return new Piece(imageData, b, coords);
+	piece = new Piece(imageData, b, coords);
+	piece.edges = new Rect(this.px[col], this.py[row], this.px[col+1], this.py[row+1]);
+	piece.column = col;
+	piece.row = row;
+	return piece;
 };
 
 Jigsaw.prototype.floodFill = function (x, y, coords, bounds) {
@@ -170,8 +180,8 @@ function init(width, height, imageData) {
 	for (var y = 0; y < jigsaw.rows; y++) {
 		for (var x = 0; x < jigsaw.columns; x++) {
 			piece = jigsaw.cutPiece(imageData, x, y);
-			piece.sprite.moveTo(120*x, 120*y);
-			piece.sprite.draw();
+			piece.moveTo(120*x, 120*y);
+			piece.draw();
 			pieces.push(piece);
 		}
 	}
@@ -180,8 +190,8 @@ function init(width, height, imageData) {
 }
 
 function Piece(imageData, bounds, coords) {
-	this.sprite = new $.Sprite(bounds.right - bounds.x + 1, bounds.bottom - bounds.y + 1);
-	this.sprite.updatePixels(function (width, height, pixels) {
+	$.Sprite.call(this, bounds.right - bounds.x + 1, bounds.bottom - bounds.y + 1);
+	$.Sprite.prototype.updatePixels.call(this, function (width, height, pixels) {
 		var pieceOffset, imageOffset,
 		    point;
 
@@ -195,6 +205,9 @@ function Piece(imageData, bounds, coords) {
 		}
 	});
 }
+
+Piece.prototype = new $.Sprite;
+Piece.prototype.constructor = Piece;
 
 /* not really a stack, just a convenient way to draw the most recently selected pieces last */
 function DrawStack() {
@@ -219,9 +232,33 @@ DrawStack.prototype.draw = function () {
 		items[i].draw();
 	}
 };
+
 function redraw(stack) {
 	$.context.clearRect(0, 0, $.width, $.height);
 	stack.draw();
+}
+
+function snap(piece, others) {
+	var pe = piece.edges, oe,
+	    other,
+	    threshold = 10;
+	for (var i = 0, l = others.length; i < l; i++) {
+		other = others[i];
+		oe = other.edges;
+		if (piece.row === other.row - 1) { // above
+			if (distance(pe.left, pe.bottom, oe.left, oe.top) < threshold) {
+			}
+		} else if (piece.row === other.row + 1) { // below
+			if (distance(pe.left, pe.top, oe.left, oe.bottom) < threshold) {
+			}
+		} else if (piece.column === other.column - 1) { // left
+			if (distance(pe.right, pe.top, oe.left, oe.top) < threshold) {
+			}
+		} else if (piece.column === other.column + 1) { // right
+			if (distance(pe.left, pe.top, oe.right, oe.top) < threshold) {
+			}
+		}
+	}
 }
 
 window.addEventListener("load", function () {
@@ -269,6 +306,7 @@ window.addEventListener("load", function () {
 			ctree.insert(selectedPiece);
 		}
 		selectedPiece.moveTo(x - selectedPiece.mx, y - selectedPiece.my);
+		snap(selectedPiece, ctree.queryItems(selectedPiece));
 		redraw(stack);
 	});
 
@@ -283,8 +321,8 @@ window.addEventListener("load", function () {
 		data = context.getImageData(0, 0, image.width, image.height);
 		pieces = init(image.width, image.height, data);
 		for (var i = 0; i < pieces.length; i++) {
-			ctree.insert(pieces[i].sprite);
-			stack.push(pieces[i].sprite);
+			ctree.insert(pieces[i]);
+			stack.push(pieces[i]);
 		}
 	});
 }, false);
