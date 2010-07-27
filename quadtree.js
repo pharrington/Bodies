@@ -108,6 +108,16 @@ $.Quadtree.prototype.queryNodes = function (rect, nodes) {
 	}
 };
 
+$.Quadtree.prototype.queryItems = function (rect) {
+	var nodes = [],
+	    items = [];
+	this.queryNodes(rect, nodes);
+	for (var i = 0, l = nodes.length; i < l; ++i) {
+		Array.prototype.push.apply(items, nodes[i].items);
+	}
+	return items;
+};
+
 $.Quadtree.prototype.contains = function (x, y, r, b) {
 	return ((x >= this.left) &&
 		(r <= this.right) &&
