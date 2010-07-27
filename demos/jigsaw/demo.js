@@ -53,17 +53,15 @@ Jigsaw.prototype.columns = 0;
 Jigsaw.prototype.cutPiece = function (imageData, col, row) {
 	var piece,
 	    coords = [],
-	    b;
+	    bounds,
+	    edges;
 	tx = Math.floor((this.px[col] + this.px[col+1]) / 2);
 	ty = Math.floor((this.py[row] + this.py[row+1]) / 2);
-	b = new Rect(tx, ty, tx, ty);
+	bounds = new Rect(tx, ty, tx, ty);
 
-	this.floodFill(tx, ty, coords, b);
-	piece = new Piece(imageData, b, coords);
-	piece.edges = new Rect(this.px[col], this.py[row], this.px[col+1], this.py[row+1]);
-	piece.column = col;
-	piece.row = row;
-	return piece;
+	this.floodFill(tx, ty, coords, bounds);
+	edges = new Rect(this.px[col], this.py[row], this.px[col+1], this.py[row+1]);
+	return new Piece(imageData, bounds, coords, edges, col, row);
 };
 
 Jigsaw.prototype.floodFill = function (x, y, coords, bounds) {
@@ -189,7 +187,17 @@ function init(width, height, imageData) {
 	return pieces;
 }
 
-function Piece(imageData, bounds, coords) {
+function Piece(imageData, bounds, coords, edges, col, row) {
+	/* find the offset of the pieces corners */
+	this.edgeOffsets = edges;
+	this.edgeOffsets.x -= bounds.x;
+	this.edgeOffsets.y -= bounds.y;
+	this.edgeOffsets.right -= bounds.x;
+	this.edgeOffsets.bottom -= bounds.y;
+	this.edges = new Rect;
+	this.row = row;
+	this.column = col;
+
 	$.Sprite.call(this, bounds.right - bounds.x + 1, bounds.bottom - bounds.y + 1);
 	$.Sprite.prototype.updatePixels.call(this, function (width, height, pixels) {
 		var pieceOffset, imageOffset,
@@ -208,6 +216,21 @@ function Piece(imageData, bounds, coords) {
 
 Piece.prototype = new $.Sprite;
 Piece.prototype.constructor = Piece;
+Piece.prototype.moveTo = function (x, y) {
+	this.edges.x = this.edgeOffsets.x + x;
+	this.edges.y = this.edgeOffsets.y + y;
+	this.edges.right = this.edgeOffsets.right + x;
+	this.edges.bottom = this.edgeOffsets.bottom + y;
+	$.Sprite.prototype.moveTo.call(this, x, y);
+};
+
+Piece.prototype.relationTo = function (other) {
+	if (this.row !== other.row && this.column !== other.column) { return; }
+	if (this.row === other.row - 1) { return "above"; }
+	if (this.row === other.row + 1) { return "below"; }
+	if (this.column === other.column - 1) { return "left"; }
+	if (this.column === other.column + 1) { return "right"; }
+};
 
 /* not really a stack, just a convenient way to draw the most recently selected pieces last */
 function DrawStack() {
@@ -244,18 +267,31 @@ function snap(piece, others) {
 	    threshold = 10;
 	for (var i = 0, l = others.length; i < l; i++) {
 		other = others[i];
+		if (!$.testCollision(piece, other)) { continue; }
 		oe = other.edges;
-		if (piece.row === other.row - 1) { // above
-			if (distance(pe.left, pe.bottom, oe.left, oe.top) < threshold) {
+		switch (piece.relationTo(other)) {
+		case "above":
+			if (distance(pe.x, pe.bottom, oe.x, oe.y) < threshold) {
+				piece.moveTo(oe.x - piece.edgeOffsets.x,
+					     oe.y - piece.edgeOffsets.bottom);
 			}
-		} else if (piece.row === other.row + 1) { // below
-			if (distance(pe.left, pe.top, oe.left, oe.bottom) < threshold) {
+			break;
+		case "below":
+			if (distance(pe.x, pe.y, oe.x, oe.bottom) < threshold) {
+				piece.moveTo(oe.x - piece.edgeOffsets.x,
+					     oe.bottom - piece.edgeOffsets.y);
 			}
-		} else if (piece.column === other.column - 1) { // left
-			if (distance(pe.right, pe.top, oe.left, oe.top) < threshold) {
+			break;
+		case "left":
+			if (distance(pe.right, pe.y, oe.x, oe.y) < threshold) {
+				piece.moveTo(oe.x - piece.edgeOffsets.right,
+					     oe.y - piece.edgeOffsets.y);
 			}
-		} else if (piece.column === other.column + 1) { // right
-			if (distance(pe.left, pe.top, oe.right, oe.top) < threshold) {
+			break;
+		case "right":
+			if (distance(pe.x, pe.y, oe.right, oe.y) < threshold) {
+				piece.moveTo(oe.right - piece.edgeOffsets.x,
+					     oe.y - piece.edgeOffsets.y);
 			}
 		}
 	}
