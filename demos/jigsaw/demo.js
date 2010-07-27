@@ -267,7 +267,6 @@ function snap(piece, others) {
 	    threshold = 10;
 	for (var i = 0, l = others.length; i < l; i++) {
 		other = others[i];
-		if (!$.testCollision(piece, other)) { continue; }
 		oe = other.edges;
 		switch (piece.relationTo(other)) {
 		case "above":
