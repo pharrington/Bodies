@@ -65,17 +65,54 @@ Jigsaw.prototype.cutPiece = function (imageData, col, row) {
 };
 
 Jigsaw.prototype.floodFill = function (x, y, coords, bounds) {
-	if (this.oob(x, y) || !this.isClear(x, y)) { return; };
-	if (x < bounds.x) { bounds.x = x; }
-	else if (x > bounds.right) { bounds.right = x; }
-	if (y < bounds.y) { bounds.y = y; }
-	else if (y > bounds.bottom) { bounds.bottom = y; }
-	this.set(x, y);
-	coords.push({x: x, y: y});
-	this.floodFill(x+1, y, coords, bounds);
-	this.floodFill(x-1, y, coords, bounds);
-	this.floodFill(x, y+1, coords, bounds);
-	this.floodFill(x, y-1, coords, bounds);
+	var fillQueue = [],
+	    range,
+	    rx, ry;
+
+	this.lineFill(x, y, fillQueue, coords);
+	while (fillQueue.length) {
+		range = fillQueue.shift();
+		if (range.x < bounds.x) { bounds.x = range.x; }
+		else if (range.right > bounds.right) { bounds.right = range.right; }
+		if (range.y < bounds.y) { bounds.y = range.y; }
+		else if (range.y > bounds.bottom) { bounds.bottom = range.y; }
+
+		for (rx = range.x; rx <= range.right; rx++) {
+			// go up
+			ry = range.y - 1;
+			if (this.isClear(rx, ry)) { this.lineFill(rx, ry, fillQueue, coords); }
+			// go down
+			ry = range.y + 1;
+			if (this.isClear(rx, ry)) { this.lineFill(rx, ry, fillQueue, coords); }
+		}
+	}
+};
+
+Jigsaw.prototype.lineFill = function (x, y, queue, coords) {
+	var range = new Rect,
+	    dx;
+	// go left
+	dx = x;
+	while (true) {
+		if (this.oob(dx, y) || !this.isClear(dx, y)) { break; };
+		this.set(dx, y);
+		coords.push({x: dx, y: y});
+		dx--;
+	}
+	range.x = dx + 1;
+	// go right
+	dx = x + 1;
+	while (true) {
+		if (this.oob(dx, y) || !this.isClear(dx, y)) { break; };
+		this.set(dx, y);
+		coords.push({x: dx, y: y});
+		dx++;
+	}
+	range.right = dx - 1;
+	if ((range.x !== x + 1) && (range.right !== x)) {
+		range.y = y;
+		queue.push(range);
+	}
 };
 
 Jigsaw.prototype.oob = function (x, y) {
@@ -88,10 +125,10 @@ Jigsaw.prototype.isClear = function (x, y) {
 
 Jigsaw.prototype.set = function (x, y) {
 	var i = y * this.width * 4 + x * 4;
-	this.pixels[i] = 0;
-	this.pixels[i+1] = 0;
-	this.pixels[i+2] = 0;
-	this.pixels[i+3] = 255;
+	this.pixels[i++] = 0;
+	this.pixels[i++] = 0;
+	this.pixels[i++] = 0;
+	this.pixels[i] = 255;
 };
 
 Jigsaw.prototype.hline = function (oy, width, cells) {
@@ -168,23 +205,6 @@ function calculateEdge(offset, length, cells, callback) {
 		callback(x, y, x2, y2, x3, y3, x4, y4,
 			 cx1, cy1, cx2, cy2, cx3, cy3, cx4, cy4);
 	}
-}
-
-function init(width, height, imageData) {
-	var jigsaw = new Jigsaw(width, height),
-	    pieces = [], piece;
-
-	// cut image via jigsaws
-	for (var y = 0; y < jigsaw.rows; y++) {
-		for (var x = 0; x < jigsaw.columns; x++) {
-			piece = jigsaw.cutPiece(imageData, x, y);
-			piece.moveTo(120*x, 120*y);
-			piece.draw();
-			pieces.push(piece);
-		}
-	}
-
-	return pieces;
 }
 
 function Piece(imageData, bounds, coords, edges, col, row) {
@@ -294,6 +314,22 @@ function snap(piece, others) {
 			}
 		}
 	}
+}
+
+function init(width, height, imageData) {
+	var jigsaw = new Jigsaw(width, height),
+	    pieces = [], piece;
+
+	// cut image via jigsaws
+	for (var y = 0; y < jigsaw.rows; y++) {
+		for (var x = 0; x < jigsaw.columns; x++) {
+			piece = jigsaw.cutPiece(imageData, x, y);
+			piece.moveTo(120*x, 120*y);
+			piece.draw();
+			pieces.push(piece);
+		}
+	}
+	return pieces;
 }
 
 window.addEventListener("load", function () {
