@@ -1,3 +1,14 @@
+// the first step to any program is to define the global variables
+var Configuration = {
+	width: 800,
+	height: 600,
+	image: "padbury.gif",
+	bgcolor: "#aaa"
+},
+    ctree,
+    selectedPiece,
+    stack;
+
 function random(low, high) {
 	return Math.random() * (high - low) + low;
 }
@@ -331,8 +342,12 @@ DrawStack.prototype.draw = function () {
 	}
 };
 
-function redraw(stack) {
-	$.context.clearRect(0, 0, $.width, $.height);
+function clear() {
+	$.context.fillRect(0, 0, $.width, $.height);
+}
+
+function redraw() {
+	clear();
 	stack.draw();
 }
 
@@ -392,11 +407,10 @@ function snap(piece, others) {
 	}
 }
 
-function init(width, height, imageData) {
+function cutImage(width, height, imageData) {
 	var jigsaw = new Jigsaw(width, height),
 	    pieces = [], piece;
 
-	// cut image via jigsaws
 	for (var y = 0; y < jigsaw.rows; y++) {
 		for (var x = 0; x < jigsaw.columns; x++) {
 			piece = jigsaw.cutPiece(imageData, x, y);
@@ -408,15 +422,36 @@ function init(width, height, imageData) {
 	return pieces;
 }
 
-window.addEventListener("load", function () {
-	var pieces, ctree, selectedPiece,
-	    stack = new DrawStack();
+function init() {
+	var image = $.resource("puzzle"),
+	    canvas = document.createElement("canvas"),
+	    context = canvas.getContext("2d"),
+	    data,
+	    pieces;
 
-	$.init("board", 800, 600);
+	clear();
+	canvas.width = image.width;
+	canvas.height = image.height;
+	context.drawImage(image, 0, 0);
+	data = context.getImageData(0, 0, image.width, image.height);
+	pieces = cutImage(image.width, image.height, data);
+	ctree = new $.Quadtree(-250, -250, Configuration.width + 250, Configuration.height + 250);
+	stack = new DrawStack();
+	for (var i = 0; i < pieces.length; i++) {
+		ctree.insert(pieces[i]);
+		stack.push(pieces[i]);
+	}
+}
+
+window.addEventListener("load", function () {
+	$.init("board", Configuration.width, Configuration.height);
+	$.context.fillStyle = Configuration.bgcolor;
+	$.context.fillRect(0, 0, $.width, $.height);
 	$.loadImage("puzzle", "padbury.gif");
-	ctree = new $.Quadtree(-250, -250, 1050, 850);
 
 	$.mouseDown(function (x, y) {
+		if (selectedPiece) { return; }
+
 		var point = new Rect(x, y, x+1, y+1),
 		    items,
 		    moveable;
@@ -438,7 +473,8 @@ window.addEventListener("load", function () {
 				} else {
 					stack.moveToTop(selectedPiece);
 				}
-				break;
+				redraw();
+				return;
 			}
 		}
 	});
@@ -452,38 +488,55 @@ window.addEventListener("load", function () {
 		} else {
 			snap(selectedPiece, ctree.queryItems(selectedPiece));
 		}
-		redraw(stack);
+		redraw();
 		selectedPiece.mx = 0;
 		selectedPiece.my = 0;
 		selectedPiece = null;
 	});
 
 	$.mouseMove(function (x, y) {
-		var node;
+		var node,
+		    group,
+		    pieces;
 
 		if (!selectedPiece) { return; }
-		node = selectedPiece.collisionNode;
-		if (!node.contains(selectedPiece)) {
-			node.deleteItem(selectedPiece);
-			ctree.insert(selectedPiece);
-		}
-		selectedPiece.moveTo(x - selectedPiece.mx, y - selectedPiece.my);
-		redraw(stack);
+
+		group = selectedPiece.group;
+		pieces = group ? group.items : [selectedPiece];
+		pieces.forEach(function (piece) {
+			node = selectedPiece.collisionNode;
+			if (!node.contains(selectedPiece)) {
+				node.deleteItem(selectedPiece);
+				ctree.insert(selectedPiece);
+			}
+			selectedPiece.moveTo(x - selectedPiece.mx, y - selectedPiece.my);
+		});
+		redraw();
 	});
 
-	$.loaded(function () {
-		var image = $.resource("puzzle"),
-		    canvas = document.createElement("canvas"),
-		    context = canvas.getContext("2d"),
-		    data;
-		canvas.width = image.width;
-		canvas.height = image.height;
-		context.drawImage(image, 0, 0);
-		data = context.getImageData(0, 0, image.width, image.height);
-		pieces = init(image.width, image.height, data);
-		for (var i = 0; i < pieces.length; i++) {
-			ctree.insert(pieces[i]);
-			stack.push(pieces[i]);
+	$.loaded(init);
+
+	document.getElementById("reset").addEventListener("click", function () {
+		stack.items.length = 0;
+		init();
+	}, false);
+
+	document.getElementById("pictures").addEventListener("click", function (e) {
+		var preview,
+		    name,
+		    ext,
+		    element,
+		    previous;
+		if (preview = e.target.src) {
+			element = e.target;
+			previous = document.querySelector(".selected");
+			if (element !== previous) {
+				previous.className = previous.className.replace(/\s*\bselected\b\s*/, "");
+				element.className += " selected";
+				name = preview.slice(preview.lastIndexOf("/")+1, preview.lastIndexOf("-sq"));
+				ext = preview.slice(preview.lastIndexOf("."));
+				$.loadImage("puzzle", name + ext);
+			}
 		}
-	});
+	}, false);
 }, false);
