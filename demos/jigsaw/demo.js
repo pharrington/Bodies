@@ -450,8 +450,6 @@ window.addEventListener("load", function () {
 	$.loadImage("puzzle", "padbury.gif");
 
 	$.mouseDown(function (x, y) {
-		if (selectedPiece) { return; }
-
 		var point = new Rect(x, y, x+1, y+1),
 		    items,
 		    moveable;
@@ -474,7 +472,7 @@ window.addEventListener("load", function () {
 					stack.moveToTop(selectedPiece);
 				}
 				redraw();
-				return;
+				break;
 			}
 		}
 	});
