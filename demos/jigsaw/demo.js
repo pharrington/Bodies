@@ -552,10 +552,7 @@ window.addEventListener("load", function () {
 
 	$.loaded(init);
 
-	document.getElementById("reset").addEventListener("click", function () {
-		stack.items.length = 0;
-		init();
-	}, false);
+	document.getElementById("reset").addEventListener("click", init, false);
 
 	document.getElementById("pictures").addEventListener("click", function (e) {
 		var preview,
