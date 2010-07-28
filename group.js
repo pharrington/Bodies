@@ -40,11 +40,13 @@ $.Group.prototype.moveTo = function (x, y) {
 	    items = this.items,
 	    item;
 
-	this.x = x;
-	this.y = y;
+	this.x = this.right = x;
+	this.y = this.bottom = y;
 	for (var i = 0; i < items.length; i++) {
 		item = items[i];
 		item.moveTo(item.x + dx, item.y + dy, true);
+		this.right = Math.max(this.right, item.right);
+		this.bottom = Math.max(this.bottom, item.bottom);
 	}
 };
 
