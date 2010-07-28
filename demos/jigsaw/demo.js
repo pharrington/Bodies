@@ -310,11 +310,15 @@ PieceGroup.prototype.resetBounds = function () {
 
 	this.x = pieces[0].x;
 	this.y = pieces[0].y;
+	this.right = pieces[0].right;
+	this.bottom = pieces[0].bottom;
 
 	for (var i = 1; i < pieces.length; i++) {
 		piece = pieces[i];
 		this.x = Math.min(this.x, piece.x);
 		this.y = Math.min(this.y, piece.y);
+		this.right = Math.max(this.right, piece.right);
+		this.bottom = Math.max(this.bottom, piece.bottom);
 	}
 };
 
@@ -443,6 +447,26 @@ function init() {
 	}
 }
 
+function redrawRegion(clip) {
+	$.context.save();
+	$.context.beginPath();
+	$.context.rect(clip.x, clip.y, clip.right - clip.x, clip.bottom - clip.y);
+	$.context.clip();
+	$.context.fill();
+	ctree.queryItems(clip).sort(function (a, b) {
+		var items = stack.items;
+		return items.indexOf(a) < items.indexOf(b) ? -1 : 1;
+	}).filter(function (piece) {
+		return !(piece.x > clip.right ||
+			 piece.right < clip.left ||
+			 piece.y > clip.bottom ||
+			 piece.bottom < clip.top);
+	}).forEach(function (piece) {
+		piece.draw();
+	});
+	$.context.restore();
+}
+
 window.addEventListener("load", function () {
 	$.init("board", Configuration.width, Configuration.height);
 	$.context.fillStyle = Configuration.bgcolor;
@@ -495,12 +519,22 @@ window.addEventListener("load", function () {
 	$.mouseMove(function (x, y) {
 		var node,
 		    group,
-		    pieces;
+		    pieces,
+		    dirty,
+		    clip;
 
 		if (!selectedPiece) { return; }
 
+		clip = new Rect;
 		group = selectedPiece.group;
 		pieces = group ? group.items : [selectedPiece];
+		dirty = group ? group : selectedPiece;
+
+		clip.x = dirty.x;
+		clip.y = dirty.y;
+		clip.right = dirty.right + 1;
+		clip.bottom = dirty.bottom + 1;
+		
 		pieces.forEach(function (piece) {
 			node = selectedPiece.collisionNode;
 			if (!node.contains(selectedPiece)) {
@@ -509,7 +543,11 @@ window.addEventListener("load", function () {
 			}
 			selectedPiece.moveTo(x - selectedPiece.mx, y - selectedPiece.my);
 		});
-		redraw();
+		clip.x = Math.min(clip.x, dirty.x) - 1;
+		clip.y = Math.min(clip.y, dirty.y) - 1;
+		clip.right = Math.max(clip.right, dirty.right) + 1;
+		clip.bottom = Math.max(clip.bottom, dirty.bottom) + 1;
+		redrawRegion(clip);
 	});
 
 	$.loaded(init);
