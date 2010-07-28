@@ -529,7 +529,6 @@ window.addEventListener("load", function () {
 		group = selectedPiece.group;
 		pieces = group ? group.items : [selectedPiece];
 		dirty = group ? group : selectedPiece;
-
 		clip.x = dirty.x;
 		clip.y = dirty.y;
 		clip.right = dirty.right + 1;
@@ -547,6 +546,7 @@ window.addEventListener("load", function () {
 		clip.y = Math.min(clip.y, dirty.y) - 1;
 		clip.right = Math.max(clip.right, dirty.right) + 1;
 		clip.bottom = Math.max(clip.bottom, dirty.bottom) + 1;
+
 		redrawRegion(clip);
 	});
 
