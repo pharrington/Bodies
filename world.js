@@ -5,6 +5,8 @@ $.World = function (imageName, resolution) {
 	    offset,
 	    width, height;
 
+	this.left = 0;
+	this.top = 0;
 	this.width = image.width;
 	this.height = image.height;
 	this.scanWidth = image.width * 4;
