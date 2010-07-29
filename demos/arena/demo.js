@@ -7,6 +7,7 @@ function drawRect(rect) {
 
 var ship,
     arena,
+    bg,
     viewport,
     width = 900, height = 600,
     px = 0, py = 0,
@@ -15,7 +16,8 @@ var ship,
 
 
 function redraw(context) {
-	context.clearRect(0, 0, width, height);
+	//context.clearRect(0, 0, width, height);
+	bg.draw();
 	viewport.draw(arena);
 	viewport.draw(ship);
 	/*
@@ -43,7 +45,8 @@ addEventListener("load", function () {
 	});
 
 	Bodies.loadImage("moth", "moth-small.png");
-	Bodies.loadImage("ring", "outline.gif");
+	Bodies.loadImage("ring", "outline.png");
+	Bodies.loadImage("bg", "grid.png");
 	Bodies.loaded(function () {
 		ship = new Bodies.Sprite("moth");
 		ship.moveTo(1000, 1000);
@@ -55,6 +58,7 @@ addEventListener("load", function () {
 		ship.rotateTo(angle + Math.PI / 2);
 
 		arena = new Bodies.World("ring", 20);
+		bg = new Bodies.TiledBackground("bg", width, height);
 		arena.insert(ship);
 		viewport = new Bodies.Viewport(width, height, arena.width, arena.height);
 	});
@@ -112,6 +116,7 @@ addEventListener("load", function () {
 		vy = ship.vy * dt;
 		ship.moveTo(ship.x + vx, ship.y + vy);
 		viewport.scrollTo(ship.x, ship.y);
+		bg.moveTo(viewport.left, viewport.top);
 		angle = Math.atan2(py - (ship.y - viewport.top + 12), px - (ship.x - viewport.left + 40));
 		ship.rotateTo(angle + Math.PI / 2);
 		arena.update();
