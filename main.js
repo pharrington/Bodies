@@ -60,7 +60,7 @@ Bodies = $ = {
 		var now = new Date().getTime(),
 		    elapsed = time ? now - time : 0;
 		time = now;
-		$.callbacks.refresh(elapsed);
+		$.callbacks.refresh(elapsed, now);
 	},
 	
 	testPoint: function (point, sprite) {

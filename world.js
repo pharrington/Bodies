@@ -42,6 +42,7 @@ $.World = function (imageName, resolution) {
 				region.imageHeight = image.height;
 				region.scanWidth = this.scanWidth;
 				region.pixels = this.pixels;
+				region.wall = true;
 				this.quadtree.insert(region);
 			}
 		}
@@ -57,13 +58,26 @@ $.World.prototype.insert = function (item) {
 	this.quadtree.insert(item);
 };
 
-$.World.prototype.update = function (callback) {
+$.World.prototype.deleteItem = function (item) {
+	var actors = this.actors,
+	    index = actors.indexOf(item);
+
+	if (index !== -1) {
+		actors.splice(index, 1);
+		item.collisionNode.deleteItem(item);
+	}
+};
+
+$.World.prototype.update = function (callback, filter) {
 	var actor,
 	    region,
 	    collisionRegions,
-	    collisions;
-              	for (var i = 0; i < this.actors.length; i++) {
-			actor = this.actors[i];
+	    collisions,
+	    actors = this.actors;
+
+	if (!filter) { filter = returnTrue; }
+             	for (var i = 0; i < actors.length; ++i) {
+			actor = actors[i];
 			region = actor.collisionNode;
 			collisions = [];
 			collisionRegions = [];
@@ -76,23 +90,25 @@ $.World.prototype.update = function (callback) {
                       	}
 
                       	// collide
-                      	for (var j = 0; j < collisionRegions.length; j++ ) {
+                      	for (var j = 0, regionsLength = collisionRegions.length; j < regionsLength; ++j) {
                               	var r = collisionRegions[j];
-                              	for (var k = 0; k < r.items.length; k++) {
+                              	for (var k = 0, itemsLength = r.items.length; k < itemsLength; ++k) {
                                       	var other = r.items[k];
-                                      	if ($.testCollision(actor, other)) {
+                                      	if (filter(actor, other) && $.testCollision(actor, other)) {
 						if (collisions.indexOf(other) === -1) {
 							collisions[collisions.length] = other;
 						}
                                       	}
                               	}
                       	}
-		if (collisions.length && actor.eject) {
-			eject(actor, collisions);
+		if (collisions.length) {
+			if (actor.eject) { eject(actor, collisions); }
+			else if (callback) { callback(actor, collisions); }
 		}
 	}
 };
 
+function returnTrue() { return true; }
 function eject(actor, walls) {
 	var oldX, oldY,
    		normalX, normalY,
