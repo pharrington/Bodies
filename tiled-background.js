@@ -38,7 +38,7 @@ $.TiledBackground.prototype.draw = function () {
 	    l = this.left,
 	    t = this.top,
 	    r = this.right,
-	    b = this.bottom,
+	    b = this.bottom;
 
 	c.drawImage(img, -l, -t);
 	if (l) { c.drawImage(img, r, -t); }
