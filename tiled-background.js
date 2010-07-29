@@ -39,11 +39,9 @@ $.TiledBackground.prototype.draw = function () {
 	    t = this.top,
 	    r = this.right,
 	    b = this.bottom,
-	    rw = $.width - r,
-	    rh = $.height - b;
 
-	c.drawImage(img, l, t, r, b, 0, 0, r, b);
-	if (l) { c.drawImage(img, 0, t, rw, b, r, 0, rw, b); }
-	if (t) { c.drawImage(img, l, 0, r, rh, 0, b, r, rh); }
-	if (l && t) { c.drawImage(img, 0, 0, rw, rh, r, b, rw, rh); }
+	c.drawImage(img, -l, -t);
+	if (l) { c.drawImage(img, r, -t); }
+	if (t) { c.drawImage(img, -l, b); }
+	if (l && t) { c.drawImage(img, r, b); }
 };
