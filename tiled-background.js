@@ -15,6 +15,10 @@ $.TiledBackground = function (resource, width, height) {
 	this.canvas.width = this.width;
 	this.canvas.height = this.height;
 	this.context = this.canvas.getContext("2d");
+	this.buffer = document.createElement("canvas");
+	this.buffer.width = $.width;
+	this.buffer.height = $.height;
+	this.bContext = this.buffer.getContext("2d");
  
 	this.context.fillStyle = "#000";
 	this.context.fillRect(0, 0, this.width, this.height);
@@ -32,8 +36,11 @@ $.TiledBackground.prototype.moveTo = function (x, y) {
 	this.bottom = Math.floor(this.height - this.top);
 };
 
+/* draw the tiled image to the back buffer, than draw that to the display canvas 
+ * this is obviously slower than just drawing to the display canvas, but soooo much smoother
+ */
 $.TiledBackground.prototype.draw = function () {
-	var c = $.context,
+	var c = this.bContext,
 	    img = this.canvas,
 	    l = this.left,
 	    t = this.top,
@@ -44,4 +51,5 @@ $.TiledBackground.prototype.draw = function () {
 	if (l) { c.drawImage(img, r, -t); }
 	if (t) { c.drawImage(img, -l, b); }
 	if (l && t) { c.drawImage(img, r, b); }
+	$.context.drawImage(this.buffer, 0, 0);
 };
