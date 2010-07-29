@@ -87,7 +87,7 @@ $.World.prototype.update = function (callback) {
                                       	}
                               	}
                       	}
-		if (collisions.length) {
+		if (collisions.length && actor.eject) {
 			eject(actor, collisions);
 		}
 	}
