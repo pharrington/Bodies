@@ -53,7 +53,13 @@ Bodies = $ = {
 	refresh: function (callback, interval) {
 		if (!interval) { interval = $.defaultInterval; }
 		$.callbacks.refresh = callback;
-		setInterval($.loop, interval);
+		if (loadingImages) {
+			setTimeout(function () {
+				$.refresh(callback, interval);
+			}, 100);
+		} else {
+			setInterval($.loop, interval);
+		}
 	},
 	
 	loop: function () {

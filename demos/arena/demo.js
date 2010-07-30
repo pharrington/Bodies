@@ -1,10 +1,46 @@
+/* the ship being responsible for its bullets seems fundamentally wrong
+ * whats a better way to structure this?
+ */
+function Ship() {
+	$.Sprite.call(this, "moth");
+	this.bullets = [];
+	this.lastShotTime = 0;
+	this.eject = true;
+}
+
+Ship.prototype = new $.Sprite;
+Ship.prototype._super = $.Sprite.prototype;
+Ship.prototype.constructor = Ship;
+Ship.prototype.shoot = function (now) {
+	var b;
+	if (now - this.lastShotTime > Bullet.interval) {
+		b = new Bullet(this.x, this.y, this.rotation - Math.PI / 2);
+		b.ship = this;
+		this.bullets.push(b);
+		arena.insert(b);
+		this.lastShotTime = now;
+	}
+};
+
+Ship.prototype.killBullet = function (bullet) {
+	var bullets = this.bullets,
+	    index = bullets.indexOf(bullet);
+	if (index !== -1) { bullets.splice(index, 1); }
+};
+
+Ship.prototype.update = function (dt) {
+	this._super.update.call(this, dt);
+	this.bullets.forEach(function (b) { b.update(dt); });
+};
+
 function Bullet(x, y, angle) {
 	var v = this.velocity,
 	    _super = this._super;
 
+	$.Sprite.call(this, "bullet");
 	this.vx = Math.cos(angle) * v;
 	this.vy = Math.sin(angle) * v;
-	$.Sprite.call(this, "bullet");
+	this.ship = null;
 	_super.moveTo.call(this, x, y);
 	_super.rotateTo.call(this, angle);
 }
@@ -13,35 +49,32 @@ Bullet.prototype = new $.Sprite;
 Bullet.prototype._super = $.Sprite.prototype;
 Bullet.prototype.constructor = Bullet;
 Bullet.prototype.velocity = 800;
+Bullet.interval = 100;
 
-Bullet.prototype.update = function (dt) {
-	var vx = this.vx * dt,
-	    vy = this.vy * dt;
-	this._super.moveTo.call(this, this.x + vx, this.y + vy);
+Bullet.prototype.die = function () {
+	this.ship.killBullet(this);
 };
 
 var ship,
-    bullets = [],
     arena,
     bg,
     viewport,
-    width = 900, height = 600,
+    width = 500, height = 500,
     px = 0, py = 0,
     angle = 0,
-    bulletInterval = 150,
+    bulletAngle = 0,
     paused = false;
 
 function redraw() {
 	bg.draw();
 	viewport.draw(arena);
 	viewport.draw(ship);
-	bullets.forEach(function (b) { viewport.draw(b); });
+	ship.bullets.forEach(function (b) { viewport.draw(b); });
 }
 
 function hitWall(bullet) {
-	var index = bullets.indexOf(bullet);
 	arena.deleteItem(bullet);
-	if (index !== -1) { bullets.splice(index, 1) };
+	bullet.die();
 }
 
 function interested(a, b) {
@@ -73,13 +106,10 @@ addEventListener("load", function () {
 	$.loadImage("bg", "grid.png");
 	$.loadImage("bullet", "bullet.png");
 	$.loaded(function () {
-		ship = new $.Sprite("moth");
+		ship = new Ship();
 		ship.moveTo(44, 3560);
-		ship.eject = true;
 		ship.ax = 0;
 		ship.ay = 0;
-		ship.vx = 0;
-		ship.vy = 0;
 		ship.vMax = 350;
 		ship.rotateTo(angle + Math.PI / 2);
 
@@ -90,8 +120,7 @@ addEventListener("load", function () {
 	});
 
 	$.refresh(function (elapsed, now) {
-		var vx, vy,
-		    accel = 25,
+		var accel = 25,
 		    stopAccel = -100,
 		    dt = elapsed / 1000;
 
@@ -138,23 +167,15 @@ addEventListener("load", function () {
 					ship.vy = -ship.vMax;
 				}
 			}
-			vx = ship.vx * dt;
-			vy = ship.vy * dt;
-			ship.moveTo(ship.x + vx, ship.y + vy);
-			viewport.scrollTo(ship.x, ship.y);
-			bg.moveTo(viewport.left * 0.6, viewport.top * 0.6);
-			angle = Math.atan2(py - (ship.y - viewport.top + 12), px - (ship.x - viewport.left + 40));
-			ship.rotateTo(angle + Math.PI / 2);
+			ship.update(dt);
+			viewport.scrollTo(ship.x + ship.halfWidth, ship.y + ship.halfHeight);
+			bg.moveTo(viewport.left * 0.4, viewport.top * 0.4);
 
+			angle = Math.atan2(py - (ship.y - viewport.top), px - (ship.x - viewport.left));
+			ship.rotateTo(angle + Math.PI / 2);
 			if (addBullet) {
-				if (now - lastTimeAdded > bulletInterval) {
-					b = new Bullet((ship.x + ship.right) / 2 , (ship.y + ship.bottom) / 2, angle);
-					bullets.push(b);
-					arena.insert(b);
-					lastTimeAdded = now;
-				}
+				ship.shoot(now);
 			}
-			bullets.forEach(function (b) { b.update(dt); });
 			arena.update(hitWall, interested);
 			redraw();
 		} /* end if (!paused) */
