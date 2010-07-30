@@ -57,6 +57,8 @@ $.Sprite.prototype.height = null;
 $.Sprite.prototype.rotation = 0;
 $.Sprite.prototype.dx = 0;
 $.Sprite.prototype.dy = 0;
+$.Sprite.prototype.vx = 0;
+$.Sprite.prototype.vy = 0;
 $.Sprite.prototype.imageOffsetX = 0;
 $.Sprite.prototype.imageOffsetY = 0;
 
@@ -110,4 +112,8 @@ $.Sprite.prototype.updatePixels = function (update) {
 
 $.Sprite.prototype.draw = function () {
 	$.context.drawImage(this.canvas, this.x - this.dx, this.y - this.dy);
+};
+
+$.Sprite.prototype.update = function (dt) {
+	this.moveTo(this.x + this.vx * dt, this.y + this.vy * dt);
 };
