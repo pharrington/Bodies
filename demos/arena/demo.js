@@ -59,7 +59,7 @@ var ship,
     arena,
     bg,
     viewport,
-    width = 500, height = 500,
+    width = 1100, height = 800,
     px = 0, py = 0,
     angle = 0,
     bulletAngle = 0,
@@ -102,7 +102,7 @@ addEventListener("load", function () {
 		addBullet = false;
 	});
 	$.loadImage("moth", "moth-small2.png");
-	$.loadImage("ring", "outline.png");
+	$.loadImage("ring", "outline_tilesheet.png");
 	$.loadImage("bg", "grid.png");
 	$.loadImage("bullet", "bullet.png");
 	$.loaded(function () {
@@ -113,7 +113,7 @@ addEventListener("load", function () {
 		ship.vMax = 350;
 		ship.rotateTo(angle + Math.PI / 2);
 
-		arena = new $.World("ring", 20);
+		arena = new $.World("ring", arenaTilesheet, arenaMap, 50);
 		bg = new $.TiledBackground("bg", width, height);
 		arena.insert(ship);
 		viewport = new $.Viewport(width, height, arena.width, arena.height);

@@ -1,27 +1,54 @@
-$.World = function (imageName, resolution) {
+$.World = function (imageName, tilesheet, map, resolution) {
 	var image = $.resource(imageName),
 	    pixels,
 	    region,
 	    offset,
-	    width, height;
+	    width, height,
+	    tile,
+	    tcanvas,
+	    tcontext,
+	    sx, sy;
 
 	this.left = 0;
 	this.top = 0;
-	this.width = image.width;
-	this.height = image.height;
+	this.width = map.width;
+	this.height = map.height;
 	this.scanWidth = image.width * 4;
-	this.rows = Math.ceil(this.height / resolution);
-	this.columns = Math.ceil(this.width / resolution);
+	tcanvas = document.createElement("canvas");
+	tcanvas.width = image.width;
+	tcanvas.height = image.height;
+	tcontext = tcanvas.getContext("2d");
+	tcontext.drawImage(image, 0, 0);
+	this.pixels = tcontext.getImageData(0, 0, image.width, image.height).data;
 	this.canvas = document.createElement("canvas");
-	this.canvas.width = this.width;
-	this.canvas.height = this.height;
+	this.canvas.width = map.width;
+	this.canvas.height = map.height;
 	this.context = this.canvas.getContext("2d");
-	this.context.drawImage(image, 0, 0);
-	this.imageData = this.context.getImageData(0, 0, this.width, this.height);
-	this.pixels = this.imageData.data;
-	this.quadtree = new $.Quadtree(0, 0, this.width, this.height);
+	this.quadtree = new $.Quadtree(0, 0, map.width, map.height);
 	this.actors = [];
 
+	for (var i = 0, len = map.tiles.length; i < len; ++i) {
+		tile = map.tiles[i];
+		region = {};
+		region.dx = region.dy = 0;
+		region.x = region.left = tile.x;
+		region.y = region.top = tile.y;
+		region.width = region.height = resolution;
+		region.right = region.x + region.width;
+		region.bottom = region.y + region.height;
+		sx = tilesheet[tile.tile].x;
+		sy = tilesheet[tile.tile].y;
+		region.imageOffsetX = sx;
+		region.imageOffsetY = sy;
+		region.imageWidth = image.width;
+		region.imageHeight = image.height;
+		region.scanWidth = this.scanWidth;
+		region.pixels = this.pixels;
+		region.wall = true;
+		this.context.drawImage(tcanvas, sx, sy, resolution, resolution, tile.x, tile.y, resolution, resolution);
+		this.quadtree.insert(region);
+	}
+	/*
 	// check the pixels to see if we need to add this region to the collision map
 	for (var y = 0; y < this.height; y += resolution) {
 		height = (y > this.height - resolution) ? this.height - y : resolution;
@@ -47,6 +74,7 @@ $.World = function (imageName, resolution) {
 			}
 		}
 	}
+	*/
 };
 
 $.World.prototype.draw = function () {
@@ -152,17 +180,4 @@ function wallCollisionArea(item, walls) {
 		area += $.collisionArea(item, wall);
 	}
 	return area;
-}
-
-function isOpaque(pixels, scanWidth, x, y, w, h) {
-	offset = y * scanWidth + x * 4 + 3;
-	for (var i = 0; i < h; i++) {
-		for (var j = 0; j < w * 4; j += 4) {
-			if (pixels[offset + j] === 255) {
-				return true
-			}
-		}
-		offset += scanWidth;
-	}
-	return false;
 }
