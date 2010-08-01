@@ -17,6 +17,9 @@ $.Viewport.prototype.draw = function (image) {
 };
 
 $.Viewport.prototype.scrollTo = function (x, y) {
+	var ox = this.left,
+	    oy = this.top;
+
 	if (x <= this.halfWidth) { this.left = 0; }
 	else if (x + this.halfWidth > this.worldWidth) { this.left = this.worldWidth - this.width; }
 	else { this.left = x - this.halfWidth; }
@@ -24,4 +27,6 @@ $.Viewport.prototype.scrollTo = function (x, y) {
 	if (y <= this.halfHeight) { this.top = 0; }
 	else if (y + this.halfHeight > this.worldHeight) { this.top = this.worldHeight - this.height; }
 	else { this.top = y - this.halfHeight; }
+
+	return {x: this.left - ox, y: this.top - oy};
 };

@@ -11,10 +11,13 @@ function Ship() {
 Ship.prototype = new $.Sprite;
 Ship.prototype._super = $.Sprite.prototype;
 Ship.prototype.constructor = Ship;
-Ship.prototype.shoot = function (now) {
-	var b;
+Ship.prototype.shoot = function (angle, now) {
+	var b,
+	    x, y;
 	if (now - this.lastShotTime > Bullet.interval) {
-		b = new Bullet(this.x, this.y, this.rotation - Math.PI / 2);
+		x = this.x + this.halfWidth;
+		y = this.y + this.halfHeight;
+		b = new Bullet(x, y, angle);
 		b.ship = this;
 		this.bullets.push(b);
 		arena.insert(b);
@@ -34,14 +37,18 @@ Ship.prototype.update = function (dt) {
 };
 
 function Bullet(x, y, angle) {
-	var v = this.velocity,
-	    _super = this._super;
-
 	$.Sprite.call(this, "bullet");
-	this.vx = Math.cos(angle) * v;
-	this.vy = Math.sin(angle) * v;
+	var v = this.velocity,
+	    _super = this._super,
+	    cos = Math.cos(angle),
+	    sin = Math.sin(angle),
+	    dx = -this.halfWidth;
+	    dy = -this.oHeight;
+
+	this.vx = cos * v;
+	this.vy = sin * v;
 	this.ship = null;
-	_super.moveTo.call(this, x, y);
+	_super.moveTo.call(this, x + dx, y + dy);
 	_super.rotateTo.call(this, angle);
 }
 
@@ -59,7 +66,7 @@ var ship,
     arena,
     bg,
     viewport,
-    width = 1100, height = 800,
+    width = 800, height = 600,
     px = 0, py = 0,
     angle = 0,
     bulletAngle = 0,
@@ -120,7 +127,11 @@ addEventListener("load", function () {
 	});
 
 	$.refresh(function (elapsed, now) {
-		var dt = elapsed / 1000;
+		var dt = elapsed / 1000,
+		    cx, cy, // center coordinates of the ship
+		    pox, poy, // point offset from the viewport
+		    bAngle, // angle of the bullet
+		    scroll;
 
 		if (!paused) {
 
@@ -137,13 +148,20 @@ addEventListener("load", function () {
 			}
 		
 			ship.update(dt);
-			viewport.scrollTo(ship.x + ship.halfWidth, ship.y + ship.halfHeight);
+			cx = ship.x + ship.halfWidth;
+			cy = ship.y + ship.halfHeight;
+			scroll = viewport.scrollTo(cx, cy);
 			bg.moveTo(viewport.left * 0.4, viewport.top * 0.4);
 
-			angle = Math.atan2(py - (ship.y - viewport.top), px - (ship.x - viewport.left));
+			poy = py - (cy - viewport.top);
+			pox = px - (cx - viewport.left);
+			angle = Math.atan2(poy, pox);
 			ship.rotateTo(angle + Math.PI / 2);
 			if (addBullet) {
-				ship.shoot(now);
+				pox = (px + 13 * scroll.x) - (cx - viewport.left);
+				poy = (py + 13 * scroll.y) - (cy - viewport.top);
+				bAngle = Math.atan2(poy, pox);
+				ship.shoot(bAngle, now);
 			}
 			arena.update(hitWall, interested);
 			redraw();
