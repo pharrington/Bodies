@@ -110,7 +110,7 @@ addEventListener("load", function () {
 		ship.moveTo(44, 3560);
 		ship.ax = 0;
 		ship.ay = 0;
-		ship.vMax = 350;
+		ship.vMax = 250;
 		ship.rotateTo(angle + Math.PI / 2);
 
 		arena = new $.World("ring", arenaTilesheet, arenaMap, 50);
@@ -120,53 +120,22 @@ addEventListener("load", function () {
 	});
 
 	$.refresh(function (elapsed, now) {
-		var accel = 25,
-		    stopAccel = -100,
-		    dt = elapsed / 1000;
-
-		ship.ax = ship.ay = stopAccel;
+		var dt = elapsed / 1000;
 
 		if (!paused) {
 
+			ship.vx = ship.vy = 0;
 			if ($.keys[65]) { // A, Left
-				ship.ax = -accel;
+				ship.vx = -ship.vMax;
 			} else if ($.keys[68]) { // D, Right
-				ship.ax = accel;
+				ship.vx = ship.vMax;
 			}
 			if ($.keys[87]) { // W, Up
-				ship.ay = -accel;
+				ship.vy = -ship.vMax;
 			} else if ($.keys[83]) { // S, Down
-				ship.ay = accel;
+				ship.vy = ship.vMax;
 			}
 		
-			ship.vx += ship.ax;
-			ship.vy += ship.ay;
-	
-			if (ship.ax === stopAccel) { // no X axis movement
-				if (ship.vx < 0) {
-					ship.vx = 0;
-				}
-			} else {
-				if (ship.vx > ship.vMax) {
-					ship.vx = ship.vMax;
-				}
-				if (ship.vx < -ship.vMax) {
-					ship.vx = -ship.vMax;
-				}
-			}
-	
-			if (ship.ay === stopAccel) { // no Y axis movement
-				if (ship.vy < 0) {
-					ship.vy = 0;
-				}
-			} else {
-				if (ship.vy > ship.vMax) {
-					ship.vy = ship.vMax;
-				}
-				if (ship.vy < -ship.vMax) {
-					ship.vy = -ship.vMax;
-				}
-			}
 			ship.update(dt);
 			viewport.scrollTo(ship.x + ship.halfWidth, ship.y + ship.halfHeight);
 			bg.moveTo(viewport.left * 0.4, viewport.top * 0.4);
