@@ -1,4 +1,4 @@
-$.Sprite = function (imageName, height) {
+$.Sprite = function (imageName, height) {;
 	if (imageName === undefined) { return; }
 	var image,
 	    maxLength;
@@ -13,6 +13,9 @@ $.Sprite = function (imageName, height) {
 		this.oHeight = height;
 	} else {
 		image = $.resource(imageName);
+		this.precompute = height;
+		this.resourceName = imageName;
+		this.steps = 100;
 		this.oWidth = image.width;
 		this.oHeight = image.height;
 	}
@@ -36,9 +39,49 @@ $.Sprite = function (imageName, height) {
 
 	if (image !== undefined) {
 		this.oContext.drawImage(image, 0, 0);
-		copyPixels.call(this);
+		if (this.precompute) {
+			preRotate(this);
+		}
+		else {
+			copyPixels.call(this);
+		}
 	}
 };
+
+$.Sprite.precomputed = {};
+function preRotate(sprite) {
+	var group = $.Sprite.precomputed[sprite.resourceName],
+	    resource,
+	    increment,
+	    steps = sprite.steps,
+	    rotation;
+
+	if (group) {
+		sprite.canvas = group[0].canvas;
+		sprite.pixels = group[0].pixels;
+		return;
+	}
+	group = $.Sprite.precomputed[sprite.resourceName] = {};
+	increment = Math.PI * 2 / steps;
+	for (var i = 0; i < steps; ++i) {
+		rotation = i * increment;
+		resource = group[rotation] = {};
+		resource.canvas = document.createElement("canvas");
+		resource.oCanvas = sprite.oCanvas;
+		resource.width = resource.canvas.width = sprite.width;
+		resource.halfWidth = sprite.halfWidth;
+		resource.halfBaseWidth = sprite.halfBaseWidth;
+		resource.height = resource.canvas.height = sprite.height;
+		resource.halfHeight = sprite.halfHeight;
+		resource.halfBaseHeight = sprite.halfBaseHeight;
+		resource.context = resource.canvas.getContext("2d");
+		$.Sprite.prototype.rotateTo.call(resource, rotation);
+		delete resource.context;
+		delete resource.imageData;
+	}
+	sprite.canvas = group[0].canvas;
+	sprite.pixels = group[0].pixels;
+}
 
 function copyPixels() {
 	this.context.drawImage(this.oCanvas, this.dx, this.dy);
@@ -74,7 +117,19 @@ $.Sprite.prototype.moveTo = function (x, y) {
 
 $.Sprite.prototype.rotateTo = function (angle) {
 	var width = this.width, height = this.height,
-	    context = this.context;
+	    context = this.context,
+	    increment,
+	    rotated;
+
+	if (this.precompute) {
+		increment = Math.PI * 2 / this.steps;
+		if (angle < 0) { angle += Math.PI * 2; }
+		rotated = $.Sprite.precomputed[this.resourceName][Math.floor(angle / increment) * increment];
+		this.canvas = rotated.canvas;
+		this.pixels = rotated.pixels;
+		return;
+	}
+
 
 	this.rotation = angle;
 
