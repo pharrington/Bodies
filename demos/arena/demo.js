@@ -1,3 +1,12 @@
+/*
+ * distance between two points
+ */
+Function.prototype.inherit = function (proto) {
+	this.prototype = new proto;
+	this.prototype._super = proto.prototype;
+	this.prototype.constructor = this;
+};
+
 /* the ship being responsible for its bullets seems fundamentally wrong
  * whats a better way to structure this?
  */
@@ -8,9 +17,7 @@ function Ship() {
 	this.eject = true;
 }
 
-Ship.prototype = new $.Sprite;
-Ship.prototype._super = $.Sprite.prototype;
-Ship.prototype.constructor = Ship;
+Ship.inherit($.Sprite);
 Ship.prototype.shoot = function (angle, now) {
 	var b,
 	    x, y;
@@ -52,15 +59,41 @@ function Bullet(x, y, angle) {
 	_super.rotateTo.call(this, angle);
 }
 
-Bullet.prototype = new $.Sprite;
-Bullet.prototype._super = $.Sprite.prototype;
-Bullet.prototype.constructor = Bullet;
+Bullet.inherit($.Sprite);
 Bullet.prototype.velocity = 800;
 Bullet.interval = 100;
 
 Bullet.prototype.die = function () {
 	this.ship.killBullet(this);
 };
+
+function Enemy(spawn, now) {
+	$.Sprite.call(this, "enemy");
+	
+	this._super.moveTo.call(this, spawn.x, spawn.y);
+	this.alive = false;
+	this.startTime = now;
+	this.spawnDelay = spawn.delay;
+	this.eject = true;
+}
+
+Enemy.inherit($.Sprite);
+Enemy.prototype.movement = null;
+
+Enemy.prototype.update = function (dt, now) {
+	if (!this.alive) {
+		if (now - this.startTime >= this.spawnDelay) {
+			this.alive = true;
+			this.movement = Movement.stalker;
+		}
+		else {
+			return;
+		}
+	}
+	this.movement.update(this);
+	this._super.update.call(this, dt);
+};
+
 
 var ship,
     arena,
@@ -70,18 +103,20 @@ var ship,
     px = 0, py = 0,
     angle = 0,
     bulletAngle = 0,
+    enemy,
     paused = false;
 
 function redraw() {
 	bg.draw();
 	viewport.draw(arena);
 	viewport.draw(ship);
+	if (enemy.alive) { viewport.draw(enemy); }
 	ship.bullets.forEach(function (b) { viewport.draw(b); });
 }
 
-function hitWall(bullet) {
-	arena.deleteItem(bullet);
-	bullet.die();
+function hitWall(actor) {
+	arena.deleteItem(actor);
+	actor.die();
 }
 
 function interested(a, b) {
@@ -112,11 +147,10 @@ addEventListener("load", function () {
 	$.loadImage("ring", "outline_tilesheet.png");
 	$.loadImage("bg", "grid.png");
 	$.loadImage("bullet", "bullet.png");
+	$.loadImage("enemy", "butterfly.png");
 	$.loaded(function () {
 		ship = new Ship();
 		ship.moveTo(44, 3560);
-		ship.ax = 0;
-		ship.ay = 0;
 		ship.vMax = 250;
 		ship.rotateTo(angle + Math.PI / 2);
 
@@ -133,6 +167,11 @@ addEventListener("load", function () {
 		    bAngle, // angle of the bullet
 		    scroll;
 
+		/* i need a $.start function for when the game actually *starts* */
+		if (!enemy) {
+			enemy = new Enemy({x: 400, y: 3300, delay: 2000}, now);
+			arena.insert(enemy);
+		}
 		if (!paused) {
 
 			ship.vx = ship.vy = 0;
@@ -158,11 +197,12 @@ addEventListener("load", function () {
 			angle = Math.atan2(poy, pox);
 			ship.rotateTo(angle + Math.PI / 2);
 			if (addBullet) {
-				pox = (px + 13 * scroll.x) - (cx - viewport.left);
-				poy = (py + 13 * scroll.y) - (cy - viewport.top);
+				pox = (px + scroll.x) - (cx - viewport.left);
+				poy = (py + scroll.y) - (cy - viewport.top);
 				bAngle = Math.atan2(poy, pox);
 				ship.shoot(bAngle, now);
 			}
+			enemy.update(dt, now);
 			arena.update(hitWall, interested);
 			redraw();
 		} /* end if (!paused) */
