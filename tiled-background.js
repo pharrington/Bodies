@@ -29,14 +29,6 @@ $.TiledBackground.prototype.moveTo = function (x, y) {
 	this.top = Math.floor(y % this.tileHeight);
 };
 
-/*
- * draw the tiled image to the back buffer, than draw that to the display canvas 
- */
 $.TiledBackground.prototype.draw = function () {
-	var c = this.bContext,
-	    img = this.canvas,
-	    l = this.left,
-	    t = this.top;
-
-	$.context.drawImage(img, -l, -t);
+	$.context.drawImage(this.canvas, -this.left, -this.top);
 };

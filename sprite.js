@@ -15,7 +15,7 @@ $.Sprite = function (imageName, height) {;
 		image = $.resource(imageName);
 		this.precompute = height;
 		this.resourceName = imageName;
-		this.steps = 100;
+		this.steps = 150;
 		this.oWidth = image.width;
 		this.oHeight = image.height;
 	}
@@ -36,6 +36,7 @@ $.Sprite = function (imageName, height) {;
 	this.canvas.height = this.height;
 	this.dx = Math.floor(this.width / 2 - this.halfBaseWidth);
 	this.dy = Math.floor(this.height / 2 - this.halfBaseHeight);
+	this.wall = false;
 
 	if (image !== undefined) {
 		this.oContext.drawImage(image, 0, 0);

@@ -48,33 +48,6 @@ $.World = function (imageName, tilesheet, map, resolution) {
 		this.context.drawImage(tcanvas, sx, sy, resolution, resolution, tile.x, tile.y, resolution, resolution);
 		this.quadtree.insert(region);
 	}
-	/*
-	// check the pixels to see if we need to add this region to the collision map
-	for (var y = 0; y < this.height; y += resolution) {
-		height = (y > this.height - resolution) ? this.height - y : resolution;
-		for (var x = 0; x < this.width; x += resolution) {
-			width = (x > this.width - resolution) ? this.width - x : resolution;
-			if (isOpaque(this.pixels, this.scanWidth, x, y, width, height)) {
-				region = {};
-				region.dx = region.dy = 0;
-				region.x = region.left = x;
-				region.y = region.top = y;
-				region.width = width;
-				region.height = height;
-				region.right = region.x + region.width;
-				region.bottom = region.y + region.height;
-				region.imageOffsetX = x;
-				region.imageOffsetY = y;
-				region.imageWidth = image.width;
-				region.imageHeight = image.height;
-				region.scanWidth = this.scanWidth;
-				region.pixels = this.pixels;
-				region.wall = true;
-				this.quadtree.insert(region);
-			}
-		}
-	}
-	*/
 };
 
 $.World.prototype.draw = function () {
@@ -104,33 +77,33 @@ $.World.prototype.update = function (callback, filter) {
 	    actors = this.actors;
 
 	if (!filter) { filter = returnTrue; }
-             	for (var i = 0; i < actors.length; ++i) {
-			actor = actors[i];
-			region = actor.collisionNode;
-			collisions = [];
-			collisionRegions = [];
+	for (var i = 0; i < actors.length; ++i) {
+		actor = actors[i];
+		region = actor.collisionNode;
+		collisions = [];
+		collisionRegions = [];
 
-                      	// update quadtree
-                      	this.quadtree.queryNodes(actor, collisionRegions);
-                      	if (collisionRegions[collisionRegions.length-1] !== region) {
-                              	region.deleteItem(actor);
-                              	this.quadtree.insert(actor);
-                      	}
+		// update quadtree
+		this.quadtree.queryNodes(actor, collisionRegions);
+		if (collisionRegions[collisionRegions.length-1] !== region) {
+			region.deleteItem(actor);
+			this.quadtree.insert(actor);
+		}	
 
-                      	// collide
-                      	for (var j = 0, regionsLength = collisionRegions.length; j < regionsLength; ++j) {
-                              	var r = collisionRegions[j];
-                              	for (var k = 0, itemsLength = r.items.length; k < itemsLength; ++k) {
-                                      	var other = r.items[k];
-                                      	if (filter(actor, other) && $.testCollision(actor, other)) {
-						if (collisions.indexOf(other) === -1) {
-							collisions[collisions.length] = other;
-						}
-                                      	}
-                              	}
-                      	}
+		// collide
+		for (var j = 0, regionsLength = collisionRegions.length; j < regionsLength; ++j) {
+			var r = collisionRegions[j];
+			for (var k = 0, itemsLength = r.items.length; k < itemsLength; ++k) {
+				var other = r.items[k];
+				if (filter(actor, other) && $.testCollision(actor, other)) {
+					if (collisions.indexOf(other) === -1) {
+						collisions[collisions.length] = other;
+					}
+				}
+			}
+		}
 		if (collisions.length) {
-			if (actor.eject) { eject(actor, collisions); }
+			if (actor.eject && collisions[0].wall) { eject(actor, collisions); }
 			else if (callback) { callback(actor, collisions); }
 		}
 	}

@@ -1,23 +1,17 @@
-/*
- * distance between two points
- */
-Function.prototype.inherit = function (proto) {
-	this.prototype = new proto;
-	this.prototype._super = proto.prototype;
-	this.prototype.constructor = this;
-};
-
 /* the ship being responsible for its bullets seems fundamentally wrong
  * whats a better way to structure this?
  */
 function Ship() {
-	$.Sprite.call(this, "moth");
+	$.Sprite.call(this, "moth", true);
 	this.bullets = [];
 	this.lastShotTime = 0;
 	this.eject = true;
+	this.alive = true;
 }
 
 Ship.inherit($.Sprite);
+Ship.prototype.collisionType = CPLAYER;
+
 Ship.prototype.shoot = function (angle, now) {
 	var b,
 	    x, y;
@@ -33,9 +27,7 @@ Ship.prototype.shoot = function (angle, now) {
 };
 
 Ship.prototype.killBullet = function (bullet) {
-	var bullets = this.bullets,
-	    index = bullets.indexOf(bullet);
-	if (index !== -1) { bullets.splice(index, 1); }
+	this.bullets.deleteItem(bullet);
 };
 
 Ship.prototype.update = function (dt) {
@@ -43,44 +35,42 @@ Ship.prototype.update = function (dt) {
 	this.bullets.forEach(function (b) { b.update(dt); });
 };
 
-function Bullet(x, y, angle) {
-	$.Sprite.call(this, "bullet");
-	var v = this.velocity,
-	    _super = this._super,
-	    cos = Math.cos(angle),
-	    sin = Math.sin(angle),
-	    dx = -this.halfWidth;
-	    dy = -this.oHeight;
-
-	this.vx = cos * v;
-	this.vy = sin * v;
-	this.ship = null;
-	_super.moveTo.call(this, x + dx, y + dy);
-	_super.rotateTo.call(this, angle);
-}
-
-Bullet.inherit($.Sprite);
-Bullet.prototype.velocity = 800;
-Bullet.interval = 100;
-
-Bullet.prototype.die = function () {
-	this.ship.killBullet(this);
+Ship.prototype.damaged = function (bullet) {
+	/*
+	 * invinciblity!!
+	 */
 };
 
-function Enemy(spawn, now) {
-	$.Sprite.call(this, "enemy");
+function Enemy(spawn) {
+	$.Sprite.call(this, "enemy", true);
 	
 	this._super.moveTo.call(this, spawn.x, spawn.y);
-	this.alive = false;
-	this.startTime = now;
 	this.spawnDelay = spawn.delay;
-	this.eject = true;
+	this.emitter = BulletEmitter.spiral2;
 }
 
 Enemy.inherit($.Sprite);
+Enemy.prototype.collisionType = CENEMY;
+Enemy.prototype.health = 1;
+Enemy.prototype.alive = false;
+Enemy.prototype.eject = true;
 Enemy.prototype.movement = null;
+Enemy.prototype.startTime = null;
+Enemy.prototype.wave = null;
+
+(function () {
+	var id = 0;
+	function generateId() { return id++; }
+
+	Enemy.prototype.id = function () {
+		if (!this.__id__) { this.__id__ = generateId(); }
+		this.id = function () { return this.__id__; };
+		return this.__id__;
+	};
+})();
 
 Enemy.prototype.update = function (dt, now) {
+	if (!this.startTime) { return; }
 	if (!this.alive) {
 		if (now - this.startTime >= this.spawnDelay) {
 			this.alive = true;
@@ -90,37 +80,79 @@ Enemy.prototype.update = function (dt, now) {
 			return;
 		}
 	}
-	this.movement.update(this);
+	this.movement.update(this, now);
 	this._super.update.call(this, dt);
+	this.emitter.update(this, now).forEach(function (bullet) {
+		bullets.push(bullet);
+		arena.insert(bullet);
+	});
 };
 
+Enemy.prototype.damaged = function (bullet) {
+	this.health -= bullet.power;
+	this.health <= 0 && this.die();
+};
 
-var ship,
-    arena,
-    bg,
-    viewport,
-    width = 800, height = 600,
-    px = 0, py = 0,
-    angle = 0,
-    bulletAngle = 0,
-    enemy,
-    paused = false;
+Enemy.prototype.die = function () {
+	this.alive = false;
+	enemies.deleteItem(this);
+	arena.deleteItem(this);
+	this.wave.deleteItem(this);
+};
+
+function EnemyWave(enemySpecs, spawn) {
+	var enemies = [];
+	enemySpecs.forEach(function (spec) {
+		spec.delay = spec.delay ? spec.delay + spawn : spawn;
+		enemies.push(new Enemy(spec));
+	});
+
+	this.spawnDelay = spawn;
+	this.enemies = enemies;
+}
+
+EnemyWave.prototype.start = function (now) {
+	var enemy;
+	for (var i = 0, len = this.enemies.length; i < len; ++i) {
+		enemy = this.enemies[i];
+		enemy.startTime = now;
+		enemy.wave = this;
+		enemies.push(enemy);
+		arena.insert(enemy);
+	}
+};
+
+EnemyWave.prototype.deleteItem = function (item) {
+	this.enemies.deleteItem(item);
+};
+
+function drawSprite(sprite) {
+	if (sprite.alive) { viewport.draw(sprite); }
+}
 
 function redraw() {
 	bg.draw();
 	viewport.draw(arena);
 	viewport.draw(ship);
-	if (enemy.alive) { viewport.draw(enemy); }
-	ship.bullets.forEach(function (b) { viewport.draw(b); });
+	enemies.forEach(drawSprite);
+	ship.bullets.forEach(drawSprite);
+	bullets.forEach(drawSprite);
 }
 
-function hitWall(actor) {
-	arena.deleteItem(actor);
-	actor.die();
+function collide(actor, others) {
+	if (others[0].wall) {
+		actor.die();
+	} else if (actor.collisionType & CBULLET) {
+		others.forEach(function (o) { o.damaged(actor); });
+		actor.die();
+	}
 }
 
 function interested(a, b) {
-	return a.wall || b.wall;
+	return  (a.wall || b.wall) ||
+		(a.alive && b.alive) &&
+		((a.collisionType ^ b.collisionType) & CPLAYER) &&
+		((a.collisionType ^ b.collisionType) & CBULLET);
 }
 
 addEventListener("load", function () {
@@ -148,7 +180,12 @@ addEventListener("load", function () {
 	$.loadImage("bg", "grid.png");
 	$.loadImage("bullet", "bullet.png");
 	$.loadImage("enemy", "butterfly.png");
+	$.loadImage("enemybullet", "enemybullet.png");
 	$.loaded(function () {
+		/* prerotate sprites */
+		["moth", "bullet", "enemy", "enemybullet"].forEach(function (resource) {
+			new $.Sprite(resource, true);
+		});
 		ship = new Ship();
 		ship.moveTo(44, 3560);
 		ship.vMax = 250;
@@ -158,6 +195,15 @@ addEventListener("load", function () {
 		bg = new $.TiledBackground("bg", width, height);
 		arena.insert(ship);
 		viewport = new $.Viewport(width, height, arena.width, arena.height);
+
+		//waves[0] = new EnemyWave([{x: 400, y: 3300}], 1000);
+		waves[0] = new EnemyWave([{x: 400, y: 3300},
+					  {x: 420, y: 3375},
+					  {x: 450, y: 3500}], 2000);
+	});
+
+	$.start(function (now) {
+		waves[0].start(now);
 	});
 
 	$.refresh(function (elapsed, now) {
@@ -167,11 +213,6 @@ addEventListener("load", function () {
 		    bAngle, // angle of the bullet
 		    scroll;
 
-		/* i need a $.start function for when the game actually *starts* */
-		if (!enemy) {
-			enemy = new Enemy({x: 400, y: 3300, delay: 2000}, now);
-			arena.insert(enemy);
-		}
 		if (!paused) {
 
 			ship.vx = ship.vy = 0;
@@ -202,9 +243,15 @@ addEventListener("load", function () {
 				bAngle = Math.atan2(poy, pox);
 				ship.shoot(bAngle, now);
 			}
-			enemy.update(dt, now);
-			arena.update(hitWall, interested);
+
+			for (var i = 0, len = enemies.length; i < len; i++) {
+				enemies[i].update(dt, now);
+			}
+			for (var i = 0, len = bullets.length; i < len; i++) {
+				bullets[i].update(dt, now);
+			}
+			arena.update(collide, interested);
 			redraw();
 		} /* end if (!paused) */
-	}, 20);
+	}, 17);
 }, false);

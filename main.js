@@ -1,6 +1,18 @@
+Function.prototype.inherit = function (proto) {
+	this.prototype = new proto;
+	this.prototype._super = proto.prototype;
+	this.prototype.constructor = this;
+};
+
+Array.prototype.deleteItem = function (element) {
+	var index = this.indexOf(element);
+	index !== -1 && this.splice(index, 1);
+};
+
 var _$ = window.$,
     loadingImages = 0,
     time,
+    started = false;
 
 Bodies = $ = {
 	id: "field",
@@ -53,7 +65,7 @@ Bodies = $ = {
 	refresh: function (callback, interval) {
 		if (!interval) { interval = $.defaultInterval; }
 		$.callbacks.refresh = callback;
-		if (loadingImages) {
+		if (!started) {
 			setTimeout(function () {
 				$.refresh(callback, interval);
 			}, 100);
@@ -62,9 +74,21 @@ Bodies = $ = {
 		}
 	},
 	
+	start: function (callback) {
+		if (loadingImages) {
+			setTimeout(function () {
+				$.start(callback);
+			}, 100);
+		} else {
+			time = new Date().getTime();
+			started = true;
+			if (callback) { callback(time) };
+		}
+	},
+
 	loop: function () {
 		var now = new Date().getTime(),
-		    elapsed = time ? now - time : 0;
+		    elapsed = now - time;
 		time = now;
 		$.callbacks.refresh(elapsed, now);
 	},

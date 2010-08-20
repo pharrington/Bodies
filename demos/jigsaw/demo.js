@@ -2,7 +2,6 @@
 var Configuration = {
 	width: 800,
 	height: 600,
-	image: "padbury.gif",
 	bgcolor: "#aaa",
 	/* please don't do bad things with my api key :( */
 	flickrKey: "dd8f94de8e3c2a2f76cd087ffc4b6020"
@@ -429,7 +428,7 @@ function cutImage(width, height, imageData) {
 }
 
 function init() {
-	var image = $.resource("puzzle"),
+	var image = $.resource("puzzleSource"),
 	    canvas = document.createElement("canvas"),
 	    context = canvas.getContext("2d"),
 	    data,
@@ -478,14 +477,34 @@ function flickrURL(photo, size) {
 		size + ".jpg";
 }
 
+function fetchImages() {
+	ajax("http://api.flickr.com/services/rest/", {
+		method: "flickr.interestingness.getList",
+		api_key: Configuration.flickrKey,
+		format: "json",
+		per_page: 8
+	});
+}
+
 function jsonFlickrApi(response) {
+	var imageList = "";
+	response.photos.photo.forEach(function (photo) {
+		var url = flickrURL(photo),
+		    small = flickrURL(photo, "s");
+		imageList += "<li><a href='#'><img src='" + small +
+		"' data-url='" + url +
+		"'</img></a></li>";
+	});
+	document.getElementById("pictures").innerHTML = imageList;
+	$.loadImage("puzzleSource", document.querySelector("#pictures img").getAttribute("data-url"));
+	$.loaded(init);
 }
 
 window.addEventListener("load", function () {
 	$.init("board", Configuration.width, Configuration.height);
 	$.context.fillStyle = Configuration.bgcolor;
 	$.context.fillRect(0, 0, $.width, $.height);
-	$.loadImage("puzzle", "padbury.gif");
+	fetchImages();
 
 	$.mouseDown(function (x, y) {
 		var point = new Rect(x, y, x+1, y+1),
@@ -565,7 +584,7 @@ window.addEventListener("load", function () {
 		redraw();
 	});
 
-	$.loaded(init);
+	//$.loaded(init);
 	$.start();
 
 	document.getElementById("reset").addEventListener("click", init, false);
