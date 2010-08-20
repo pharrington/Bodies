@@ -1,13 +1,15 @@
-// the first step to any program is to define the global variables
+/* the first step to any program is to define the global variables */
 var Configuration = {
 	width: 800,
 	height: 600,
 	image: "padbury.gif",
-	bgcolor: "#aaa"
-},
-    ctree,
-    selectedPiece,
-    stack;
+	bgcolor: "#aaa",
+	/* please don't do bad things with my api key :( */
+	flickrKey: "dd8f94de8e3c2a2f76cd087ffc4b6020"
+	},
+	ctree,
+	selectedPiece,
+	stack;
 
 function random(low, high) {
 	return Math.random() * (high - low) + low;
@@ -137,7 +139,7 @@ Jigsaw.prototype.oob = function (x, y) {
 };
 
 Jigsaw.prototype.isClear = function (x, y) {
-	return this.pixels[y * this.width * 4 + x * 4 + 3] < 100;
+	return this.pixels[y * this.width * 4 + x * 4 + 3] < 50;
 };
 
 Jigsaw.prototype.set = function (x, y) {
@@ -467,6 +469,18 @@ function redrawRegion(clip) {
 	$.context.restore();
 }
 
+function flickrURL(photo, size) {
+	size = size ? "_" + size : "";
+	return "http://farm" + photo.farm +
+		".static.flickr.com/" + photo.server + "/" +
+		photo.id + "_" +
+		photo.secret + 
+		size + ".jpg";
+}
+
+function jsonFlickrApi(response) {
+}
+
 window.addEventListener("load", function () {
 	$.init("board", Configuration.width, Configuration.height);
 	$.context.fillStyle = Configuration.bgcolor;
@@ -547,10 +561,12 @@ window.addEventListener("load", function () {
 		clip.right = Math.max(clip.right, dirty.right) + 1;
 		clip.bottom = Math.max(clip.bottom, dirty.bottom) + 1;
 
-		redrawRegion(clip);
+		//redrawRegion(clip);
+		redraw();
 	});
 
 	$.loaded(init);
+	$.start();
 
 	document.getElementById("reset").addEventListener("click", init, false);
 
