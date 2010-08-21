@@ -44,8 +44,8 @@ function Jigsaw(width, height) {
 	canvas.height = height;
 	this.width = width;
 	this.height = height;
-	this.px = [0];
-	this.py = [0];
+	this.hEdges = [];
+	this.vEdges = [];
 	this.context = canvas.getContext("2d");
 
 	for (y = 1; y < cy; y++) {
@@ -54,127 +54,106 @@ function Jigsaw(width, height) {
 	for (x = 1; x < cx; x++) {
 		this.vline(hSize * x, height, this.rows);
 	}
-	this.px.push(width);
-	this.py.push(height);
-	this.pixels = this.context.getImageData(0, 0, width, height).data;
 }
 
 Jigsaw.prototype.rows = 0;
 Jigsaw.prototype.columns = 0;
 
-Jigsaw.prototype.cutPiece = function (imageData, col, row) {
-	var piece,
-	    coords = [],
-	    bounds,
-	    edges;
-	tx = Math.floor((this.px[col] + this.px[col+1]) / 2);
-	ty = Math.floor((this.py[row] + this.py[row+1]) / 2);
-	bounds = new Rect(tx, ty, tx, ty);
+Jigsaw.prototype.cutPiece = function (image, col, row) {
+	var top = [{}, {}],
+	    right = [{}, {}],
+	    bottom = [{}, {}],
+	    left = [{}, {}];
 
-	this.floodFill(tx, ty, coords, bounds);
-	edges = new Rect(this.px[col], this.py[row], this.px[col+1], this.py[row+1]);
-	return new Piece(imageData, bounds, coords, edges, col, row);
-};
-
-Jigsaw.prototype.floodFill = function (x, y, coords, bounds) {
-	var fillQueue = [],
-	    range,
-	    rx, ry;
-
-	this.lineFill(x, y, fillQueue, coords);
-	while (fillQueue.length) {
-		range = fillQueue.shift();
-		if (range.x < bounds.x) { bounds.x = range.x; }
-		else if (range.right > bounds.right) { bounds.right = range.right; }
-		if (range.y < bounds.y) { bounds.y = range.y; }
-		else if (range.y > bounds.bottom) { bounds.bottom = range.y; }
-
-		for (rx = range.x; rx <= range.right; rx++) {
-			// go up
-			ry = range.y - 1;
-			if (this.isClear(rx, ry)) {
-				this.lineFill(rx, ry, fillQueue, coords);
-			}
-			// go down
-			ry = range.y + 1;
-			if (this.isClear(rx, ry)) {
-				this.lineFill(rx, ry, fillQueue, coords);
-			}
-		}
+	dp = this;
+	console.log(col);
+	console.log(this.vEdges[col]);
+	if (row) {
+		top = this.hEdges[(row-1) * this.rows + col];
+		left[0].y = top[0].y
 	}
-};
-
-Jigsaw.prototype.lineFill = function (x, y, queue, coords) {
-	var range = new Rect,
-	    dx;
-	// go left
-	dx = x;
-	while (true) {
-		if (this.oob(dx, y) || !this.isClear(dx, y)) { break; };
-		this.set(dx, y);
-		coords.push({x: dx, y: y});
-		dx--;
+	if (row < this.rows - 1) {
+		bottom = this.hEdges[row * this.rows + col];
 	}
-	range.x = dx + 1;
-
-	// go right
-	dx = x + 1;
-	while (true) {
-		if (this.oob(dx, y) || !this.isClear(dx, y)) { break; };
-		this.set(dx, y);
-		coords.push({x: dx, y: y});
-		dx++;
+	if (col) {
+		left = this.vEdges[(col-1) + this.rows * row];
+		top[0].x = left[0].x
 	}
-	range.right = dx - 1;
-
-	if ((range.x !== x + 1) && (range.right !== x)) {
-		range.y = y;
-		queue.push(range);
+	if (col < this.columns - 1) {
+		right = this.vEdges[col + this.rows * row];
 	}
-};
+	if (!row) {
+		top[0].y =
+		top[top.length-1].y =
+		left[0].y =
+		right[0].y = 0;
+		top[top.length-1].x = right[0].x
+	}
+	if (row === this.rows - 1) {
+		bottom[0].y =
+		bottom[bottom.length-1].y =
+		left[left.length-1].y = 
+		right[right.length-1].y = this.height;
+		right[0].y = top[top.length-1].y;
+	}
+	if (!col) {
+		left[0].x =
+		left[left.length-1].x =
+		top[0].x =
+		bottom[0].x = 0;
+		left[left.length-1].y = bottom[0].y
+	}
+	if (col === this.columns - 1) {
+		right[0].x =
+		right[right.length-1].x =
+		top[top.length-1].x =
+		bottom[bottom.length-1].x = this.width;
+		bottom[0].x = left[left.length-1].x;
+	}
 
-Jigsaw.prototype.oob = function (x, y) {
-	return (x < 0 || y < 0 || x >= this.width || y >= this.height);
-};
-
-Jigsaw.prototype.isClear = function (x, y) {
-	return this.pixels[y * this.width * 4 + x * 4 + 3] < 50;
-};
-
-Jigsaw.prototype.set = function (x, y) {
-	var i = y * this.width * 4 + x * 4;
-	this.pixels[i++] = 0;
-	this.pixels[i++] = 0;
-	this.pixels[i++] = 0;
-	this.pixels[i] = 255;
+	return new Piece(image, top, right, bottom, left);
 };
 
 Jigsaw.prototype.hline = function (oy, width, cells) {
 	var c = this.context,
-	    px = this.px;
-	c.beginPath();
+	    px = this.px,
+	    edges = this.hEdges;
+	//c.beginPath();
 	calculateEdge(oy, width, cells, function (x, y, x2, y2, x3, y3, x4, y4, cx1, cy1, cx2, cy2, cx3, cy3, cx4, cy4) {
-		if (px.length < cells) { px.push(x4) }
+		//if (px.length < cells) { px.push(x4) }
+		edges.push([{x: x, y: y},
+			    {cx1: cx1, cy1: cy1, cx2: cx1, cy2: cy1, x: x2, y: y2},
+			    {cx1: cx2, cy1: cy2, cx2: cx3, cy2: cy3, x: x3, y: y3},
+			    {cx1: cx4, cy1: cy4, cx2: cx4, cy2: cy4, x: x4, y: y4}]);
+		/*
 		c.moveTo(x, y);
 		c.bezierCurveTo(cx1, cy1, cx1, cy1, x2, y2);
 		c.bezierCurveTo(cx2, cy2, cx3, cy3, x3, y3);
 		c.bezierCurveTo(cx4, cy4, cx4, cy4, x4, y4);
+		*/
 	});
-	c.stroke();
+	//c.stroke();
 };
 
 Jigsaw.prototype.vline = function (ox, height, cells) {
 	var c = this.context,
-	    py = this.py;
-	c.beginPath();
+	    py = this.py,
+	    edges = this.vEdges;
+	//c.beginPath();
 	calculateEdge(ox, height, cells, function (y, x, y2, x2, y3, x3, y4, x4, cy1, cx1, cy2, cx2, cy3, cx3, cy4, cx4) {
-		if (py.length < cells) { py.push(y4) }
+		//if (py.length < cells) { py.push(y4) }
+		edges.push([{x: x, y: y},
+			    {cx1: cx1, cy1: cy1, cx2: cx1, cy2: cy1, x: x2, y: y2},
+			    {cx1: cx2, cy1: cy2, cx2: cx3, cy2: cy3, x: x3, y: y3},
+			    {cx1: cx4, cy1: cy4, cx2: cx4, cy2: cy4, x: x4, y: y4}]);
+		/*
 		c.moveTo(x, y);
 		c.bezierCurveTo(cx1, cy1, cx1, cy1, x2, y2);
 		c.bezierCurveTo(cx2, cy2, cx3, cy3, x3, y3);
 		c.bezierCurveTo(cx4, cy4, cx4, cy4, x4, y4);
+		*/
 	});
-	c.stroke();
+	//c.stroke();
 };
 
 function calculateEdge(offset, length, cells, callback) {
@@ -225,8 +204,59 @@ function calculateEdge(offset, length, cells, callback) {
 	}
 }
 
-function Piece(imageData, bounds, coords, edges, col, row) {
+function extremity(segment, vertical) {
+	var axis,
+	    c1, c2,
+	    t = 0.5;
+	if (vertical) {
+		axis = "y";
+		c1 = "cy1";
+		c2 = "cy2";
+	} else {
+		axis = "x";
+		c1 = "cx1";
+		c2 = "cx2";
+	}
+	if (segment.length === 2) {
+		return segment[0][axis];
+	}
+	return t*t*t*segment[1][axis] + 3*t*segment[2][c1]*t*t + 3*t*segment[2][c2]*t*t + t*t*t*segment[2][axis]; 
+}
+
+function Piece(image, top, right, bottom, left) {
+	var bounds = new Rect,
+	    context;
+
+	this.topEdge = top;
+	this.leftEdge = left;
+	this.bottomEdge = bottom;
+	this.rightEdge = right;
+
+	console.log(top[top.length-1].x === right[0].x && top[top.length-1].y === right[0].y);
+	console.log(top);
+	console.log(right);
+	bounds.x = Math.min(left[0].x, left[left.length-1].x, extremity(left));
+	bounds.y = Math.min(top[0].y, top[top.length-1].y, extremity(top, true));
+	bounds.right = Math.max(right[0].x, right[right.length-1].x, extremity(right));
+	bounds.bottom = Math.max(bottom[0].y, bottom[bottom.length-1].y, extremity(bottom, true));
+
+	$.Sprite.call(this, bounds.right - bounds.x + 1, bounds.bottom - bounds.y + 1, {foreign: true});
+	context = this.context;
+
+	/* clip */
+	context.beginPath();
+	context.moveTo(top[0].x, top[0].y);
+	this.segment(top);
+	this.segment(right);
+	this.segment(bottom, true);
+	this.segment(left, true);
+	context.closePath();
+	context.clip();
+	context.drawImage(image, -bounds.x, -bounds.y);
+
+
 	/* find the offset of the pieces corners */
+	/*
 	this.edgeOffsets = edges;
 	this.edgeOffsets.x -= bounds.x;
 	this.edgeOffsets.y -= bounds.y;
@@ -250,18 +280,40 @@ function Piece(imageData, bounds, coords, edges, col, row) {
 			}
 		}
 	});
+	*/
 }
 
 Piece.prototype = new $.Sprite;
 Piece.prototype.constructor = Piece;
+Piece.prototype.segment = function (line, reverse) {
+	var context = this.context;
+	if (line.length === 2) {
+		reverse ? 
+			context.lineTo(line[0].x, line[0].y) :
+			context.lineTo(line[1].x, line[1].y);
+	} else {
+		if (reverse) {
+			for (var i = 3; i > 0; i--) {
+				context.bezierCurveTo(line[i].cx2, line[i].cy2, line[i].cx1, line[i].cy1, line[i-1].x, line[i-1].y);
+			}
+		} else {
+			for (var i = 1; i < 4; i++) {
+				context.bezierCurveTo(line[i].cx1, line[i].cy1, line[i].cx2, line[i].cy2, line[i].x, line[i].y);
+			}
+		}
+	}
+};
+
 Piece.prototype.moveTo = function (x, y, independent) {
 	var dx, dy,
 	    group;
 
+	/*
 	this.edges.x = this.edgeOffsets.x + x;
 	this.edges.y = this.edgeOffsets.y + y;
 	this.edges.right = this.edgeOffsets.right + x;
 	this.edges.bottom = this.edgeOffsets.bottom + y;
+	*/
 	if (this.group && !independent) {
 		group = this.group;
 		dx = x - this.x;
@@ -412,6 +464,7 @@ function snap(piece, others) {
 	}
 }
 
+/*
 function cutImage(width, height, imageData) {
 	var jigsaw = new Jigsaw(width, height),
 	    pieces = [], piece;
@@ -426,14 +479,29 @@ function cutImage(width, height, imageData) {
 	}
 	return pieces;
 }
+*/
 
 function init() {
 	var image = $.resource("puzzleSource"),
 	    canvas = document.createElement("canvas"),
 	    context = canvas.getContext("2d"),
 	    data,
-	    pieces;
+	    pieces,
+	    piece,
+	    jigsaw,
+	    x, y;
 
+	jigsaw = new Jigsaw(image.width, image.height);
+	//for (x = 0; x < jigsaw.columns; x++) {
+	//	for (y = 0; y < jigsaw.rows; y++) {
+			x = 0; y = 1;
+			piece = jigsaw.cutPiece(image, x, y);
+		//}
+	//}
+	//$.context.drawImage(image, 0, 0);
+	piece.moveTo(5, 5);
+	piece.draw();
+	/*
 	clear();
 	canvas.width = image.width;
 	canvas.height = image.height;
@@ -446,6 +514,7 @@ function init() {
 		ctree.insert(pieces[i]);
 		stack.push(pieces[i]);
 	}
+	*/
 }
 
 function redrawRegion(clip) {
@@ -489,7 +558,7 @@ function fetchImages() {
 function jsonFlickrApi(response) {
 	var imageList = "";
 	response.photos.photo.forEach(function (photo) {
-		var url = flickrURL(photo),
+		var url = flickrURL(photo, "z"),
 		    small = flickrURL(photo, "s");
 		imageList += "<li><a href='#'><img src='" + small +
 		"' data-url='" + url +

@@ -1,4 +1,4 @@
-$.Sprite = function (imageName, height) {;
+$.Sprite = function (imageName, height, options) {;
 	if (imageName === undefined) { return; }
 	var image,
 	    maxLength;
@@ -13,13 +13,15 @@ $.Sprite = function (imageName, height) {;
 		this.oHeight = height;
 	} else {
 		image = $.resource(imageName);
-		this.precompute = height;
+		options = height;
 		this.resourceName = imageName;
 		this.steps = 150;
 		this.oWidth = image.width;
 		this.oHeight = image.height;
 	}
 
+	this.precompute = options.precompute;
+	this.foreign = options.foreign;
 	this.oCanvas.width = this.oWidth;
 	this.oCanvas.height = this.oHeight;
 	this.halfBaseWidth = this.oWidth / 2;
@@ -86,8 +88,10 @@ function preRotate(sprite) {
 
 function copyPixels() {
 	this.context.drawImage(this.oCanvas, this.dx, this.dy);
-	this.imageData = this.context.getImageData(0, 0, this.width, this.height);
-	this.pixels = this.imageData.data;
+	if (!this.foreign) {
+		this.imageData = this.context.getImageData(0, 0, this.width, this.height);
+		this.pixels = this.imageData.data;
+	}
 }
 
 $.Sprite.prototype.x = null;
@@ -142,10 +146,10 @@ $.Sprite.prototype.rotateTo = function (angle) {
 	context.drawImage(this.oCanvas, 0, 0);
 	context.restore();
 
-	// ImageData/CanvasPixelArray allocations get out of control with the next line.
-	// The alternative would be to create and store a seperate collision mask for the sprite, and manually rotate that - MAD slow :(
-	this.imageData = context.getImageData(0, 0, width, height);
-	this.pixels = this.imageData.data;
+	if (!this.foreign) {
+		this.imageData = context.getImageData(0, 0, width, height);
+		this.pixels = this.imageData.data;
+	}
 };
 
 $.Sprite.prototype.rotate = function (angle) {
@@ -154,6 +158,7 @@ $.Sprite.prototype.rotate = function (angle) {
 };
 
 $.Sprite.prototype.updatePixels = function (update) {
+	if (this.foreign) { return; }
 	var context = this.oContext,
 	    data = context.getImageData(0, 0, this.oWidth, this.oHeight),
 	    pixels = data.data;
