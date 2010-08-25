@@ -94,6 +94,7 @@ function copyPixels() {
 	}
 }
 
+
 $.Sprite.prototype.x = null;
 $.Sprite.prototype.y = null;
 $.Sprite.prototype.left = null;
@@ -109,6 +110,8 @@ $.Sprite.prototype.vx = 0;
 $.Sprite.prototype.vy = 0;
 $.Sprite.prototype.imageOffsetX = 0;
 $.Sprite.prototype.imageOffsetY = 0;
+
+$.Sprite.prototype.copyPixels = copyPixels;
 
 $.Sprite.prototype.moveTo = function (x, y) {
 	this.x = x;
