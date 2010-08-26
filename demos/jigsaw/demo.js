@@ -1,3 +1,27 @@
+Array.prototype.last = function () {
+	return this[this.length-1];
+};
+
+Array.prototype.copy = function () {
+	return this.map(function (val) {
+		return (typeof val === "object" && typeof val.copy === "function") ? val.copy() : val;
+	});
+};
+
+Object.prototype.copy = function () {
+	var o = this.constructor(),
+	    val;
+	for (property in this) {
+		val = this[property];
+		if (typeof val === "object" && typeof val.copy === "function") {
+			o[property] = val.copy();
+		} else if (this.hasOwnProperty(property)) {
+			o[property] = val;
+		}
+	};
+	return o;
+};
+
 /* the first step to any program is to define the global variables */
 var Configuration = {
 	width: 800,
@@ -28,7 +52,7 @@ function Rect(left, top, right, bottom) {
 };
 
 function Jigsaw(width, height) {
-	var cellSize = 100,
+	var cellSize = 150,
 	    hSize, vSize,
 	    cx = width / cellSize,
 	    cy  = height / cellSize,
@@ -81,7 +105,7 @@ Jigsaw.prototype.cutPiece = function (image, col, row) {
 	right[right.length-1].y = bottom[bottom.length-1].y;
 	bottom[bottom.length-1].x = right[right.length-1].x;
 
-	return new Piece(image, top, right, bottom, left);
+	return new Piece(image, col, row, top, right, bottom, left);
 };
 
 Jigsaw.prototype.hline = function (rowIndex, oy, width, cells) {
@@ -194,57 +218,7 @@ function extremity(segment, vertical) {
 	return t*t*t*segment[1][axis] + 3*t*segment[2][c1]*t*t + 3*t*segment[2][c2]*t*t + t*t*t*segment[2][axis]; 
 }
 
-function Piece(image, top, right, bottom, left) {
-	var bounds = new Rect,
-	    context;
-
-	this.topEdge = top;
-	this.leftEdge = left;
-	this.bottomEdge = bottom;
-	this.rightEdge = right;
-
-	bounds.x = Math.min(left[0].x, left[left.length-1].x, extremity(left));
-	bounds.y = Math.min(top[0].y, top[top.length-1].y, extremity(top, true));
-	bounds.right = Math.max(right[0].x, right[right.length-1].x, extremity(right));
-	bounds.bottom = Math.max(bottom[0].y, bottom[bottom.length-1].y, extremity(bottom, true));
-	this.bounds = bounds;
-
-	$.Sprite.call(this, bounds.right - bounds.x + 1, bounds.bottom - bounds.y + 1, {foreign: true});
-	context = this.oContext;
-
-	/* clip */
-	context.beginPath();
-	context.save();
-	context.translate(-bounds.x, -bounds.y);
-	context.moveTo(top[0].x, top[0].y);
-	this.segment(top);
-	this.segment(right);
-	this.segment(bottom, true);
-	this.segment(left, true);
-	context.closePath();
-	context.clip();
-	context.drawImage(image, 0, 0);
-	context.restore();
-	$.Sprite.prototype.copyPixels.call(this);
-
-
-	/* find the offset of the pieces corners */
-	/*
-	this.edgeOffsets = edges;
-	this.edgeOffsets.x -= bounds.x;
-	this.edgeOffsets.y -= bounds.y;
-	this.edgeOffsets.right -= bounds.x;
-	this.edgeOffsets.bottom -= bounds.y;
-	this.edges = new Rect;
-	this.row = row;
-	this.column = col;
-	*/
-}
-
-Piece.prototype = new $.Sprite;
-Piece.prototype.constructor = Piece;
-Piece.prototype.segment = function (line, reverse) {
-	var context = this.oContext;
+function segment(context, line, reverse) {
 	if (line.length === 2) {
 		reverse ? 
 			context.lineTo(line[0].x, line[0].y) :
@@ -261,6 +235,80 @@ Piece.prototype.segment = function (line, reverse) {
 		}
 	}
 };
+
+function clipImage(context, bounds, top, right, bottom, left, image) {
+	context.beginPath();
+	context.save();
+	image && context.translate(-bounds.x, -bounds.y);
+	context.moveTo(top[0].x, top[0].y);
+	segment(context, top);
+	segment(context, right);
+	segment(context, bottom, true);
+	segment(context, left, true);
+	context.closePath();
+	context.clip();
+	if (image) {
+		context.drawImage(image, 0, 0);
+		context.restore();
+	}
+}
+
+function Piece(image, col, row, top, right, bottom, left) {
+	var bounds = new Rect,
+	    context,
+	    edgeOffsets = new Rect,
+	    edges,
+	    dx, dy;
+
+	this.row = row;
+	this.column = col;
+	this.topEdge = top;
+	this.leftEdge = left;
+	this.bottomEdge = bottom;
+	this.rightEdge = right;
+
+	bounds.x = Math.min(left[0].x, left.last().x, extremity(left));
+	bounds.y = Math.min(top[0].y, top.last().y, extremity(top, true));
+	bounds.right = Math.max(right[0].x, right.last().x, extremity(right));
+	bounds.bottom = Math.max(bottom[0].y, bottom.last().y, extremity(bottom, true));
+	this.bounds = bounds;
+
+	$.Sprite.call(this, bounds.right - bounds.x + 1, bounds.bottom - bounds.y + 1, {foreign: true});
+
+	/* clip */
+	clipImage(this.oContext, bounds, top, right, bottom, left, image);
+	$.Sprite.prototype.copyPixels.call(this);
+
+	/* boundary clipping path */
+	dx = this.dx;
+	dy = this.dy;
+	edges = [top, right, bottom, left].map(function (edge) {
+		edge = edge.copy();
+		edge.forEach(function (point) {
+			point.x -= bounds.x - dx;
+			point.y -= bounds.y - dy;
+			if (point.cx1) {
+				point.cx1 -= bounds.x - dx;
+				point.cx2 -= bounds.x - dx;
+				point.cy1 -= bounds.y - dy;
+				point.cy2 -= bounds.y - dy;
+			}
+		});
+		return edge;
+	});
+	clipImage(this.context, bounds, edges[0], edges[1], edges[2], edges[3]);
+
+	/* find the offset of the piece's corners */
+	edgeOffsets.x = top[0].x - bounds.x + dx;
+	edgeOffsets.y = top[0].y - bounds.y + dy;
+	edgeOffsets.right = bottom.last().x - bounds.x + dx;
+	edgeOffsets.bottom = bottom.last().y - bounds.y + dy;
+	this.edgeOffsets = edgeOffsets;
+	this.edges = new Rect;
+}
+
+Piece.prototype = new $.Sprite;
+Piece.prototype.constructor = Piece;
 
 Piece.prototype.moveTo = function (x, y, independent) {
 	var dx, dy,
@@ -279,6 +327,10 @@ Piece.prototype.moveTo = function (x, y, independent) {
 	} else {
 		$.Sprite.prototype.moveTo.call(this, x, y);
 	}
+};
+
+Piece.prototype.testPoint = function (point) {
+	return this.context.isPointInPath(point.x - this.x, point.y - this.y);
 };
 
 Piece.prototype.relationTo = function (other) {
@@ -445,15 +497,14 @@ function init() {
 	    jigsaw,
 	    x, y;
 
+	clear();
 	pieces = cutImage(image);
-	/*
 	ctree = new $.Quadtree(-250, -250, Configuration.width + 250, Configuration.height + 250);
 	stack = new DrawStack();
 	for (var i = 0; i < pieces.length; i++) {
 		ctree.insert(pieces[i]);
 		stack.push(pieces[i]);
 	}
-	*/
 }
 
 function redrawRegion(clip) {
@@ -524,7 +575,8 @@ window.addEventListener("load", function () {
 			return items.indexOf(a) > items.indexOf(b) ? -1 : 1
 		});
 		for (var j = 0; j < items.length; j++) {
-			if ($.testPoint(point, items[j])) {
+			if (items[j].testPoint(point)) {
+			//if ($.testPoint(point, items[j])) {
 				// select this piece
 				selectedPiece = items[j];
 				selectedPiece.mx = x - selectedPiece.x;
@@ -607,11 +659,15 @@ window.addEventListener("load", function () {
 			element = e.target;
 			previous = document.querySelector(".selected");
 			if (element !== previous) {
-				previous.className = previous.className.replace(/\s*\bselected\b\s*/, "");
+				if (previous) {
+					previous.className = previous.className.replace(/\s*\bselected\b\s*/, "");
+				}
 				element.className += " selected";
+				/*
 				name = preview.slice(preview.lastIndexOf("/")+1, preview.lastIndexOf("-sq"));
 				ext = preview.slice(preview.lastIndexOf("."));
-				$.loadImage("puzzle", name + ext);
+				*/
+				$.loadImage("puzzleSource", element.getAttribute("data-url"));
 			}
 		}
 	}, false);
