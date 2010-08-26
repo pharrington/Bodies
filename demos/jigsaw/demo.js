@@ -257,8 +257,7 @@ function Piece(image, col, row, top, right, bottom, left) {
 	var bounds = new Rect,
 	    context,
 	    edgeOffsets = new Rect,
-	    edges,
-	    dx, dy;
+	    edges;
 
 	this.row = row;
 	this.column = col;
@@ -280,18 +279,16 @@ function Piece(image, col, row, top, right, bottom, left) {
 	$.Sprite.prototype.copyPixels.call(this);
 
 	/* boundary clipping path */
-	dx = this.dx;
-	dy = this.dy;
 	edges = [top, right, bottom, left].map(function (edge) {
 		edge = edge.copy();
 		edge.forEach(function (point) {
-			point.x -= bounds.x - dx;
-			point.y -= bounds.y - dy;
+			point.x -= bounds.x;
+			point.y -= bounds.y;
 			if (point.cx1) {
-				point.cx1 -= bounds.x - dx;
-				point.cx2 -= bounds.x - dx;
-				point.cy1 -= bounds.y - dy;
-				point.cy2 -= bounds.y - dy;
+				point.cx1 -= bounds.x;
+				point.cx2 -= bounds.x;
+				point.cy1 -= bounds.y;
+				point.cy2 -= bounds.y;
 			}
 		});
 		return edge;
@@ -299,10 +296,10 @@ function Piece(image, col, row, top, right, bottom, left) {
 	clipImage(this.context, bounds, edges[0], edges[1], edges[2], edges[3]);
 
 	/* find the offset of the piece's corners */
-	edgeOffsets.x = top[0].x - bounds.x + dx;
-	edgeOffsets.y = top[0].y - bounds.y + dy;
-	edgeOffsets.right = bottom.last().x - bounds.x + dx;
-	edgeOffsets.bottom = bottom.last().y - bounds.y + dy;
+	edgeOffsets.x = top[0].x - bounds.x;
+	edgeOffsets.y = top[0].y - bounds.y;
+	edgeOffsets.right = bottom.last().x - bounds.x;
+	edgeOffsets.bottom = bottom.last().y - bounds.y;
 	this.edgeOffsets = edgeOffsets;
 	this.edges = new Rect;
 }
@@ -576,7 +573,6 @@ window.addEventListener("load", function () {
 		});
 		for (var j = 0; j < items.length; j++) {
 			if (items[j].testPoint(point)) {
-			//if ($.testPoint(point, items[j])) {
 				// select this piece
 				selectedPiece = items[j];
 				selectedPiece.mx = x - selectedPiece.x;
