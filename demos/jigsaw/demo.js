@@ -38,8 +38,10 @@ function random(low, high) {
 	return Math.random() * (high - low) + low;
 }
 
-function distance(x1, y1, x2, y2) {
-	var dx2 = (x1 - x2) * (x1 - x2),
+function distance(p1, p2) {
+	var x1 = p1.x, x2 = p2.x,
+	    y1 = p1.y, y2 = p2.y,
+	    dx2 = (x1 - x2) * (x1 - x2),
 	    dy2 = (y1 - y2) * (y1 - y2);
 	return Math.sqrt(dx2 + dy2);
 }
@@ -91,19 +93,19 @@ Jigsaw.prototype.cutPiece = function (image, col, row) {
 	    right,
 	    bottom;
 	if (col === this.columns - 1) {
-		right = [{x: this.width, y: top[top.length-1].y},
+		right = [{x: this.width, y: top.last().y},
 		         {x: this.width}];
 	} else {
 		right = this.edges[row][col+1].y;
 	}
 	if (row === this.rows - 1) {
-		bottom = [{x: left[left.length-1].x, y: this.height},
+		bottom = [{x: left.last().x, y: this.height},
 		          {y: this.height}];
 	} else {
 		bottom = this.edges[row+1][col].x;
 	}
-	right[right.length-1].y = bottom[bottom.length-1].y;
-	bottom[bottom.length-1].x = right[right.length-1].x;
+	right[right.length-1].y = bottom.last().y;
+	bottom[bottom.length-1].x = right.last().x;
 
 	return new Piece(image, col, row, top, right, bottom, left);
 };
@@ -256,7 +258,7 @@ function clipImage(context, bounds, top, right, bottom, left, image) {
 function Piece(image, col, row, top, right, bottom, left) {
 	var bounds = new Rect,
 	    context,
-	    edgeOffsets = new Rect,
+	    corners = new Rect,
 	    edges;
 
 	this.row = row;
@@ -296,11 +298,10 @@ function Piece(image, col, row, top, right, bottom, left) {
 	clipImage(this.context, bounds, edges[0], edges[1], edges[2], edges[3]);
 
 	/* find the offset of the piece's corners */
-	edgeOffsets.x = top[0].x - bounds.x;
-	edgeOffsets.y = top[0].y - bounds.y;
-	edgeOffsets.right = bottom.last().x - bounds.x;
-	edgeOffsets.bottom = bottom.last().y - bounds.y;
-	this.edgeOffsets = edgeOffsets;
+	corners.tl = {x: top[0].x - bounds.x, y: top[0].y - bounds.y};
+	corners.tr = {x: right[0].x - bounds.x, y: right[0].y - bounds.y};
+	corners.bl = {x: bottom[0].x - bounds.x, y: bottom[0].y - bounds.y};
+	this.corners = corners;
 	this.edges = new Rect;
 }
 
@@ -309,12 +310,12 @@ Piece.prototype.constructor = Piece;
 
 Piece.prototype.moveTo = function (x, y, independent) {
 	var dx, dy,
+	    corner = this.corners,
 	    group;
 
-	this.edges.x = this.edgeOffsets.x + x;
-	this.edges.y = this.edgeOffsets.y + y;
-	this.edges.right = this.edgeOffsets.right + x;
-	this.edges.bottom = this.edgeOffsets.bottom + y;
+	this.edges.tl = {x: corner.tl.x + x, y: corner.tl.y + y};
+	this.edges.tr = {x: corner.tr.x + x, y: corner.tr.y + y};
+	this.edges.bl = {x: corner.bl.x + x, y: corner.bl.y + y};
 
 	if (this.group && !independent) {
 		group = this.group;
@@ -435,31 +436,31 @@ function snap(piece, others) {
 		oe = other.edges;
 		switch (piece.relationTo(other)) {
 		case "above":
-			if (distance(pe.x, pe.bottom, oe.x, oe.y) < threshold) {
+			if (distance(pe.bl, oe.tl) < threshold) {
 				snapped = true;
-				piece.moveTo(oe.x - piece.edgeOffsets.x,
-					     oe.y - piece.edgeOffsets.bottom);
+				piece.moveTo(oe.tl.x - piece.corners.bl.x,
+					     oe.tl.y - piece.corners.bl.y);
 			}
 			break;
 		case "below":
-			if (distance(pe.x, pe.y, oe.x, oe.bottom) < threshold) {
+			if (distance(pe.tl, oe.bl) < threshold) {
 				snapped = true;
-				piece.moveTo(oe.x - piece.edgeOffsets.x,
-					     oe.bottom - piece.edgeOffsets.y);
+				piece.moveTo(oe.bl.x - piece.corners.tl.x,
+					     oe.bl.y - piece.corners.tl.y);
 			}
 			break;
 		case "left":
-			if (distance(pe.right, pe.y, oe.x, oe.y) < threshold) {
+			if (distance(pe.tr, oe.tl) < threshold) {
 				snapped = true;
-				piece.moveTo(oe.x - piece.edgeOffsets.right,
-					     oe.y - piece.edgeOffsets.y);
+				piece.moveTo(oe.tl.x - piece.corners.tr.x,
+					     oe.tl.y - piece.corners.tr.y);
 			}
 			break;
 		case "right":
-			if (distance(pe.x, pe.y, oe.right, oe.y) < threshold) {
+			if (distance(pe.tl, oe.tr) < threshold) {
 				snapped = true;
-				piece.moveTo(oe.right - piece.edgeOffsets.x,
-					     oe.y - piece.edgeOffsets.y);
+				piece.moveTo(oe.tr.x - piece.corners.tl.x,
+					     oe.tr.y - piece.corners.tl.y);
 			}
 			break;
 		}
