@@ -107,7 +107,7 @@ Jigsaw.prototype.cutPiece = function (image, col, row) {
 	right[right.length-1].y = bottom.last().y;
 	bottom[bottom.length-1].x = right.last().x;
 
-	return new Piece(image, col, row, top, right, bottom, left);
+	return new Piece(image, col, row, top, right, bottom.copy().reverse(), left.copy().reverse());
 };
 
 Jigsaw.prototype.hline = function (rowIndex, oy, width, cells) {
@@ -121,9 +121,9 @@ Jigsaw.prototype.hline = function (rowIndex, oy, width, cells) {
 			edge[1].x = x4;
 		} else {
 			edge = [{x: x, y: y},
-				{cx1: cx1, cy1: cy1, cx2: cx1, cy2: cy1, x: x2, y: y2},
-				{cx1: cx2, cy1: cy2, cx2: cx3, cy2: cy3, x: x3, y: y3},
-				{cx1: cx4, cy1: cy4, cx2: cx4, cy2: cy4, x: x4, y: y4}];
+				{x: cx1, y: cy1}, {x: cx1, y: cy1}, {x: x2, y: y2},
+				{x: cx2, y: cy2}, {x: cx3, y: cy3}, {x: x3, y: y3},
+				{x: cx4, y: cy4}, {x: cx4, y: cy4}, {x: x4, y: y4}];
 		}
 		row.push({x: edge});
 	});
@@ -143,10 +143,10 @@ Jigsaw.prototype.vline = function (columnIndex, ox, height, cells) {
 			edge[1].y = y4;
 		} else {
 			x4 = row === cells - 1 ? x4 : edges[row+1][columnIndex].x[0].x;
-			edge = [{x: cell.x[0].x, y: y},
-				{cx1: cx1, cy1: cy1, cx2: cx1, cy2: cy1, x: x2, y: y2},
-				{cx1: cx2, cy1: cy2, cx2: cx3, cy2: cy3, x: x3, y: y3},
-				{cx1: cx4, cy1: cy4, cx2: cx4, cy2: cy4, x: x4, y: y4}];
+			edge =[{x: cell.x[0].x, y: y},
+				{x: cx1, y: cy1}, {x: cx1, y: cy1}, {x: x2, y: y2},
+				{x: cx2, y: cy2}, {x: cx3, y: cy3}, {x: x3, y: y3},
+				{x: cx4, y: cy4}, {x: cx4, y: cy4}, {x: x4, y: y4}];
 		}
 		cell.x[0].y = y;
 		cell.y = edge;
@@ -201,39 +201,43 @@ function calculateEdge(offset, length, cells, callback) {
 	}
 }
 
-function extremity(segment, vertical) {
+function extremity(edge, vertical) {
 	var axis,
-	    c1, c2,
-	    t = 0.5;
-	if (vertical) {
-		axis = "y";
-		c1 = "cy1";
-		c2 = "cy2";
-	} else {
-		axis = "x";
-		c1 = "cx1";
-		c2 = "cx2";
+	    t;
+	axis = vertical ? "y" : "x";
+
+	if (edge.length === 2) {
+		return edge[0][axis];
 	}
-	if (segment.length === 2) {
-		return segment[0][axis];
-	}
-	return t*t*t*segment[1][axis] + 3*t*segment[2][c1]*t*t + 3*t*segment[2][c2]*t*t + t*t*t*segment[2][axis]; 
+
+	t = bezierMax(edge[3][axis], edge[4][axis], edge[5][axis], edge[6][axis]);
+	return bezier(t, edge[3][axis], edge[4][axis], edge[5][axis], edge[6][axis]);
 }
 
-function segment(context, line, reverse) {
+function bezier(t, p0, p1, p2, p3) {
+	var ti = 1 - t;
+	return ti*ti*ti*p0 + 3*t*p1*ti*ti + 3*ti*p2*t*t + t*t*t*p3;
+}
+
+function bezierMax(p0, p1, p2, p3) {
+	if (p0 + 3 * p2 === 3 * p1 + p3) {
+		return 0.5;
+	}
+	var a = 6 * (p0 - 2 * p1 + p2),
+	    b = p0 - 3 * p1 + 3 * p2 - p3,
+	    sqrt = Math.sqrt(a * a + 36 * b * (p1 - p0));
+	return (-a + sqrt) / (-6 * b);
+}
+
+function segment(context, line) {
+	var segment;
 	if (line.length === 2) {
-		reverse ? 
-			context.lineTo(line[0].x, line[0].y) :
-			context.lineTo(line[1].x, line[1].y);
+		segment = line[1];
+		context.lineTo(segment.x, segment.y);
 	} else {
-		if (reverse) {
-			for (var i = 3; i > 0; i--) {
-				context.bezierCurveTo(line[i].cx2, line[i].cy2, line[i].cx1, line[i].cy1, line[i-1].x, line[i-1].y);
-			}
-		} else {
-			for (var i = 1; i < 4; i++) {
-				context.bezierCurveTo(line[i].cx1, line[i].cy1, line[i].cx2, line[i].cy2, line[i].x, line[i].y);
-			}
+		for (var i = 1; i <= 7; i += 3) {
+			segment = line.slice(i, i + 3);
+			context.bezierCurveTo(segment[0].x, segment[0].y, segment[1].x, segment[1].y, segment[2].x, segment[2].y);
 		}
 	}
 };
@@ -245,8 +249,8 @@ function clipImage(context, bounds, top, right, bottom, left, image) {
 	context.moveTo(top[0].x, top[0].y);
 	segment(context, top);
 	segment(context, right);
-	segment(context, bottom, true);
-	segment(context, left, true);
+	segment(context, bottom);
+	segment(context, left);
 	context.closePath();
 	context.clip();
 	if (image) {
@@ -258,7 +262,7 @@ function clipImage(context, bounds, top, right, bottom, left, image) {
 function Piece(image, col, row, top, right, bottom, left) {
 	var bounds = new Rect,
 	    context,
-	    corners = new Rect,
+	    corners = {},
 	    edges;
 
 	this.row = row;
@@ -274,7 +278,7 @@ function Piece(image, col, row, top, right, bottom, left) {
 	bounds.bottom = Math.max(bottom[0].y, bottom.last().y, extremity(bottom, true));
 	this.bounds = bounds;
 
-	$.Sprite.call(this, bounds.right - bounds.x + 1, bounds.bottom - bounds.y + 1, {foreign: true});
+	$.Sprite.call(this, bounds.right - bounds.x, bounds.bottom - bounds.y, {foreign: true});
 
 	/* clip */
 	clipImage(this.oContext, bounds, top, right, bottom, left, image);
@@ -286,12 +290,6 @@ function Piece(image, col, row, top, right, bottom, left) {
 		edge.forEach(function (point) {
 			point.x -= bounds.x;
 			point.y -= bounds.y;
-			if (point.cx1) {
-				point.cx1 -= bounds.x;
-				point.cx2 -= bounds.x;
-				point.cy1 -= bounds.y;
-				point.cy2 -= bounds.y;
-			}
 		});
 		return edge;
 	});
@@ -300,7 +298,7 @@ function Piece(image, col, row, top, right, bottom, left) {
 	/* find the offset of the piece's corners */
 	corners.tl = {x: top[0].x - bounds.x, y: top[0].y - bounds.y};
 	corners.tr = {x: right[0].x - bounds.x, y: right[0].y - bounds.y};
-	corners.bl = {x: bottom[0].x - bounds.x, y: bottom[0].y - bounds.y};
+	corners.bl = {x: bottom.last().x - bounds.x, y: bottom.last().y - bounds.y}; // bottom is reversed
 	this.corners = corners;
 	this.edges = new Rect;
 }
