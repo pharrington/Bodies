@@ -259,6 +259,7 @@ function attachEvents() {
 		var point = $.coordinates(e),
 	    	callbacks;
 	
+		e.preventDefault();
 		if ($.callbacks.mousedown) {
 			callbacks = $.callbacks.mousedown;
 			for (var i = 0; i < callbacks.length; i++) {
@@ -271,6 +272,7 @@ function attachEvents() {
 		var point = $.coordinates(e),
 	    	callbacks;
 	
+		e.preventDefault();
 		if ($.callbacks.mouseup) {
 			callbacks = $.callbacks.mouseup;
 			for (var i = 0; i < callbacks.length; i++) {
@@ -283,6 +285,7 @@ function attachEvents() {
 		var point = $.coordinates(e),
 	    	mmCallbacks;
 	
+		e.preventDefault();
 		if ($.callbacks.mousemove) {
 			mmCallbacks = $.callbacks.mousemove;
 			for (var i = 0; i < mmCallbacks.length; i++) {

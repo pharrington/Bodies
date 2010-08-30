@@ -1,3 +1,27 @@
+Array.prototype.flatten = function () {
+	var result = [],
+	    i,
+	    len,
+	    item;
+	for (i = 0, len = this.length; i < len; i++) {
+		item = this[i];
+		if (Object.prototype.toString.call(item) === "[object Array]") {
+			Array.prototype.push.apply(result, item.flatten());
+		} else {
+			result.push(item);
+		}
+	}
+	return result;
+};
+
+Array.prototype.min = function () {
+	return Math.min.apply(null, this.flatten());
+};
+
+Array.prototype.max = function () {
+	return Math.max.apply(null, this.flatten());
+};
+
 Array.prototype.last = function () {
 	return this[this.length-1];
 };
@@ -24,8 +48,8 @@ Object.prototype.copy = function () {
 
 /* the first step to any program is to define the global variables */
 var Configuration = {
-	width: 800,
-	height: 600,
+	width: 1000,
+	height: 800,
 	bgcolor: "#aaa",
 	/* please don't do bad things with my api key :( */
 	flickrKey: "dd8f94de8e3c2a2f76cd087ffc4b6020"
@@ -54,7 +78,7 @@ function Rect(left, top, right, bottom) {
 };
 
 function Jigsaw(width, height) {
-	var cellSize = 150,
+	var cellSize = 80,
 	    hSize, vSize,
 	    cx = width / cellSize,
 	    cy  = height / cellSize,
@@ -203,30 +227,52 @@ function calculateEdge(offset, length, cells, callback) {
 
 function extremity(edge, vertical) {
 	var axis,
-	    t;
+	    t1, t2, t3,
+	    s1, s2, s3;
 	axis = vertical ? "y" : "x";
 
 	if (edge.length === 2) {
 		return edge[0][axis];
 	}
 
-	t = bezierMax(edge[3][axis], edge[4][axis], edge[5][axis], edge[6][axis]);
-	return bezier(t, edge[3][axis], edge[4][axis], edge[5][axis], edge[6][axis]);
+	s1 = [0, 1, 2, 3].map(function (i) { return edge[i][axis]; });
+	t1 = bezierMax(s1);
+	s2 = [3, 4, 5, 6].map(function (i) { return edge[i][axis]; });
+	t2 = bezierMax(s2);
+	s3 = [6, 7, 8, 9].map(function (i) { return edge[i][axis]; });
+	t3 = bezierMax(s3);
+	return [bezier(t1, s1), bezier(t2, s2), bezier(t3, s3)];
 }
 
-function bezier(t, p0, p1, p2, p3) {
-	var ti = 1 - t;
+function bezier(t, segment) {
+	var ti = 1 - t,
+	    p0 = segment[0],
+	    p1 = segment[1],
+	    p2 = segment[2],
+	    p3 = segment[3];
 	return ti*ti*ti*p0 + 3*t*p1*ti*ti + 3*ti*p2*t*t + t*t*t*p3;
 }
 
-function bezierMax(p0, p1, p2, p3) {
+function bezierMax1(p0, p1, p2, p3) {
 	if (p0 + 3 * p2 === 3 * p1 + p3) {
 		return 0.5;
 	}
+
 	var a = 6 * (p0 - 2 * p1 + p2),
 	    b = p0 - 3 * p1 + 3 * p2 - p3,
-	    sqrt = Math.sqrt(a * a + 36 * b * (p1 - p0));
-	return (-a + sqrt) / (-6 * b);
+	    d = Math.sqrt(a * a + 36 * b * (p1 - p0)),
+	    plus = (-a + d) / (-6 * b),
+	    minus = (-a - d) / (-6 * b);
+
+	return (plus >= 0 && plus <= 1) ? plus : minus;
+}
+
+function bezierMax(segment) {
+	var t = bezierMax1.apply(null, segment);
+	if (isNaN(t)) {
+		t = 1 - bezierMax1.apply(null, segment.copy().reverse());
+	}
+	return isNaN(t) ? 0 : t;
 }
 
 function segment(context, line) {
@@ -240,7 +286,7 @@ function segment(context, line) {
 			context.bezierCurveTo(segment[0].x, segment[0].y, segment[1].x, segment[1].y, segment[2].x, segment[2].y);
 		}
 	}
-};
+}
 
 function clipImage(context, bounds, top, right, bottom, left, image) {
 	context.beginPath();
@@ -272,10 +318,10 @@ function Piece(image, col, row, top, right, bottom, left) {
 	this.bottomEdge = bottom;
 	this.rightEdge = right;
 
-	bounds.x = Math.min(left[0].x, left.last().x, extremity(left));
-	bounds.y = Math.min(top[0].y, top.last().y, extremity(top, true));
-	bounds.right = Math.max(right[0].x, right.last().x, extremity(right));
-	bounds.bottom = Math.max(bottom[0].y, bottom.last().y, extremity(bottom, true));
+	bounds.x = [left[0].x, left.last().x, extremity(left)].min();
+	bounds.y = [top[0].y, top.last().y, extremity(top, true)].min();
+	bounds.right = [right[0].x, right.last().x, extremity(right)].max();
+	bounds.bottom = [bottom[0].y, bottom.last().y, extremity(bottom, true)].max();
 	this.bounds = bounds;
 
 	$.Sprite.call(this, bounds.right - bounds.x, bounds.bottom - bounds.y, {foreign: true});
