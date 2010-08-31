@@ -77,33 +77,121 @@ function Rect(left, top, right, bottom) {
 	this.bottom = bottom;
 };
 
+function plotCorners(length, cells) {
+	var cellLength = length / cells,
+	    range = cellLength / 20,
+	    axis = [],
+	    i;
+
+	for (i = 0; i <= cells; i++ ) {
+		c = i * cellLength;
+		if (i && i != cells) { c += random(-range, range); }
+		axis.push(c);
+	}
+	return axis;
+}
+
+function plotEdge(x, y, xn, yn, makeEdge) {
+	if (y === ~~y && y === yn) {
+		return makeEdge(x, y, xn, yn);
+		//return [{x: x, y: y}, {x: xn, y: y}];
+	}
+
+	var cellWidth = xn - x,
+	    dy = cellWidth / 6,
+	    range = cellWidth / 20, rx, ry,
+	    xm, x2, y2, x3, y3,
+	    cx1, cy1, cx2, cy2, cx3, cy3, cx4, cy4,
+	    direction;
+
+	rx = random(range, range * 2);
+	ry = random(-range/2, range/2);
+	xm = x + cellWidth / 2;
+	direction = Math.round(Math.random()) ? 1 : -1;
+	dy *= direction;
+	x2 = xm - cellWidth / 5;
+	y2 = y - dy;
+	x3 = xm + cellWidth / 5;
+	y3 = y - dy;
+	cx1 = x2 + rx + range;
+	cy1 = y + ry - range / 2.5;
+	cx2 = x2;
+	cy2 = y2 - dy;
+	cx3 = x3;
+	cy3 = cy2;
+	cx4 = x3 - rx - range;
+	cy4 = cy1;
+
+	return makeEdge(x, y, x2, y2, x3, y3, xn, yn,
+		 cx1, cy1, cx2, cy2, cx3, cy3, cx4, cy4);
+}
+
+function makeHedge(x, y, x2, y2, x3, y3, x4, y4, cx1, cy1, cx2, cy2, cx3, cy3, cx4, cy4) {
+	if (x3 === undefined) {
+		return [{x: x, y: y}, {x: x2, y: y}];
+	}
+	return [{x: x, y: y},
+		{x: cx1, y: cy1}, {x: cx1, y: cy1}, {x: x2, y: y2},
+		{x: cx2, y: cy2}, {x: cx3, y: cy3}, {x: x3, y: y3},
+		{x: cx4, y: cy4}, {x: cx4, y: cy4}, {x: x4, y: y4}];
+}
+
+function makeVedge(y, x, y2, x2, y3, x3, y4, x4, cy1, cx1, cy2, cx2, cy3, cx3, cy4, cx4) {
+	if (x3 === undefined) {
+		return [{x: x, y: y}, {x: x, y: y2}];
+	}
+	return [{x: x, y: y},
+		{x: cx1, y: cy1}, {x: cx1, y: cy1}, {x: x2, y: y2},
+		{x: cx2, y: cy2}, {x: cx3, y: cy3}, {x: x3, y: y3},
+		{x: cx4, y: cy4}, {x: cx4, y: cy4}, {x: x4, y: y4}];
+}
+
 function Jigsaw(width, height) {
-	var cellSize = 80,
-	    hSize, vSize,
+	var cellSize = 150,
 	    cx = width / cellSize,
 	    cy  = height / cellSize,
-	    hEdge, vEdge,
-	    canvas = document.createElement("canvas");
+	    t, l, r, b, t2, l2,
+	    hplots = [], vplots = [],
+	    row,
+	    cell,
+	    x, y;
 
 	/* Try to divide rows and columns evenly, as close to the given cell size as possible */
 	hSize = width / Math.ceil(cx);
 	vSize = height / Math.ceil(cy);
 	this.columns = Math.ceil(width / hSize);
 	this.rows = Math.ceil(height / vSize);
-
-	canvas.width = width;
-	canvas.height = height;
 	this.width = width;
 	this.height = height;
-	this.context = canvas.getContext("2d");
-
 	this.edges = [];
 
-	for (y = 0; y < cy; y++) {
-		this.hline(y, vSize * y, width, this.columns);
+	for (y = 0; y <= this.rows; y++) {
+		hplots.push(plotCorners(this.width, this.columns));
 	}
-	for (x = 0; x < cx; x++) {
-		this.vline(x, hSize * x, height, this.rows);
+
+	for (x = 0; x <= this.columns; x++) {
+		vplots.push(plotCorners(this.height, this.rows));
+	}
+
+	for (y = 0; y <= this.rows; y++) {
+		row = [];
+		for (x = 0; x <= this.columns; x++) {
+			cell = {};
+			t = vplots[x][y];
+			l = hplots[y][x];
+			b = vplots[x][y+1];
+			r = hplots[y][x+1];
+			if (r) {
+				t2 = vplots[x+1][y];
+				cell.x = plotEdge(l, t, r, t2, makeHedge);
+			}
+			if (b) {
+				l2 = hplots[y+1][x];
+				cell.y = plotEdge(t, l, b, l2, makeVedge);
+			}
+			row.push(cell);
+		}
+		this.edges.push(row);
 	}
 }
 
@@ -114,116 +202,11 @@ Jigsaw.prototype.cutPiece = function (image, col, row) {
 	var cell = this.edges[row][col],
 	    left = cell.y,
 	    top = cell.x,
-	    right,
-	    bottom;
-	if (col === this.columns - 1) {
-		right = [{x: this.width, y: top.last().y},
-		         {x: this.width}];
-	} else {
-		right = this.edges[row][col+1].y;
-	}
-	if (row === this.rows - 1) {
-		bottom = [{x: left.last().x, y: this.height},
-		          {y: this.height}];
-	} else {
-		bottom = this.edges[row+1][col].x;
-	}
-	right[right.length-1].y = bottom.last().y;
-	bottom[bottom.length-1].x = right.last().x;
+	    right = this.edges[row][col+1].y,
+	    bottom = this.edges[row+1][col].x;
 
 	return new Piece(image, col, row, top, right, bottom.copy().reverse(), left.copy().reverse());
 };
-
-Jigsaw.prototype.hline = function (rowIndex, oy, width, cells) {
-	var edges = this.edges,
-	    row = [],
-	    edge;
-	calculateEdge(oy, width, cells, function (x, y, x2, y2, x3, y3, x4, y4, cx1, cy1, cx2, cy2, cx3, cy3, cx4, cy4, column) {
-		if (!rowIndex) {
-			edge = [{y: 0}, {y: 0}];
-			edge[0].x = column ? x : 0;
-			edge[1].x = x4;
-		} else {
-			edge = [{x: x, y: y},
-				{x: cx1, y: cy1}, {x: cx1, y: cy1}, {x: x2, y: y2},
-				{x: cx2, y: cy2}, {x: cx3, y: cy3}, {x: x3, y: y3},
-				{x: cx4, y: cy4}, {x: cx4, y: cy4}, {x: x4, y: y4}];
-		}
-		row.push({x: edge});
-	});
-	edges.push(row);
-};
-
-Jigsaw.prototype.vline = function (columnIndex, ox, height, cells) {
-	var edges = this.edges,
-	    edge,
-	    cell;
-	calculateEdge(ox, height, cells, function (y, x, y2, x2, y3, x3, y4, x4, cy1, cx1, cy2, cx2, cy3, cx3, cy4, cx4, row) {
-		cell = edges[row][columnIndex];
-
-		if (!columnIndex) {
-			edge = [{x: 0}, {x: 0}];
-			edge[0].y = row ? y : y;
-			edge[1].y = y4;
-		} else {
-			x4 = row === cells - 1 ? x4 : edges[row+1][columnIndex].x[0].x;
-			edge =[{x: cell.x[0].x, y: y},
-				{x: cx1, y: cy1}, {x: cx1, y: cy1}, {x: x2, y: y2},
-				{x: cx2, y: cy2}, {x: cx3, y: cy3}, {x: x3, y: y3},
-				{x: cx4, y: cy4}, {x: cx4, y: cy4}, {x: x4, y: y4}];
-		}
-		cell.x[0].y = y;
-		cell.y = edge;
-	});
-};
-
-function calculateEdge(offset, length, cells, callback) {
-	var y = offset,
-	    cellWidth = length / cells,
-	    xm, x,
-	    dy = cellWidth / 6,
-	    range = cellWidth / 20, rx, ry, rx4,
-	    x2, y2, x3, y3, x4, y4,
-	    cx1, cy1, cx2, cy2, cx3, cy3, cx4, cy4,
-	    direction;
-
-	for (var i = 0; i < cells; i++) {
-		rx = random(range, range * 2);
-		ry = random(-range/2, range/2);
-		rx4 = random(-range, range);
-		if (i === cells - 1) {
-			x = x4;
-			x4 = length;
-			y = y4;
-		} else if (i === 0) {
-			x = 0;
-			x4 = x + cellWidth + rx4;
-			y = Math.random() * 10 - 5 + offset;
-		} else {
-			x = x4;
-			x4 = i * cellWidth + cellWidth + rx4;
-			y = y4;
-		}
-		xm = x + cellWidth / 2;
-		direction = Math.round(Math.random()) ? 1 : -1;
-		dy *= direction;
-		x2 = xm - cellWidth / 5;
-		y2 = y - dy;
-		x3 = xm + cellWidth / 5;
-		y3 = y - dy;
-		y4 = offset + ry;
-		cx1 = x2 + rx + range;
-		cy1 = y + ry - range / 2.5;
-		cx2 = x2;
-		cy2 = y2 - dy;
-		cx3 = x3;
-		cy3 = cy2;
-		cx4 = x3 - rx - range;
-		cy4 = cy1;
-		callback(x, y, x2, y2, x3, y3, x4, y4,
-			 cx1, cy1, cx2, cy2, cx3, cy3, cx4, cy4, i);
-	}
-}
 
 function extremity(edge, vertical) {
 	var axis,
@@ -676,16 +659,15 @@ window.addEventListener("load", function () {
 			}
 			selectedPiece.moveTo(x - selectedPiece.mx, y - selectedPiece.my);
 		});
-		clip.x = Math.min(clip.x, dirty.x) - 1;
-		clip.y = Math.min(clip.y, dirty.y) - 1;
-		clip.right = Math.max(clip.right, dirty.right) + 1;
-		clip.bottom = Math.max(clip.bottom, dirty.bottom) + 1;
+		clip.x = Math.min(clip.x, dirty.x);
+		clip.y = Math.min(clip.y, dirty.y);
+		clip.right = Math.max(clip.right, dirty.right);
+		clip.bottom = Math.max(clip.bottom, dirty.bottom);
 
-		//redrawRegion(clip);
 		redraw();
+		//redrawRegion(clip);
 	});
 
-	//$.loaded(init);
 	$.start();
 
 	document.getElementById("reset").addEventListener("click", init, false);
