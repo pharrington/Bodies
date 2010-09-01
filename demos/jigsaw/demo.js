@@ -32,6 +32,15 @@ Array.prototype.copy = function () {
 	});
 };
 
+Object.prototype.equals = function (other) {
+	for (p in this) {
+		if (this.hasOwnProperty(p) && other.hasOwnProperty(p)) {
+			this[p] !== other[p] && return false;
+		}
+	}
+	return true;
+};
+
 Object.prototype.copy = function () {
 	var o = this.constructor(),
 	    val;
@@ -45,6 +54,15 @@ Object.prototype.copy = function () {
 	};
 	return o;
 };
+
+function Point(x, y) {
+	this.x = x;
+	this.y = y;
+}
+
+Point.prototype.add = function (other) {
+	return new Point(this.x + other.x, this.y + other.y);
+}
 
 /* the first step to any program is to define the global variables */
 var Configuration = {
@@ -94,7 +112,6 @@ function plotCorners(length, cells) {
 function plotEdge(x, y, xn, yn, makeEdge) {
 	if (y === ~~y && y === yn) {
 		return makeEdge(x, y, xn, yn);
-		//return [{x: x, y: y}, {x: xn, y: y}];
 	}
 
 	var cellWidth = xn - x,
@@ -294,12 +311,8 @@ function Piece(image, col, row, top, right, bottom, left) {
 	    corners = {},
 	    edges;
 
-	this.row = row;
-	this.column = col;
-	this.topEdge = top;
-	this.leftEdge = left;
-	this.bottomEdge = bottom;
-	this.rightEdge = right;
+	this.offset = new Point(0, 0);
+	this.edges = [top, right, bottom, left];
 
 	bounds.x = [left[0].x, left.last().x, extremity(left)].min();
 	bounds.y = [top[0].y, top.last().y, extremity(top, true)].min();
@@ -314,7 +327,7 @@ function Piece(image, col, row, top, right, bottom, left) {
 	$.Sprite.prototype.copyPixels.call(this);
 
 	/* boundary clipping path */
-	edges = [top, right, bottom, left].map(function (edge) {
+	edges = this.edges.map(function (edge) {
 		edge = edge.copy();
 		edge.forEach(function (point) {
 			point.x -= bounds.x;
@@ -323,13 +336,6 @@ function Piece(image, col, row, top, right, bottom, left) {
 		return edge;
 	});
 	clipImage(this.context, bounds, edges[0], edges[1], edges[2], edges[3]);
-
-	/* find the offset of the piece's corners */
-	corners.tl = {x: top[0].x - bounds.x, y: top[0].y - bounds.y};
-	corners.tr = {x: right[0].x - bounds.x, y: right[0].y - bounds.y};
-	corners.bl = {x: bottom.last().x - bounds.x, y: bottom.last().y - bounds.y}; // bottom is reversed
-	this.corners = corners;
-	this.edges = new Rect;
 }
 
 Piece.prototype = new $.Sprite;
@@ -340,73 +346,54 @@ Piece.prototype.moveTo = function (x, y, independent) {
 	    corner = this.corners,
 	    group;
 
-	this.edges.tl = {x: corner.tl.x + x, y: corner.tl.y + y};
-	this.edges.tr = {x: corner.tr.x + x, y: corner.tr.y + y};
-	this.edges.bl = {x: corner.bl.x + x, y: corner.bl.y + y};
+	this.offset.x = x;
+	this.offset.y = y;
+	$.Sprite.prototype.moveTo.call(this, x, y);
+};
 
-	if (this.group && !independent) {
-		group = this.group;
-		dx = x - this.x;
-		dy = y - this.y
-		group.moveTo(group.x + dx, group.y + dy);
-	} else {
-		$.Sprite.prototype.moveTo.call(this, x, y);
+Piece.prototype.merge = function (other) {
+	var edges = [],
+	    edge, oedge,
+	    shared {}, oshared = {},
+	    i, j;
+
+	/* find the indices of all edges shared between both pieces */
+	for (i = 0; i < this.edges.length; i++) {
+		edge = this.edges[i];
+
+		for (j = 0; j < other.edges.length; j++) {
+			oedge = other.edges[end];
+
+			if (edge[0].equals(oedge.last()) && edge.last().equals(oedge[0])) {
+				shared[i] = true;
+				oshared[j] = true;
+			}
+		}
+	}
+
+	/* create a new set of edges thats the symmetric difference between the current to sets
+	 * the edges from "other" are inserted where "this" edges are removed
+	 */
+	i = j = 0;
+	while (this.edges.length && other.edges.length) {
+		for (; !(i in shared); i++) {
+			edges.push(this.edges.splice(i, 1)[0]);
+		}
+		for (; i in shared; i++) {
+			this.edges.splice(i, 1);
+		}
+
+		for (; !(j in oshared); j++) {
+			edges.push(other.edges.splice(i, 1)[0]);
+		}
+		for (; j in oshared; j++) {
+			other.edges.splice(j, 1);
+		}
 	}
 };
 
 Piece.prototype.testPoint = function (point) {
 	return this.context.isPointInPath(point.x - this.x, point.y - this.y);
-};
-
-Piece.prototype.relationTo = function (other) {
-	if (this.row !== other.row && this.column !== other.column) { return; }
-	if (this.row === other.row - 1) { return "above"; }
-	if (this.row === other.row + 1) { return "below"; }
-	if (this.column === other.column - 1) { return "left"; }
-	if (this.column === other.column + 1) { return "right"; }
-};
-
-Piece.prototype.groupWith = function (other) {
-	var newGroup;
-
-	if (!this.group) {
-		if (other.group) { other.group.insert(this); }
-		else { newGroup = new PieceGroup([this, other]); }
-	} else {
-		if (other.group) { other.group.merge(this.group); }
-		else { this.group.insert(other); }
-	}
-};
-
-function PieceGroup(pieces) {
-	$.Group.call(this, pieces);
-	this.resetBounds();
-}
-
-PieceGroup.prototype = new $.Group;
-PieceGroup.prototype.constructor = PieceGroup;
-
-PieceGroup.prototype.insert = function (piece) {
-	$.Group.prototype.insert.call(this, piece);
-	this.resetBounds();
-};
-
-PieceGroup.prototype.resetBounds = function () {
-	var piece,
-	    pieces = this.items;
-
-	this.x = pieces[0].x;
-	this.y = pieces[0].y;
-	this.right = pieces[0].right;
-	this.bottom = pieces[0].bottom;
-
-	for (var i = 1; i < pieces.length; i++) {
-		piece = pieces[i];
-		this.x = Math.min(this.x, piece.x);
-		this.y = Math.min(this.y, piece.y);
-		this.right = Math.max(this.right, piece.right);
-		this.bottom = Math.max(this.bottom, piece.bottom);
-	}
 };
 
 /* not really a stack, just a convenient way to draw the most recently selected pieces last */
@@ -442,58 +429,31 @@ function redraw() {
 	stack.draw();
 }
 
-function groupSnap(group, tree) {
-	var others;
-	group.items.forEach(function (item) {
-		others = tree.queryItems(item).filter(function (piece) {
-			return (group.items.indexOf(piece) === -1);
-		});
-		snap(item, others);
-	});
-}
-
 function snap(piece, others) {
-	var pe = piece.edges, oe,
-	    other,
-	    threshold = 10,
-	    snapped;
-	for (var i = 0, l = others.length; i < l; i++) {
-		snapped = false;
-		other = others[i];
-		oe = other.edges;
-		switch (piece.relationTo(other)) {
-		case "above":
-			if (distance(pe.bl, oe.tl) < threshold) {
-				snapped = true;
-				piece.moveTo(oe.tl.x - piece.corners.bl.x,
-					     oe.tl.y - piece.corners.bl.y);
+	var i, j, k,
+	    o, other,
+	    pedge, oedge,
+	    pstart, pend,
+	    ostart, oend,
+	    threshold = 10;
+
+	/* TODO: less horrid snap detection algorithm */
+	for (i = 0; i < piece.edges.length; i++) {
+		pedge = piece.edges[i];
+		pstart = piece.offset.add(pedge[0]);
+		pend = piece.offset.add(pedge.last());
+		for (j = 0; j < others.length; j++) {
+			o = others[j];
+			other = o.edges;
+			for (k = 0; k < other.length; k++) {
+				oedge = other[k];
+				ostart = o.offset.add(oedge[0]);
+				oend = o.offset.add(oedge.last());
+				if (distance(pstart, oend) < threshold && distance(pend, ostart) < threshold) {
+					o.merge(piece, k, i);
+					return;
+				}
 			}
-			break;
-		case "below":
-			if (distance(pe.tl, oe.bl) < threshold) {
-				snapped = true;
-				piece.moveTo(oe.bl.x - piece.corners.tl.x,
-					     oe.bl.y - piece.corners.tl.y);
-			}
-			break;
-		case "left":
-			if (distance(pe.tr, oe.tl) < threshold) {
-				snapped = true;
-				piece.moveTo(oe.tl.x - piece.corners.tr.x,
-					     oe.tl.y - piece.corners.tr.y);
-			}
-			break;
-		case "right":
-			if (distance(pe.tl, oe.tr) < threshold) {
-				snapped = true;
-				piece.moveTo(oe.tr.x - piece.corners.tl.x,
-					     oe.tr.y - piece.corners.tl.y);
-			}
-			break;
-		}
-		if (snapped) {
-			piece.groupWith(other);
-			return;
 		}
 	}
 }
