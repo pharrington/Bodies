@@ -57,15 +57,6 @@ Object.prototype.copy = function () {
 	return o;
 };
 
-function Point(x, y) {
-	this.x = x;
-	this.y = y;
-}
-
-Point.prototype.add = function (other) {
-	return new Point(this.x + other.x, this.y + other.y);
-}
-
 function pointStr(p) {
 	return p.x + "_" + p.y;
 }
@@ -93,12 +84,37 @@ function distance(p1, p2) {
 	return Math.sqrt(dx2 + dy2);
 }
 
-function Rect(left, top, right, bottom) {
-	this.x = left;
-	this.y = top;
-	this.right = right;
-	this.bottom = bottom;
-};
+function flickrURL(photo, size) {
+	size = size ? "_" + size : "";
+	return "http://farm" + photo.farm +
+		".static.flickr.com/" + photo.server + "/" +
+		photo.id + "_" +
+		photo.secret + 
+		size + ".jpg";
+}
+
+function fetchImages() {
+	ajax("http://api.flickr.com/services/rest/", {
+		method: "flickr.interestingness.getList",
+		api_key: Configuration.flickrKey,
+		format: "json",
+		per_page: 8
+	});
+}
+
+function jsonFlickrApi(response) {
+	var imageList = "";
+	response.photos.photo.forEach(function (photo) {
+		var url = flickrURL(photo, "z"),
+		    small = flickrURL(photo, "s");
+		imageList += "<li><a href='#'><img src='" + small +
+		"' data-url='" + url +
+		"'</img></a></li>";
+	});
+	document.getElementById("pictures").innerHTML = imageList;
+	$.loadImage("puzzleSource", document.querySelector("#pictures img").getAttribute("data-url"));
+	$.loaded(init);
+}
 
 function plotCorners(length, cells) {
 	var cellLength = length / cells,
@@ -167,68 +183,6 @@ function makeVedge(y, x, y2, x2, y3, x3, y4, x4, cy1, cx1, cy2, cx2, cy3, cx3, c
 		{x: cx2, y: cy2}, {x: cx3, y: cy3}, {x: x3, y: y3},
 		{x: cx4, y: cy4}, {x: cx4, y: cy4}, {x: x4, y: y4}];
 }
-
-function Jigsaw(width, height) {
-	var cellSize = 150,
-	    cx = width / cellSize,
-	    cy  = height / cellSize,
-	    t, l, r, b, t2, l2,
-	    hplots = [], vplots = [],
-	    row,
-	    cell,
-	    x, y;
-
-	/* Try to divide rows and columns evenly, as close to the given cell size as possible */
-	hSize = width / Math.ceil(cx);
-	vSize = height / Math.ceil(cy);
-	this.columns = Math.ceil(width / hSize);
-	this.rows = Math.ceil(height / vSize);
-	this.width = width;
-	this.height = height;
-	this.edges = [];
-
-	for (y = 0; y <= this.rows; y++) {
-		hplots.push(plotCorners(this.width, this.columns));
-	}
-
-	for (x = 0; x <= this.columns; x++) {
-		vplots.push(plotCorners(this.height, this.rows));
-	}
-
-	for (y = 0; y <= this.rows; y++) {
-		row = [];
-		for (x = 0; x <= this.columns; x++) {
-			cell = {};
-			t = vplots[x][y];
-			l = hplots[y][x];
-			b = vplots[x][y+1];
-			r = hplots[y][x+1];
-			if (r) {
-				t2 = vplots[x+1][y];
-				cell.x = plotEdge(l, t, r, t2, makeHedge);
-			}
-			if (b) {
-				l2 = hplots[y+1][x];
-				cell.y = plotEdge(t, l, b, l2, makeVedge);
-			}
-			row.push(cell);
-		}
-		this.edges.push(row);
-	}
-}
-
-Jigsaw.prototype.rows = 0;
-Jigsaw.prototype.columns = 0;
-
-Jigsaw.prototype.cutPiece = function (image, col, row) {
-	var cell = this.edges[row][col],
-	    left = cell.y,
-	    top = cell.x,
-	    right = this.edges[row][col+1].y,
-	    bottom = this.edges[row+1][col].x;
-
-	return new Piece(image, col, row, top.copy(), right.copy(), bottom.copy().reverse(), left.copy().reverse());
-};
 
 function extremity(edge, vertical) {
 	var axis,
@@ -311,6 +265,84 @@ function clipImage(context, bounds, edges, image) {
 		context.restore();
 	}
 }
+
+function Rect(left, top, right, bottom) {
+	this.x = left;
+	this.y = top;
+	this.right = right;
+	this.bottom = bottom;
+};
+
+function Point(x, y) {
+	this.x = x;
+	this.y = y;
+}
+
+Point.prototype.add = function (other) {
+	return new Point(this.x + other.x, this.y + other.y);
+}
+
+function Jigsaw(width, height) {
+	var cellSize = 150,
+	    cx = width / cellSize,
+	    cy  = height / cellSize,
+	    t, l, r, b, t2, l2,
+	    hplots = [], vplots = [],
+	    row,
+	    cell,
+	    x, y;
+
+	/* Try to divide rows and columns evenly, as close to the given cell size as possible */
+	hSize = width / Math.ceil(cx);
+	vSize = height / Math.ceil(cy);
+	this.columns = Math.ceil(width / hSize);
+	this.rows = Math.ceil(height / vSize);
+	this.width = width;
+	this.height = height;
+	this.edges = [];
+
+	for (y = 0; y <= this.rows; y++) {
+		hplots.push(plotCorners(this.width, this.columns));
+	}
+
+	for (x = 0; x <= this.columns; x++) {
+		vplots.push(plotCorners(this.height, this.rows));
+	}
+
+	for (y = 0; y <= this.rows; y++) {
+		row = [];
+		for (x = 0; x <= this.columns; x++) {
+			cell = {};
+			t = vplots[x][y];
+			l = hplots[y][x];
+			b = vplots[x][y+1];
+			r = hplots[y][x+1];
+			if (r) {
+				t2 = vplots[x+1][y];
+				cell.x = plotEdge(l, t, r, t2, makeHedge);
+			}
+			if (b) {
+				l2 = hplots[y+1][x];
+				cell.y = plotEdge(t, l, b, l2, makeVedge);
+			}
+			row.push(cell);
+		}
+		this.edges.push(row);
+	}
+}
+
+Jigsaw.prototype.rows = 0;
+Jigsaw.prototype.columns = 0;
+
+Jigsaw.prototype.cutPiece = function (image, col, row) {
+	var cell = this.edges[row][col],
+	    left = cell.y,
+	    top = cell.x,
+	    right = this.edges[row][col+1].y,
+	    bottom = this.edges[row+1][col].x;
+
+	return new Piece(image, col, row, top.copy(), right.copy(), bottom.copy().reverse(), left.copy().reverse());
+};
 
 function Piece(image, col, row, top, right, bottom, left) {
 	var bounds = new Rect,
@@ -588,38 +620,6 @@ function redrawRegion(clip) {
 	$.context.restore();
 }
 
-function flickrURL(photo, size) {
-	size = size ? "_" + size : "";
-	return "http://farm" + photo.farm +
-		".static.flickr.com/" + photo.server + "/" +
-		photo.id + "_" +
-		photo.secret + 
-		size + ".jpg";
-}
-
-function fetchImages() {
-	ajax("http://api.flickr.com/services/rest/", {
-		method: "flickr.interestingness.getList",
-		api_key: Configuration.flickrKey,
-		format: "json",
-		per_page: 8
-	});
-}
-
-function jsonFlickrApi(response) {
-	var imageList = "";
-	response.photos.photo.forEach(function (photo) {
-		var url = flickrURL(photo, "z"),
-		    small = flickrURL(photo, "s");
-		imageList += "<li><a href='#'><img src='" + small +
-		"' data-url='" + url +
-		"'</img></a></li>";
-	});
-	document.getElementById("pictures").innerHTML = imageList;
-	$.loadImage("puzzleSource", document.querySelector("#pictures img").getAttribute("data-url"));
-	$.loaded(init);
-}
-
 window.addEventListener("load", function () {
 	$.init("board", Configuration.width, Configuration.height);
 	$.context.fillStyle = Configuration.bgcolor;
@@ -681,8 +681,7 @@ window.addEventListener("load", function () {
 
 	document.getElementById("pictures").addEventListener("click", function (e) {
 		var preview,
-		    name,
-		    ext,
+		    url,
 		    element,
 		    previous;
 		if (preview = e.target.src) {
@@ -693,7 +692,8 @@ window.addEventListener("load", function () {
 					previous.className = previous.className.replace(/\s*\bselected\b\s*/, "");
 				}
 				element.className += " selected";
-				$.loadImage("puzzleSource", element.getAttribute("data-url"));
+				url = element.getAttribute("data-url");
+				url && $.loadImage("puzzleSource", url);
 			}
 		}
 	}, false);
