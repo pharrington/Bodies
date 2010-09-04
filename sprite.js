@@ -1,6 +1,7 @@
 $.Sprite = function (imageName, height, options) {;
 	if (imageName === undefined) { return; }
 	var image,
+	    width,
 	    maxLength;
 
 	this.canvas = document.createElement("canvas");
@@ -9,46 +10,20 @@ $.Sprite = function (imageName, height, options) {;
 	this.oContext = this.oCanvas.getContext("2d");
 
 	if (typeof imageName === "number" && typeof height === "number") {
-		this.oWidth = imageName;
-		this.oHeight = height;
+		width = imageName;
 	} else {
 		image = $.resource(imageName);
 		options = height;
+		width = image.width;
+		height = image.height;
+		this.resource = image;
 		this.resourceName = imageName;
 		this.steps = 150;
-		this.oWidth = image.width;
-		this.oHeight = image.height;
 	}
 
 	this.precompute = options.precompute;
 	this.foreign = options.foreign;
-	this.oCanvas.width = this.oWidth;
-	this.oCanvas.height = this.oHeight;
-	this.halfBaseWidth = this.oWidth / 2;
-	this.halfBaseHeight = this.oHeight / 2;
-
-
-	// the actual image canvas will be larger, to handle rotations
-	maxLength = Math.sqrt(Math.pow(this.oWidth, 2) + Math.pow(this.oHeight, 2));
-	this.width = this.height = this.imageWidth = this.imageHeight = Math.floor(maxLength);
-	this.scanWidth = this.width * 4;
-	this.halfWidth = maxLength / 2;
-	this.halfHeight = maxLength / 2;
-	this.canvas.width = this.width;
-	this.canvas.height = this.height;
-	this.dx = Math.floor(this.width / 2 - this.halfBaseWidth);
-	this.dy = Math.floor(this.height / 2 - this.halfBaseHeight);
-	this.wall = false;
-
-	if (image !== undefined) {
-		this.oContext.drawImage(image, 0, 0);
-		if (this.precompute) {
-			preRotate(this);
-		}
-		else {
-			copyPixels.call(this);
-		}
-	}
+	this.resize(width, height);
 };
 
 $.Sprite.precomputed = {};
@@ -112,6 +87,40 @@ $.Sprite.prototype.imageOffsetX = 0;
 $.Sprite.prototype.imageOffsetY = 0;
 
 $.Sprite.prototype.copyPixels = copyPixels;
+
+$.Sprite.prototype.resize = function (width, height) {
+	var maxLength,
+	    image = this.resource;
+
+	this.oWidth = width;
+	this.oHeight = height;
+	this.oCanvas.width = this.oWidth;
+	this.oCanvas.height = this.oHeight;
+	this.halfBaseWidth = this.oWidth / 2;
+	this.halfBaseHeight = this.oHeight / 2;
+
+	// the actual image canvas will be larger, to handle rotations
+	maxLength = Math.sqrt(Math.pow(this.oWidth, 2) + Math.pow(this.oHeight, 2));
+	this.width = this.height = Math.floor(maxLength);
+	this.scanWidth = this.width * 4;
+	this.halfWidth = maxLength / 2;
+	this.halfHeight = maxLength / 2;
+	this.canvas.width = this.width;
+	this.canvas.height = this.height;
+	this.dx = Math.floor(this.width / 2 - this.halfBaseWidth);
+	this.dy = Math.floor(this.height / 2 - this.halfBaseHeight);
+	this.wall = false;
+
+	if (image !== undefined) {
+		this.oContext.drawImage(image, 0, 0);
+		if (this.precompute) {
+			preRotate(this);
+		}
+		else {
+			copyPixels.call(this);
+		}
+	}
+};
 
 $.Sprite.prototype.moveTo = function (x, y) {
 	this.x = x;

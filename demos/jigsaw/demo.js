@@ -32,13 +32,15 @@ Array.prototype.copy = function () {
 	});
 };
 
-Object.prototype.equals = function (other) {
-	for (p in this) {
-		if (this.hasOwnProperty(p) && other.hasOwnProperty(p)) {
-			this[p] !== other[p] && return false;
+Object.prototype.first = function () {
+	var k, v;
+	for (k in this) {
+		if (this.hasOwnProperty(k)) {
+			v = this[k];
+			break;
 		}
 	}
-	return true;
+	return !v ? null : [k, v];
 };
 
 Object.prototype.copy = function () {
@@ -64,6 +66,10 @@ Point.prototype.add = function (other) {
 	return new Point(this.x + other.x, this.y + other.y);
 }
 
+function pointStr(p) {
+	return p.x + "_" + p.y;
+}
+
 /* the first step to any program is to define the global variables */
 var Configuration = {
 	width: 1000,
@@ -72,7 +78,6 @@ var Configuration = {
 	/* please don't do bad things with my api key :( */
 	flickrKey: "dd8f94de8e3c2a2f76cd087ffc4b6020"
 	},
-	ctree,
 	selectedPiece,
 	stack;
 
@@ -222,7 +227,7 @@ Jigsaw.prototype.cutPiece = function (image, col, row) {
 	    right = this.edges[row][col+1].y,
 	    bottom = this.edges[row+1][col].x;
 
-	return new Piece(image, col, row, top, right, bottom.copy().reverse(), left.copy().reverse());
+	return new Piece(image, col, row, top.copy(), right.copy(), bottom.copy().reverse(), left.copy().reverse());
 };
 
 function extremity(edge, vertical) {
@@ -288,15 +293,17 @@ function segment(context, line) {
 	}
 }
 
-function clipImage(context, bounds, top, right, bottom, left, image) {
+function clipImage(context, bounds, edges, image) {
 	context.beginPath();
 	context.save();
 	image && context.translate(-bounds.x, -bounds.y);
-	context.moveTo(top[0].x, top[0].y);
-	segment(context, top);
-	segment(context, right);
-	segment(context, bottom);
-	segment(context, left);
+	//context.moveTo(edges[0][0].x, edges[0][0].y);
+	edges.forEach(function (edge) {
+		if (edge.newPath) {
+			context.moveTo(edge[0].x, edge[0].y);
+		}
+		segment(context, edge);
+	});
 	context.closePath();
 	context.clip();
 	if (image) {
@@ -311,6 +318,8 @@ function Piece(image, col, row, top, right, bottom, left) {
 	    corners = {},
 	    edges;
 
+	top.newPath = true;
+	this.image = image;
 	this.offset = new Point(0, 0);
 	this.edges = [top, right, bottom, left];
 
@@ -321,21 +330,8 @@ function Piece(image, col, row, top, right, bottom, left) {
 	this.bounds = bounds;
 
 	$.Sprite.call(this, bounds.right - bounds.x, bounds.bottom - bounds.y, {foreign: true});
-
-	/* clip */
-	clipImage(this.oContext, bounds, top, right, bottom, left, image);
-	$.Sprite.prototype.copyPixels.call(this);
-
-	/* boundary clipping path */
-	edges = this.edges.map(function (edge) {
-		edge = edge.copy();
-		edge.forEach(function (point) {
-			point.x -= bounds.x;
-			point.y -= bounds.y;
-		});
-		return edge;
-	});
-	clipImage(this.context, bounds, edges[0], edges[1], edges[2], edges[3]);
+	
+	this.clip();
 }
 
 Piece.prototype = new $.Sprite;
@@ -343,53 +339,118 @@ Piece.prototype.constructor = Piece;
 
 Piece.prototype.moveTo = function (x, y, independent) {
 	var dx, dy,
-	    corner = this.corners,
-	    group;
+	    corner = this.corners;
 
 	this.offset.x = x;
 	this.offset.y = y;
 	$.Sprite.prototype.moveTo.call(this, x, y);
 };
 
+Piece.prototype.clip = function () {
+	var edges,
+	    clip,
+	    bounds = this.bounds;
+
+	clipImage(this.oContext, bounds, this.edges, this.image);
+	$.Sprite.prototype.copyPixels.call(this);
+
+	/* boundary clipping path */
+	clip = this.edges.map(function (edge) {
+		edge = edge.copy();
+		edge.forEach(function (point) {
+			point.x -= bounds.x;
+			point.y -= bounds.y;
+		});
+		return edge;
+	});
+	this.clipEdges = clip;
+	clipImage(this.context, bounds, clip);
+};
+
 Piece.prototype.merge = function (other) {
 	var edges = [],
-	    edge, oedge,
-	    shared {}, oshared = {},
-	    i, j;
+	    p, p1, p2,
+	    points = {},
+	    k;
 
-	/* find the indices of all edges shared between both pieces */
-	for (i = 0; i < this.edges.length; i++) {
-		edge = this.edges[i];
+	// let it be known what ends lead where
+	this.edges.forEach(function (edge) {
+		edge.newPath = false;
+		p1 = pointStr(edge[0]);
+		p2 = pointStr(edge.last());
 
-		for (j = 0; j < other.edges.length; j++) {
-			oedge = other.edges[end];
+		points[p1] = {};
+		points[p1][p2] = edge;
+	});
 
-			if (edge[0].equals(oedge.last()) && edge.last().equals(oedge[0])) {
-				shared[i] = true;
-				oshared[j] = true;
-			}
+	// track where the other piece's edges' ends lead, and remove duplicates from the first piece
+	other.edges.forEach(function (edge) {
+		edge.newPath = false;
+		p1 = pointStr(edge[0]);
+		p2 = pointStr(edge.last());
+		p = points[p2];
+
+		// its a duplicate edge, remove
+		if (p && p[p1]) {
+			delete p[p1];
+		} else {
+			if (!points[p1]) { points[p1] = {}; }
+			points[p1][p2] = edge;
 		}
+	});
+
+	// prune phantom edges
+	for (p in points) {
+		if (!points[p].first()) { delete points[p]; }
 	}
 
-	/* create a new set of edges thats the symmetric difference between the current to sets
-	 * the edges from "other" are inserted where "this" edges are removed
+	/* follow the gathered points to create our new edges
+	 * we just follow each edge's associated point, and quit when we're back to the first point
 	 */
-	i = j = 0;
-	while (this.edges.length && other.edges.length) {
-		for (; !(i in shared); i++) {
-			edges.push(this.edges.splice(i, 1)[0]);
-		}
-		for (; i in shared; i++) {
-			this.edges.splice(i, 1);
+
+	for (p in points) {
+		if (!points.hasOwnProperty(p)) {
+			continue;
 		}
 
-		for (; !(j in oshared); j++) {
-			edges.push(other.edges.splice(i, 1)[0]);
-		}
-		for (; j in oshared; j++) {
-			other.edges.splice(j, 1);
+		p1 = points[p];
+		p2 = p1.first();
+		p2[1].newPath = true;
+		k = p;
+
+		while (p2) {
+			/* add this edge, and remove it from our collection of points */
+			edges.push(p2[1]);
+			delete p1[p2[0]];
+
+			/* if there are new more edges connected to this point, remove it */
+			if (!p1.first()) {
+				delete points[k];
+			}
+
+			/* onto the next point */
+			k = p2[0];
+			p1 = points[p2[0]];
+			p2 = p1 && p1.first();
 		}
 	}
+
+	this.reset(edges, other);
+};
+
+Piece.prototype.reset = function (edges, other) {
+	var b = this.bounds,
+	    ob = other.bounds;
+
+	b.x = Math.min(b.x, ob.x);
+	b.y = Math.min(b.y, ob.y);
+	b.right = Math.max(b.right, ob.right);
+	b.bottom = Math.max(b.bottom, ob.bottom);
+	$.Sprite.prototype.resize.call(this, b.right - b.x, b.bottom - b.y);
+	this.moveTo(Math.min(this.x, other.x), Math.min(this.y, other.y));
+
+	this.edges = edges;
+	this.clip();
 };
 
 Piece.prototype.testPoint = function (point) {
@@ -435,22 +496,41 @@ function snap(piece, others) {
 	    pedge, oedge,
 	    pstart, pend,
 	    ostart, oend,
+	    pclip, oclip,
+	    pcstart, pcend,
+	    ocstart, ocend,
 	    threshold = 10;
 
 	/* TODO: less horrid snap detection algorithm */
 	for (i = 0; i < piece.edges.length; i++) {
 		pedge = piece.edges[i];
-		pstart = piece.offset.add(pedge[0]);
-		pend = piece.offset.add(pedge.last());
+		pstart = pedge[0];
+		pend = pedge.last();
+		pclip = piece.clipEdges[i];
+		pcstart = piece.offset.add(pclip[0]);
+		pcend = piece.offset.add(pclip.last());
+
 		for (j = 0; j < others.length; j++) {
 			o = others[j];
+			//other = o.clipEdges;
 			other = o.edges;
+
 			for (k = 0; k < other.length; k++) {
 				oedge = other[k];
-				ostart = o.offset.add(oedge[0]);
-				oend = o.offset.add(oedge.last());
-				if (distance(pstart, oend) < threshold && distance(pend, ostart) < threshold) {
+				ostart = oedge[0];
+				oend = oedge.last();
+				oclip = o.clipEdges[k];
+				ocstart = o.offset.add(oclip[0]);
+				ocend = o.offset.add(oclip.last());
+
+				if (pstart.x === oend.x &&
+					pstart.y === oend.y &&
+					pend.x === ostart.x &&
+					pend.y === ostart.y &&
+					distance(pcstart, ocend) < threshold &&
+					distance(pcend, ocstart) < threshold) {
 					o.merge(piece, k, i);
+					stack.items.deleteItem(piece);
 					return;
 				}
 			}
@@ -484,10 +564,8 @@ function init() {
 
 	clear();
 	pieces = cutImage(image);
-	ctree = new $.Quadtree(-250, -250, Configuration.width + 250, Configuration.height + 250);
 	stack = new DrawStack();
 	for (var i = 0; i < pieces.length; i++) {
-		ctree.insert(pieces[i]);
 		stack.push(pieces[i]);
 	}
 }
@@ -498,10 +576,8 @@ function redrawRegion(clip) {
 	$.context.rect(clip.x, clip.y, clip.right - clip.x, clip.bottom - clip.y);
 	$.context.clip();
 	$.context.fill();
-	ctree.queryItems(clip).sort(function (a, b) {
-		var items = stack.items;
-		return items.indexOf(a) < items.indexOf(b) ? -1 : 1;
-	}).filter(function (piece) {
+
+	stack.items.filter(function (piece) {
 		return !(piece.x > clip.right ||
 			 piece.right < clip.left ||
 			 piece.y > clip.bottom ||
@@ -552,26 +628,16 @@ window.addEventListener("load", function () {
 
 	$.mouseDown(function (x, y) {
 		var point = new Rect(x, y, x+1, y+1),
-		    items,
+		    items = stack.items,
 		    moveable;
-		items = ctree.queryItems(point);
-		items.sort(function (a, b) {
-			var items = stack.items;
-			return items.indexOf(a) > items.indexOf(b) ? -1 : 1
-		});
-		for (var j = 0; j < items.length; j++) {
+
+		for (var j = items.length - 1; j >= 0; j--) {
 			if (items[j].testPoint(point)) {
 				// select this piece
 				selectedPiece = items[j];
 				selectedPiece.mx = x - selectedPiece.x;
 				selectedPiece.my = y - selectedPiece.y;
-				if (selectedPiece.group) {
-					selectedPiece.group.items.forEach(function (piece) {
-						stack.moveToTop(piece);
-					});
-				} else {
-					stack.moveToTop(selectedPiece);
-				}
+				stack.moveToTop(selectedPiece);
 				redraw();
 				break;
 			}
@@ -579,14 +645,9 @@ window.addEventListener("load", function () {
 	});
 
 	$.mouseUp(function (x, y) {
-		var group;
 		if (!selectedPiece) { return; }
-		group = selectedPiece.group;
-		if (group) {
-			groupSnap(group, ctree);
-		} else {
-			snap(selectedPiece, ctree.queryItems(selectedPiece));
-		}
+
+		snap(selectedPiece, stack.items);
 		redraw();
 		selectedPiece.mx = 0;
 		selectedPiece.my = 0;
@@ -595,30 +656,19 @@ window.addEventListener("load", function () {
 
 	$.mouseMove(function (x, y) {
 		var node,
-		    group,
-		    pieces,
 		    dirty,
 		    clip;
 
 		if (!selectedPiece) { return; }
 
 		clip = new Rect;
-		group = selectedPiece.group;
-		pieces = group ? group.items : [selectedPiece];
-		dirty = group ? group : selectedPiece;
+		dirty = selectedPiece;
 		clip.x = dirty.x;
 		clip.y = dirty.y;
 		clip.right = dirty.right + 1;
 		clip.bottom = dirty.bottom + 1;
 		
-		pieces.forEach(function (piece) {
-			node = selectedPiece.collisionNode;
-			if (!node.contains(selectedPiece)) {
-				node.deleteItem(selectedPiece);
-				ctree.insert(selectedPiece);
-			}
-			selectedPiece.moveTo(x - selectedPiece.mx, y - selectedPiece.my);
-		});
+		selectedPiece.moveTo(x - selectedPiece.mx, y - selectedPiece.my);
 		clip.x = Math.min(clip.x, dirty.x);
 		clip.y = Math.min(clip.y, dirty.y);
 		clip.right = Math.max(clip.right, dirty.right);
@@ -646,10 +696,6 @@ window.addEventListener("load", function () {
 					previous.className = previous.className.replace(/\s*\bselected\b\s*/, "");
 				}
 				element.className += " selected";
-				/*
-				name = preview.slice(preview.lastIndexOf("/")+1, preview.lastIndexOf("-sq"));
-				ext = preview.slice(preview.lastIndexOf("."));
-				*/
 				$.loadImage("puzzleSource", element.getAttribute("data-url"));
 			}
 		}
