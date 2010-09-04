@@ -656,26 +656,23 @@ window.addEventListener("load", function () {
 
 	$.mouseMove(function (x, y) {
 		var node,
-		    dirty,
 		    clip;
 
 		if (!selectedPiece) { return; }
 
 		clip = new Rect;
-		dirty = selectedPiece;
-		clip.x = dirty.x;
-		clip.y = dirty.y;
-		clip.right = dirty.right + 1;
-		clip.bottom = dirty.bottom + 1;
+		clip.x = selectedPiece.x;
+		clip.y = selectedPiece.y;
+		clip.right = selectedPiece.right;
+		clip.bottom = selectedPiece.bottom;
 		
 		selectedPiece.moveTo(x - selectedPiece.mx, y - selectedPiece.my);
-		clip.x = Math.min(clip.x, dirty.x);
-		clip.y = Math.min(clip.y, dirty.y);
-		clip.right = Math.max(clip.right, dirty.right);
-		clip.bottom = Math.max(clip.bottom, dirty.bottom);
+		clip.x = Math.floor(Math.min(clip.x, selectedPiece.x));
+		clip.y = Math.floor(Math.min(clip.y, selectedPiece.y));
+		clip.right = Math.ceil(Math.max(clip.right, selectedPiece.right));
+		clip.bottom = Math.ceil(Math.max(clip.bottom, selectedPiece.bottom));
 
-		redraw();
-		//redrawRegion(clip);
+		redrawRegion(clip);
 	});
 
 	$.start();
