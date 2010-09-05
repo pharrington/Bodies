@@ -101,7 +101,7 @@ $.Sprite.prototype.resize = function (width, height) {
 
 	// the actual image canvas will be larger, to handle rotations
 	maxLength = Math.sqrt(Math.pow(this.oWidth, 2) + Math.pow(this.oHeight, 2));
-	this.width = this.height = Math.floor(maxLength);
+	this.width = this.height = this.imageWidth = this.imageHeight = Math.floor(maxLength);
 	this.scanWidth = this.width * 4;
 	this.halfWidth = maxLength / 2;
 	this.halfHeight = maxLength / 2;
