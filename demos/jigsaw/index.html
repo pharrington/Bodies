@@ -1,57 +1,26 @@
+<!DOCTYPE html>
 <html>
 <head>
 <title>Bodies Collide - Jigsaw puzzle</title>
+<link rel="stylesheet" type="text/css" href="style.css">
 <script type="text/javascript" src="../../bodies.js"></script>
 <script type="text/javascript" src="ajax.js"></script>
 <script type="text/javascript" src="demo.js"></script>
-<style type="text/css">
-	* {
-		border: 0;
-		padding: 0;
-		margin: 0;
-		position: relative;
-	}
-
-	body {
-		padding: 5px;
-	}
-	input {
-		border: 1px solid black;
-	}
-	form {
-		display: block;
-		margin-bottom: 5px;
-	}
-
-	ul > li {
-		display: inline;
-		margin-right: 3px;
-	}
-
-	a > img {
-		padding: 3px;
-	}
-
-	a > img.selected {
-		padding: 0;
-		border: 3px solid #f00ba4;
-	}
-</style>
 </head>
 <body>
-	<form>
-		<input id="reset" type="button" value="Reset Puzzle" />
-	</form>
-	<ul id="pictures">
-		<li><a href="#"><img src="b75.gif" class="selected"></a></li>
-		<li><a href="#"><img src="b75.gif"></a></li>
-		<li><a href="#"><img src="b75.gif"></a></li>
-		<li><a href="#"><img src="b75.gif"></a></li>
-		<li><a href="#"><img src="b75.gif"></a></li>
-		<li><a href="#"><img src="b75.gif"></a></li>
-		<li><a href="#"><img src="b75.gif"></a></li>
-		<li><a href="#"><img src="b75.gif"></a></li>
-	</ul>
 	<canvas id="board"></canvas>
+	<section id="puzzle_picker">
+		<ul id="pictures">
+		</ul>
+		<form>
+			<fieldset>
+				<label for="piece_size">Piece Size:</label>
+				<input type="radio" name="piece_size" value="0">Small
+				<input type="radio" name="piece_size" value="1" checked>Medium
+				<input type="radio" name="piece_size" value="2">Large
+			</fieldset>
+			<input id="reset" type="button" value="Reset Puzzle">
+		</form>
+	</section>
 </body>
 </html>

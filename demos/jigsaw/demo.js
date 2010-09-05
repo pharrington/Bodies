@@ -63,10 +63,11 @@ function pointStr(p) {
 
 /* the first step to any program is to define the global variables */
 var Configuration = {
-	width: 1000,
-	height: 800,
+	width: 800,
+	height: 700,
 	bgcolor: "#aaa",
 	/* please don't do bad things with my api key :( */
+	cellSizes: [100, 150, 200],
 	flickrKey: "dd8f94de8e3c2a2f76cd087ffc4b6020"
 	},
 	selectedPiece,
@@ -98,12 +99,13 @@ function fetchImages() {
 		method: "flickr.interestingness.getList",
 		api_key: Configuration.flickrKey,
 		format: "json",
-		per_page: 8
+		per_page: 24
 	});
 }
 
 function jsonFlickrApi(response) {
-	var imageList = "";
+	var imageList = "",
+	    first;
 	response.photos.photo.forEach(function (photo) {
 		var url = flickrURL(photo, "z"),
 		    small = flickrURL(photo, "s");
@@ -111,8 +113,11 @@ function jsonFlickrApi(response) {
 		"' data-url='" + url +
 		"'</img></a></li>";
 	});
+
 	document.getElementById("pictures").innerHTML = imageList;
-	$.loadImage("puzzleSource", document.querySelector("#pictures img").getAttribute("data-url"));
+	first = document.querySelector("#pictures img");
+	first.className = "selected"
+	$.loadImage("puzzleSource", first.getAttribute("data-url"));
 	$.loaded(init);
 }
 
@@ -251,7 +256,6 @@ function clipImage(context, bounds, edges, image) {
 	context.beginPath();
 	context.save();
 	image && context.translate(-bounds.x, -bounds.y);
-	//context.moveTo(edges[0][0].x, edges[0][0].y);
 	edges.forEach(function (edge) {
 		if (edge.newPath) {
 			context.moveTo(edge[0].x, edge[0].y);
@@ -262,6 +266,7 @@ function clipImage(context, bounds, edges, image) {
 	context.clip();
 	if (image) {
 		context.drawImage(image, 0, 0);
+		context.stroke();
 		context.restore();
 	}
 }
@@ -282,9 +287,8 @@ Point.prototype.add = function (other) {
 	return new Point(this.x + other.x, this.y + other.y);
 }
 
-function Jigsaw(width, height) {
-	var cellSize = 150,
-	    cx = width / cellSize,
+function Jigsaw(width, height, cellSize) {
+	var cx = width / cellSize,
 	    cy  = height / cellSize,
 	    t, l, r, b, t2, l2,
 	    hplots = [], vplots = [],
@@ -382,6 +386,9 @@ Piece.prototype.clip = function () {
 	var edges,
 	    clip,
 	    bounds = this.bounds;
+
+	this.oContext.lineWidth = 2.5;
+	this.oContext.strokeStyle = "#555";
 
 	clipImage(this.oContext, bounds, this.edges, this.image);
 	$.Sprite.prototype.copyPixels.call(this);
@@ -572,7 +579,8 @@ function snap(piece, others) {
 
 
 function cutImage(image) {
-	var jigsaw = new Jigsaw(image.width, image.height),
+	var sizeIndex = parseInt(document.querySelector("input:checked").value),
+	    jigsaw = new Jigsaw(image.width, image.height, Configuration.cellSizes[sizeIndex]),
 	    pieces = [], piece;
 
 	for (var y = 0; y < jigsaw.rows; y++) {

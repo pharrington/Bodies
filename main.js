@@ -20,6 +20,8 @@ Bodies = $ = {
 	context: null,
 	width: null,
 	height: null,
+	offsetLeft: null,
+	offsetTop: null,
 	callbacks: {},
 	images: {},
 	defaultInterval: 40,
@@ -36,6 +38,7 @@ Bodies = $ = {
 		$.canvas.height = $.height = height;
 		$.context = $.canvas.getContext("2d");
 		attachEvents();
+		calculateOffsets();
 	},
 	
 	loadImage: function (name, path) {
@@ -228,8 +231,8 @@ Bodies = $ = {
 		    	document.documentElement.scrollTop;
 		}
 	
-		x -= $.canvas.offsetLeft;
-		y -= $.canvas.offsetTop;
+		x -= $.offsetLeft;
+		y -= $.offsetTop;
 		return {x: x, y: y};
 	},
 
@@ -301,4 +304,11 @@ function attachEvents() {
 	addEventListener("keyup", function (e) {
 		$.keys[e.keyCode] = false;
 	}, false);
+}
+
+function calculateOffsets() {
+	var b = $.canvas.getBoundingClientRect();
+
+	$.offsetLeft = b.left;
+	$.offsetTop = b.top;
 }
