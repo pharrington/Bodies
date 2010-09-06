@@ -28,7 +28,7 @@ Array.prototype.last = function () {
 
 Array.prototype.copy = function () {
 	return this.map(function (val) {
-		return (typeof val === "object" && typeof val.copy === "function") ? val.copy() : val;
+		return (typeof val === "object") ? Object.prototype.copy.call(val) : val;
 	});
 };
 
@@ -48,8 +48,8 @@ Object.prototype.copy = function () {
 	    val;
 	for (property in this) {
 		val = this[property];
-		if (typeof val === "object" && typeof val.copy === "function") {
-			o[property] = val.copy();
+		if (typeof val === "object") {
+			o[property] = Object.prototype.copy.call(val);
 		} else if (this.hasOwnProperty(property)) {
 			o[property] = val;
 		}
@@ -267,8 +267,8 @@ function clipImage(context, bounds, edges, image) {
 	if (image) {
 		context.drawImage(image, 0, 0);
 		context.stroke();
-		context.restore();
 	}
+	context.restore();
 }
 
 function Rect(left, top, right, bottom) {
@@ -409,8 +409,7 @@ Piece.prototype.clip = function () {
 Piece.prototype.merge = function (other) {
 	var edges = [],
 	    p, p1, p2,
-	    points = {},
-	    k;
+	    points = {};
 
 	// let it be known what ends lead where
 	this.edges.forEach(function (edge) {
@@ -418,7 +417,7 @@ Piece.prototype.merge = function (other) {
 		p1 = pointStr(edge[0]);
 		p2 = pointStr(edge.last());
 
-		points[p1] = {};
+		if (!points[p1]) { points[p1] = {}; }
 		points[p1][p2] = edge;
 	});
 
@@ -455,20 +454,19 @@ Piece.prototype.merge = function (other) {
 		p1 = points[p];
 		p2 = p1.first();
 		p2[1].newPath = true;
-		k = p;
 
 		while (p2) {
 			/* add this edge, and remove it from our collection of points */
 			edges.push(p2[1]);
 			delete p1[p2[0]];
 
-			/* if there are new more edges connected to this point, remove it */
+			/* if there are no more edges connected to this point, remove it */
 			if (!p1.first()) {
-				delete points[k];
+				delete points[p];
 			}
 
 			/* onto the next point */
-			k = p2[0];
+			p = p2[0];
 			p1 = points[p2[0]];
 			p2 = p1 && p1.first();
 		}
@@ -551,7 +549,6 @@ function snap(piece, others) {
 
 		for (j = 0; j < others.length; j++) {
 			o = others[j];
-			//other = o.clipEdges;
 			other = o.edges;
 
 			for (k = 0; k < other.length; k++) {
