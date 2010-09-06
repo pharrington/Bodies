@@ -568,6 +568,7 @@ function snap(piece, others) {
 				    distance(endpoints1[0], endpoints2.last()) < threshold &&
 				    distance(endpoints2[0], endpoints1.last()) < threshold) {
 					o.merge(piece, k, i);
+					stack.moveToTop(o);
 					stack.items.deleteItem(piece);
 					return;
 				}
