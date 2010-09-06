@@ -44,7 +44,7 @@ Object.prototype.first = function () {
 };
 
 Object.prototype.copy = function () {
-	var o = this.constructor(),
+	var o = new this.constructor(),
 	    val;
 	for (property in this) {
 		val = this[property];
@@ -283,6 +283,14 @@ function Point(x, y) {
 	this.y = y;
 }
 
+Point.create = function (p) {
+	return new Point(p.x, p.y);
+};
+
+Point.prototype.equals = function (other) {
+	return this.x === other.x && this.y === other.y;
+};
+
 Point.prototype.add = function (other) {
 	return new Point(this.x + other.x, this.y + other.y);
 }
@@ -323,11 +331,11 @@ function Jigsaw(width, height, cellSize) {
 			r = hplots[y][x+1];
 			if (r) {
 				t2 = vplots[x+1][y];
-				cell.x = plotEdge(l, t, r, t2, makeHedge);
+				cell.x = plotEdge(l, t, r, t2, makeHedge).map(Point.create);
 			}
 			if (b) {
 				l2 = hplots[y+1][x];
-				cell.y = plotEdge(t, l, b, l2, makeVedge);
+				cell.y = plotEdge(t, l, b, l2, makeVedge).map(Point.create);
 			}
 			row.push(cell);
 		}
@@ -403,6 +411,7 @@ Piece.prototype.clip = function () {
 		return edge;
 	});
 	this.clipEdges = clip;
+	this.updateEdges();
 	clipImage(this.context, bounds, clip);
 };
 
@@ -490,6 +499,14 @@ Piece.prototype.reset = function (edges, other) {
 	this.clip();
 };
 
+Piece.prototype.updateEdges = function () {
+	this.clipEndpoints = this.clipEdges.map(function (edge) {
+		return edge.map(function (point) {
+			return point.add(this.offset);
+		}, this);
+	}, this);
+};
+
 Piece.prototype.testPoint = function (point) {
 	return this.context.isPointInPath(point.x - this.x, point.y - this.y);
 };
@@ -530,41 +547,26 @@ function redraw() {
 function snap(piece, others) {
 	var i, j, k,
 	    o, other,
-	    pedge, oedge,
-	    pstart, pend,
-	    ostart, oend,
-	    pclip, oclip,
-	    pcstart, pcend,
-	    ocstart, ocend,
+	    edge1, edge2,
+	    endpoints1, endpoints2,
 	    threshold = 10;
 
 	/* TODO: less horrid snap detection algorithm */
 	for (i = 0; i < piece.edges.length; i++) {
-		pedge = piece.edges[i];
-		pstart = pedge[0];
-		pend = pedge.last();
-		pclip = piece.clipEdges[i];
-		pcstart = piece.offset.add(pclip[0]);
-		pcend = piece.offset.add(pclip.last());
+		edge1 = piece.edges[i];
+		endpoints1 = piece.clipEndpoints[i];
 
 		for (j = 0; j < others.length; j++) {
 			o = others[j];
-			other = o.edges;
 
-			for (k = 0; k < other.length; k++) {
-				oedge = other[k];
-				ostart = oedge[0];
-				oend = oedge.last();
-				oclip = o.clipEdges[k];
-				ocstart = o.offset.add(oclip[0]);
-				ocend = o.offset.add(oclip.last());
+			for (k = 0; k < o.edges.length; k++) {
+				edge2 = o.edges[k];
+				endpoints2 = o.clipEndpoints[k];
 
-				if (pstart.x === oend.x &&
-					pstart.y === oend.y &&
-					pend.x === ostart.x &&
-					pend.y === ostart.y &&
-					distance(pcstart, ocend) < threshold &&
-					distance(pcend, ocstart) < threshold) {
+				if (edge1[0].equals(edge2.last()) &&
+				    edge2[0].equals(edge1.last()) && 
+				    distance(endpoints1[0], endpoints2.last()) < threshold &&
+				    distance(endpoints2[0], endpoints1.last()) < threshold) {
 					o.merge(piece, k, i);
 					stack.items.deleteItem(piece);
 					return;
@@ -584,6 +586,7 @@ function cutImage(image) {
 		for (var x = 0; x < jigsaw.columns; x++) {
 			piece = jigsaw.cutPiece(image, x, y);
 			piece.moveTo(random(0, $.width - piece.width), random(0, $.height - piece.height));
+			piece.updateEdges();
 			piece.draw();
 			pieces.push(piece);
 		}
@@ -652,6 +655,7 @@ window.addEventListener("load", function () {
 	$.mouseUp(function (x, y) {
 		if (!selectedPiece) { return; }
 
+		selectedPiece.updateEdges();
 		snap(selectedPiece, stack.items);
 		redraw();
 		selectedPiece.mx = 0;
