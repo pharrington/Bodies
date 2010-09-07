@@ -1,12 +1,25 @@
+Function.prototype.curry = function () {
+	var a = arguments, f = this;
+
+	return function (arg) {
+		var args = Array.prototype.slice.call(a);
+		args.push(arg);
+
+		return f.apply(window, args);
+	};
+};
+
 Array.prototype.flatten = function () {
 	var result = [],
 	    i,
 	    len,
-	    item;
+	    item,
+	    proto = Array.prototype;
+
 	for (i = 0, len = this.length; i < len; i++) {
 		item = this[i];
 		if (Object.prototype.toString.call(item) === "[object Array]") {
-			Array.prototype.push.apply(result, item.flatten());
+			proto.push.apply(result, proto.flatten.call(item));
 		} else {
 			result.push(item);
 		}
@@ -47,10 +60,12 @@ Object.prototype.copy = function () {
 	var o = new this.constructor(),
 	    val;
 	for (property in this) {
+		if (!this.hasOwnProperty(property)) { continue; }
+
 		val = this[property];
 		if (typeof val === "object") {
 			o[property] = Object.prototype.copy.call(val);
-		} else if (this.hasOwnProperty(property)) {
+		} else {
 			o[property] = val;
 		}
 	};
@@ -415,36 +430,29 @@ Piece.prototype.clip = function () {
 	clipImage(this.context, bounds, clip);
 };
 
+function collectEndpoints(points, removeDuplicates, edge) {
+	var p, p1, p2;
+
+	edge.newPath = false;
+	p1 = pointStr(edge[0]);
+	p2 = pointStr(edge.last());
+	p = points[p2];
+
+	if (removeDuplicates && p && p[p1]) {
+		delete p[p1];
+	} else {
+		if (!points[p1]) { points[p1] = {}; }
+		points[p1][p2] = edge;
+	}
+}
+
 Piece.prototype.merge = function (other) {
 	var edges = [],
 	    p, p1, p2,
 	    points = {};
 
-	// let it be known what ends lead where
-	this.edges.forEach(function (edge) {
-		edge.newPath = false;
-		p1 = pointStr(edge[0]);
-		p2 = pointStr(edge.last());
-
-		if (!points[p1]) { points[p1] = {}; }
-		points[p1][p2] = edge;
-	});
-
-	// track where the other piece's edges' ends lead, and remove duplicates from the first piece
-	other.edges.forEach(function (edge) {
-		edge.newPath = false;
-		p1 = pointStr(edge[0]);
-		p2 = pointStr(edge.last());
-		p = points[p2];
-
-		// its a duplicate edge, remove
-		if (p && p[p1]) {
-			delete p[p1];
-		} else {
-			if (!points[p1]) { points[p1] = {}; }
-			points[p1][p2] = edge;
-		}
-	});
+	this.edges.forEach(collectEndpoints.curry(points, false));
+	other.edges.forEach(collectEndpoints.curry(points, true));
 
 	// prune phantom edges
 	for (p in points) {
@@ -665,8 +673,7 @@ window.addEventListener("load", function () {
 	});
 
 	$.mouseMove(function (x, y) {
-		var node,
-		    clip;
+		var clip;
 
 		if (!selectedPiece) { return; }
 
