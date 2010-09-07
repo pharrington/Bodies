@@ -62,6 +62,7 @@ function preRotate(sprite) {
 }
 
 function copyPixels() {
+	this.context.clearRect(0, 0, this.width, this.height);
 	this.context.drawImage(this.oCanvas, this.dx, this.dy);
 	if (!this.foreign) {
 		this.imageData = this.context.getImageData(0, 0, this.width, this.height);
