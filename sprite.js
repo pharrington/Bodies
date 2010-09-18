@@ -21,6 +21,7 @@ $.Sprite = function (imageName, height, options) {;
 		this.steps = 150;
 	}
 
+	this._offsets = {};
 	this.precompute = options.precompute;
 	this.foreign = options.foreign;
 	this.resize(width, height);
@@ -80,6 +81,8 @@ $.Sprite.prototype.bottom = null;
 $.Sprite.prototype.width = null;
 $.Sprite.prototype.height = null;
 $.Sprite.prototype.rotation = 0;
+$.Sprite.prototype.ox = 0;
+$.Sprite.prototype.oy = 0;
 $.Sprite.prototype.dx = 0;
 $.Sprite.prototype.dy = 0;
 $.Sprite.prototype.vx = 0;
@@ -110,6 +113,8 @@ $.Sprite.prototype.resize = function (width, height) {
 	this.canvas.height = this.height;
 	this.dx = Math.floor(this.width / 2 - this.halfBaseWidth);
 	this.dy = Math.floor(this.height / 2 - this.halfBaseHeight);
+	this._offsets.dx = this.dx;
+	this._offsets.dy = this.dy;
 	this.wall = false;
 
 	if (image !== undefined) {
@@ -126,6 +131,8 @@ $.Sprite.prototype.resize = function (width, height) {
 $.Sprite.prototype.moveTo = function (x, y) {
 	this.x = x;
 	this.y = y;
+	this.ox = x + this._offsets.dx;
+	this.oy = y + this._offsets.dy;
 	this.left = Math.floor(x);
 	this.top = Math.floor(y);
 	this.right = this.left + this.width;
@@ -137,7 +144,9 @@ $.Sprite.prototype.rotateTo = function (angle) {
 	var width = this.width, height = this.height,
 	    context = this.context,
 	    increment,
-	    rotated;
+	    rotated,
+	    sin, cos,
+	    offsets = this._offsets;
 
 	if (this.precompute) {
 		increment = Math.PI * 2 / this.steps;
@@ -150,6 +159,12 @@ $.Sprite.prototype.rotateTo = function (angle) {
 
 
 	this.rotation = angle;
+	sin = Math.sin(angle);
+	cos = Math.cos(angle);
+	offsets.dx = width - (this.oHeight * sin + this.oWidth * cos);
+	offsets.dy = height - (this.oHeight * cos + this.oWidth * sin);
+	this.ox = Math.floor(this.x + offsets.dx);
+	this.oy = Math.floor(this.y + offsets.dy);
 
 	context.clearRect(0, 0, width, height);
 	context.save();

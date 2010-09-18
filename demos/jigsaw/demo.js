@@ -267,25 +267,6 @@ function segment(context, line) {
 	}
 }
 
-function clipImage(context, bounds, edges, image) {
-	context.beginPath();
-	context.save();
-	image && context.translate(-bounds.x, -bounds.y);
-	edges.forEach(function (edge) {
-		if (edge.newPath) {
-			context.moveTo(edge[0].x, edge[0].y);
-		}
-		segment(context, edge);
-	});
-	context.closePath();
-	context.clip();
-	if (image) {
-		context.drawImage(image, 0, 0);
-		context.stroke();
-	}
-	context.restore();
-}
-
 function Rect(left, top, right, bottom) {
 	this.x = left;
 	this.y = top;
@@ -308,7 +289,34 @@ Point.prototype.equals = function (other) {
 
 Point.prototype.add = function (other) {
 	return new Point(this.x + other.x, this.y + other.y);
-}
+};
+
+Point.prototype.sub = function (other) {
+	return new Point(this.x - other.x, this.y - other.y);
+};
+
+Point.prototype.rotate = function (theta, pivot) {
+	var sin = Math.sin(theta),
+	    cos = Math.cos(theta),
+	    x = this.x,
+	    y = this.y,
+	    o,
+	    p = this;
+	
+	if (pivot) {
+		o = pivot;
+		//o = this.sub(pivot);
+		p = p.sub(o);
+	}
+	p = new Point(p.x * cos - p.y * sin, p.x * sin + p.y * cos);
+
+	if (pivot) {
+		p = p.add(o);
+	}
+
+	return p;
+};
+
 
 function Jigsaw(width, height, cellSize) {
 	var cx = width / cellSize,
@@ -400,34 +408,88 @@ Piece.prototype.moveTo = function (x, y, independent) {
 	var dx, dy,
 	    corner = this.corners;
 
-	this.offset.x = x;
-	this.offset.y = y;
+	this.offset.x = x + this.dx;
+	this.offset.y = y + this.dy;
 	$.Sprite.prototype.moveTo.call(this, x, y);
 };
 
 Piece.prototype.clip = function () {
 	var edges,
 	    clip,
-	    bounds = this.bounds;
+	    bounds = this.bounds,
+	    angle = this.rotation,
+	    t1 = {x: this.halfWidth, y: this.halfHeight},
+	    t2 = {x: this.halfBaseWidth, y: this.halfBaseHeight};
 
 	this.oContext.lineWidth = 2.5;
 	this.oContext.strokeStyle = "#555";
 
-	clipImage(this.oContext, bounds, this.edges, this.image);
+	this.clipImage(this.oContext, this.edges, true);
 	$.Sprite.prototype.copyPixels.call(this);
+	$.Sprite.prototype.rotateTo.call(this, this.rotation);
 
 	/* boundary clipping path */
 	clip = this.edges.map(function (edge) {
-		edge = edge.copy();
-		edge.forEach(function (point) {
-			point.x -= bounds.x;
-			point.y -= bounds.y;
+		return edge.map(function (point) {
+			return point.sub(bounds);
 		});
-		return edge;
 	});
+
 	this.clipEdges = clip;
 	this.updateEdges();
-	clipImage(this.context, bounds, clip);
+	this.clipImage(this.context, clip);
+};
+
+Piece.prototype.rotateTo = function (angle) {
+	this.rotation = angle;
+	this.clip();
+};
+
+Piece.prototype.clipImage = function (context, edges, drawImage) {
+	var bounds = this.bounds;
+
+	context.beginPath();
+	context.save();
+
+	if (drawImage) {
+		context.translate(-bounds.x, -bounds.y);
+	} else {
+		context.translate(this.halfWidth, this.halfHeight);
+		context.rotate(this.rotation);
+		context.translate(-this.halfBaseWidth, -this.halfBaseHeight);
+	}
+
+	edges.forEach(function (edge) {
+		if (edge.newPath) {
+			context.moveTo(edge[0].x, edge[0].y);
+		}
+		segment(context, edge);
+	});
+
+	context.closePath();
+	context.clip();
+	if (drawImage) {
+		context.drawImage(this.image, 0, 0);
+		context.stroke();
+	}
+
+	context.restore();
+}
+
+Piece.prototype.updateEdges = function () {
+	var angle = this.rotation,
+	    offset = this.offset,
+	    center = {x: this.halfBaseWidth, y: this.halfBaseHeight},
+	    d = {x: this.dx, y: this.dy};
+
+	this.transformEndpoints = this.edges.map(function (edge) {
+		return [edge[0].rotate(angle), edge.last().rotate(angle)];
+	});
+
+	this.clipEndpoints = this.clipEdges.map(function (edge) {
+		return [edge[0].rotate(angle, center).add(offset).sub(d),
+			edge.last().rotate(angle, center).add(offset).sub(d)];
+	}, this);
 };
 
 function collectEndpoints(points, removeDuplicates, edge) {
@@ -507,16 +569,10 @@ Piece.prototype.reset = function (edges, other) {
 	this.clip();
 };
 
-Piece.prototype.updateEdges = function () {
-	this.clipEndpoints = this.clipEdges.map(function (edge) {
-		return edge.map(function (point) {
-			return point.add(this.offset);
-		}, this);
-	}, this);
-};
-
 Piece.prototype.testPoint = function (point) {
-	return this.context.isPointInPath(point.x - this.x, point.y - this.y);
+	$.context.strokeStyle = "red";
+	$.context.strokeRect(this.ox, this.oy, 5, 5);
+	return this.context.isPointInPath(point.x - this.x + this.dx, point.y - this.y + this.dy);
 };
 
 /* not really a stack, just a convenient way to draw the most recently selected pieces last */
@@ -561,14 +617,14 @@ function snap(piece, others) {
 
 	/* TODO: less horrid snap detection algorithm */
 	for (i = 0; i < piece.edges.length; i++) {
-		edge1 = piece.edges[i];
+		edge1 = piece.transformEndpoints[i];
 		endpoints1 = piece.clipEndpoints[i];
 
 		for (j = 0; j < others.length; j++) {
 			o = others[j];
 
 			for (k = 0; k < o.edges.length; k++) {
-				edge2 = o.edges[k];
+				edge2 = o.transformEndpoints[k];
 				endpoints2 = o.clipEndpoints[k];
 
 				if (edge1[0].equals(edge2.last()) &&
@@ -595,6 +651,7 @@ function cutImage(image) {
 		for (var x = 0; x < jigsaw.columns; x++) {
 			piece = jigsaw.cutPiece(image, x, y);
 			piece.moveTo(random(0, $.width - piece.width), random(0, $.height - piece.height));
+			piece.rotateTo(Math.PI / 4);
 			piece.updateEdges();
 			piece.draw();
 			pieces.push(piece);
