@@ -81,6 +81,7 @@ var Configuration = {
 	width: 800,
 	height: 700,
 	bgcolor: "#aaa",
+	rotate: true,
 	/* please don't do bad things with my api key :( */
 	cellSizes: [100, 150, 200],
 	flickrKey: "dd8f94de8e3c2a2f76cd087ffc4b6020"
@@ -284,7 +285,10 @@ Point.create = function (p) {
 };
 
 Point.prototype.equals = function (other) {
-	return this.x === other.x && this.y === other.y;
+	var threshold = .01;
+
+	return Math.abs(this.x - other.x) < threshold &&
+		Math.abs(this.y - other.y) < threshold;
 };
 
 Point.prototype.add = function (other) {
@@ -305,7 +309,6 @@ Point.prototype.rotate = function (theta, pivot) {
 	
 	if (pivot) {
 		o = pivot;
-		//o = this.sub(pivot);
 		p = p.sub(o);
 	}
 	p = new Point(p.x * cos - p.y * sin, p.x * sin + p.y * cos);
@@ -404,22 +407,17 @@ function Piece(image, col, row, top, right, bottom, left) {
 Piece.prototype = new $.Sprite;
 Piece.prototype.constructor = Piece;
 
-Piece.prototype.moveTo = function (x, y, independent) {
-	var dx, dy,
-	    corner = this.corners;
-
-	this.offset.x = x + this.dx;
-	this.offset.y = y + this.dy;
+Piece.prototype.moveTo = function (x, y) {
 	$.Sprite.prototype.moveTo.call(this, x, y);
+	this.offset.x = this.x;
+	this.offset.y = this.y;
 };
 
 Piece.prototype.clip = function () {
 	var edges,
 	    clip,
 	    bounds = this.bounds,
-	    angle = this.rotation,
-	    t1 = {x: this.halfWidth, y: this.halfHeight},
-	    t2 = {x: this.halfBaseWidth, y: this.halfBaseHeight};
+	    angle = this.rotation;
 
 	this.oContext.lineWidth = 2.5;
 	this.oContext.strokeStyle = "#555";
@@ -478,17 +476,16 @@ Piece.prototype.clipImage = function (context, edges, drawImage) {
 
 Piece.prototype.updateEdges = function () {
 	var angle = this.rotation,
-	    offset = this.offset,
-	    center = {x: this.halfBaseWidth, y: this.halfBaseHeight},
-	    d = {x: this.dx, y: this.dy};
+	    offset = this.offset.sub({x: this.dx, y: this.dy}),
+	    center = {x: this.halfBaseWidth, y: this.halfBaseHeight};
 
 	this.transformEndpoints = this.edges.map(function (edge) {
 		return [edge[0].rotate(angle), edge.last().rotate(angle)];
 	});
 
 	this.clipEndpoints = this.clipEdges.map(function (edge) {
-		return [edge[0].rotate(angle, center).add(offset).sub(d),
-			edge.last().rotate(angle, center).add(offset).sub(d)];
+		return [edge[0].rotate(angle, center).add(offset),
+			edge.last().rotate(angle, center).add(offset)];
 	}, this);
 };
 
@@ -570,9 +567,7 @@ Piece.prototype.reset = function (edges, other) {
 };
 
 Piece.prototype.testPoint = function (point) {
-	$.context.strokeStyle = "red";
-	$.context.strokeRect(this.ox, this.oy, 5, 5);
-	return this.context.isPointInPath(point.x - this.x + this.dx, point.y - this.y + this.dy);
+	return this.context.isPointInPath(point.x - this.x, point.y - this.y);
 };
 
 /* not really a stack, just a convenient way to draw the most recently selected pieces last */
@@ -651,7 +646,7 @@ function cutImage(image) {
 		for (var x = 0; x < jigsaw.columns; x++) {
 			piece = jigsaw.cutPiece(image, x, y);
 			piece.moveTo(random(0, $.width - piece.width), random(0, $.height - piece.height));
-			piece.rotateTo(Math.PI / 4);
+			Configuration.rotate && piece.rotateTo(Math.PI / 2 * ~~random(0, 4));
 			piece.updateEdges();
 			piece.draw();
 			pieces.push(piece);
@@ -700,7 +695,7 @@ window.addEventListener("load", function () {
 	$.context.fillRect(0, 0, $.width, $.height);
 	fetchImages();
 
-	$.mouseDown(function (x, y) {
+	$.mouseDown(function (x, y, e) {
 		var point = new Rect(x, y, x+1, y+1),
 		    items = stack.items,
 		    moveable;
@@ -709,11 +704,20 @@ window.addEventListener("load", function () {
 			if (items[j].testPoint(point)) {
 				// select this piece
 				selectedPiece = items[j];
+
+				// rotate piece on right click
+				if (e.button === 2) {
+					selectedPiece.rotate(Math.PI / 2);
+					stack.moveToTop(selectedPiece);
+					redraw();
+					selectedPiece = null;
+					return;
+				}
 				selectedPiece.mx = x - selectedPiece.x;
 				selectedPiece.my = y - selectedPiece.y;
 				stack.moveToTop(selectedPiece);
-				redraw();
-				break;
+				redrawRegion(selectedPiece);
+				return;
 			}
 		}
 	});

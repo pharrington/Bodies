@@ -266,7 +266,7 @@ function attachEvents() {
 		if ($.callbacks.mousedown) {
 			callbacks = $.callbacks.mousedown;
 			for (var i = 0; i < callbacks.length; i++) {
-				callbacks[i](point.x, point.y);
+				callbacks[i](point.x, point.y, e);
 			}
 		}
 	}, false);
@@ -279,9 +279,13 @@ function attachEvents() {
 		if ($.callbacks.mouseup) {
 			callbacks = $.callbacks.mouseup;
 			for (var i = 0; i < callbacks.length; i++) {
-				callbacks[i](point.x, point.y);
+				callbacks[i](point.x, point.y, e);
 			}
 		}
+	}, false);
+
+	$.canvas.addEventListener("contextmenu", function (e) {
+		e.preventDefault();
 	}, false);
 
 	$.canvas.addEventListener("mousemove", function (e) {
@@ -292,7 +296,7 @@ function attachEvents() {
 		if ($.callbacks.mousemove) {
 			mmCallbacks = $.callbacks.mousemove;
 			for (var i = 0; i < mmCallbacks.length; i++) {
-				mmCallbacks[i](point.x, point.y);
+				mmCallbacks[i](point.x, point.y, e);
 			}
 		}
 	}, false);
