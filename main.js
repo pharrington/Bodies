@@ -30,10 +30,13 @@ Bodies = $ = {
 	init: function(id, width, height) {
 		if (typeof id === "string") {
 			this.id = id;
+		} else if (typeof id === "number") {
+			widht = id;
+			height = width;
 		}
 
 		$ = this;
-		$.canvas = document.getElementById(id);
+		$.canvas = document.getElementById(this.id);
 		$.canvas.width = $.width = width;
 		$.canvas.height = $.height = height;
 		$.context = $.canvas.getContext("2d");
@@ -93,6 +96,7 @@ Bodies = $ = {
 		var now = new Date().getTime(),
 		    elapsed = now - time;
 		time = now;
+		runKeyHoldCallbacks(now);
 		$.callbacks.refresh(elapsed, now);
 	},
 	
@@ -246,6 +250,19 @@ Bodies = $ = {
 
 	mouseUp: function (callback) {
 		addMouseCallback("mouseup", callback);
+	},
+
+	keyPress: function (callback) {
+		$.callbacks.keyPress = callback;
+	},
+
+	keyHold: function (callback, delay, interval) {
+		var keyHold;
+
+		keyHold = $.callbacks.keyHold = $.callbacks.keyHold || {};
+		keyHold.callback = callback;
+		keyHold.delay = delay;
+		keyHold.interval = interval;
 	}
 };
 
@@ -254,6 +271,30 @@ function addMouseCallback(event, callback) {
 		$.callbacks[event] = [];
 	}
 	$.callbacks[event].push(callback);
+}
+
+function runKeyHoldCallbacks(now) {
+	var keys = $.keys,
+	    keyHold = $.callbacks.keyHold,
+	    key,
+	    i, len;
+
+	if (!keyHold) { return; }
+
+	for (i = 0, len = keys.length; i < len; i++) {
+		key = keys[i];
+
+		if (!key) { continue; }
+
+		if (!key.interval) {
+			keyHold.callback(i);
+			key.interval = keyHold.delay;
+		} else if (now >= key.last + key.interval) {
+			keyHold.callback(i);
+			key.interval = keyHold.interval;
+			key.last = now;
+		}
+	}
 }
 
 function attachEvents() {
@@ -302,7 +343,16 @@ function attachEvents() {
 	}, false);
 	
 	addEventListener("keydown", function (e) {
-		$.keys[e.keyCode] = true;
+		var keys = $.keys,
+		    pressed = keys[e.keyCode],
+		    keyPress = $.callbacks.keyPress;
+
+		e.preventDefault();
+		if (!pressed) {
+			keys[e.keyCode] = {last: new Date().getTime()};
+			keyPress && keyPress(e.keyCode);
+		}
+
 	}, false);
 	
 	addEventListener("keyup", function (e) {
