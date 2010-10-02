@@ -32,8 +32,8 @@ Bodies = $ = {
 		if (typeof id === "string") {
 			this.id = id;
 		} else if (typeof id === "number") {
-			widht = id;
 			height = width;
+			width = id;
 		}
 
 		$ = this;
