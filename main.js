@@ -12,6 +12,7 @@ Array.prototype.deleteItem = function (element) {
 var _$ = window.$,
     loadingImages = 0,
     time,
+    loopInterval = null,
     started = false;
 
 Bodies = $ = {
@@ -76,7 +77,8 @@ Bodies = $ = {
 				$.refresh(callback, interval);
 			}, 100);
 		} else {
-			setInterval($.loop, interval);
+			loopInterval && clearInterval(loopInterval);
+			loopInterval = setInterval($.loop, interval);
 		}
 	},
 	
@@ -263,6 +265,19 @@ Bodies = $ = {
 		keyHold.callback = callback;
 		keyHold.delay = delay;
 		keyHold.interval = interval;
+	},
+
+	register: function (o) {
+		var events = ["keyHold", "keyPress", "mouseUp", "mouseDown", "mouseMove", "loaded", "start", "refresh"],
+		    e,
+		    i, len;
+
+		for (i = 0, len = events.length; i < len; i++) {
+			e = events[i];
+			if (e in o) {
+				$[e](o[e].bind(o));
+			}
+		}
 	}
 };
 
