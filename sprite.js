@@ -3,6 +3,7 @@ $.Sprite = function (imageName, height, options) {;
 	var image,
 	    width;
 
+	options = options || {};
 	this.canvas = document.createElement("canvas");
 	this.context = this.canvas.getContext("2d");
 	this.oCanvas = document.createElement("canvas");

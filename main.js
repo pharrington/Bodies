@@ -268,17 +268,29 @@ Bodies = $ = {
 	},
 
 	register: function (o) {
-		var events = ["keyHold", "keyPress", "mouseUp", "mouseDown", "mouseMove", "loaded", "start", "refresh"],
+		var events = ["keyHold", "keyPress", "mouseUp", "mouseDown", "mouseMove", "refresh"],
 		    e,
-		    i, len;
+		    i, len,
+		    args = [];
 
 		for (i = 0, len = events.length; i < len; i++) {
 			e = events[i];
 			if (e in o) {
-				$[e](o[e].bind(o));
+				switch (e) {
+				case "keyHold":
+					args = [o.keyHoldDelay, o.keyHoldInterval];
+					break;
+				case "refresh":
+					args = [o.refreshInterval];
+					break;
+				}
+
+				$[e].apply($, [o[e].bind(o)].concat(args));
 			}
 		}
-	}
+	},
+
+	noop: function () {}
 };
 
 function addMouseCallback(event, callback) {
@@ -362,7 +374,7 @@ function attachEvents() {
 		    pressed = keys[e.keyCode],
 		    keyPress = $.callbacks.keyPress;
 
-		e.preventDefault();
+		//e.preventDefault();
 		if (!pressed) {
 			keys[e.keyCode] = {last: new Date().getTime()};
 			keyPress && keyPress(e.keyCode);
