@@ -84,7 +84,9 @@ $.Sprite.prototype.moveTo = function (x, y) {
 $.Sprite.prototype.rotateTo = function (angle) {
 	var context = this.context,
 	    increment,
-	    rotated;
+	    rotated,
+	    width = this.width,
+	    height = this.height;
 
 	if (this.precompute) {
 		increment = Math.PI * 2 / this.steps;
@@ -99,7 +101,7 @@ $.Sprite.prototype.rotateTo = function (angle) {
 	this.rotation = angle;
 	setRotatedDimensions.call(this);
 
-	context.clearRect(0, 0, this.width, this.height);
+	context.clearRect(0, 0, width, height);
 	context.save();
 	context.translate(this.halfWidth, this.halfHeight);
 	context.rotate(angle);

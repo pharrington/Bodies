@@ -62,6 +62,20 @@ $.extend = function (base, attrs) {
 	return base;
 };
 
+$.timed = function (obj, elapsed, callback, complete) {
+	var progress;
+
+	obj.elapsed += elapsed;
+	progress = obj.elapsed / obj.duration;
+
+	if (progress < 1) {
+		callback.call(obj, progress);
+	} else {
+		obj.elapsed = 0;
+		complete.call(obj);
+	}
+};
+
 $.inherit = function (proto, attrs) {
 	var maker = function () {},
 	    o;
@@ -384,9 +398,9 @@ var Field = {
 
 	animate: function (rows) {
 		Game.clearSpawnTimer();
-		$.keyHold($.noop);
-		$.keyPress($.noop);
-		$.refresh(Dissolve.refresh.partial(this, rows).bind(Dissolve), 17);
+		Dissolve.field = this;
+		Dissolve.rows = rows;
+		$.register(Dissolve);
 	},
 
 	
@@ -469,28 +483,33 @@ var Field = {
 var Dissolve = {
 	elapsed: 0,
 	duration: 500,
+	refreshInterval: 17,
 
-	refresh: function (field, rows, elapsed) {
-		var progress,
-		    context = field.context,
-		    i, len = rows.length;
+	keyPress: $.noop,
+	keyHold: $.noop,
 
-		this.elapsed += elapsed;
-		progress = this.elapsed / this.duration;
+	refresh: function (elapsed) {
 
-		if (progress < 1) {
-			for (i = 0; i < len; i++) {
-				this.dissolve(rows[i], progress, context);
-			}
-		} else {
-			this.elapsed = 0;
-			$.register(Game);
-			Game.spawnNext();
-			field.redraw();
-			Game.drawPiecePreview();
+		$.timed(this, elapsed, this.step, this.complete);
+
+		this.field.draw();
+	},
+
+	step: function (progress) {
+		var context = this.field.context,
+		    rows = this.rows,
+		    i, len;
+
+		for (i = 0, len = rows.length; i < len; i++) {
+			this.dissolve(rows[i], progress, context);
 		}
+	},
 
-		field.draw();
+	complete: function () {
+		$.register(Game);
+		Game.spawnNext();
+		this.field.redraw();
+		Game.drawPiecePreview();
 	},
 
 	dissolve: function (row, percent, context) {
@@ -501,7 +520,6 @@ var Dissolve = {
 		    i, len;
 
 		// len is block size^2 * tetris grid columns * 4 ints per pixel
-		//for (i = 0, len = size * size * 40; i < len; i += 4) {
 		for (i = 0, len = (size * 10 + spacing) * size * 4; i < len; i += 4) {
 			if (percent * percent >= Math.random()) {
 				pixels[i] = 128;
@@ -516,6 +534,7 @@ var Dissolve = {
 };
 
 var Game = {
+	elapsed: 0,
 	shapes: ["I", "T", "O", "S", "Z", "L", "J"],
 	shapeQueue: [],
 	currentPiece: null,
@@ -524,7 +543,7 @@ var Game = {
 
 	groundedTimeout: 500,
 	spawnDelay: 300,
-	velocity: 1 / 1000,
+	velocity: 0.75 / 1000,
 	keyHoldDelay: 200,
 	keyHoldInterval: 20,
 	refreshInterval: 15,
@@ -535,8 +554,8 @@ var Game = {
 	Config: {
 		Left: 65,
 		Right: 68,
-		Accel: 83,
-		Drop: 87,
+		SoftDrop: 83,
+		HardDrop: 87,
 		RotateCW: 74,
 		RotateCCW: 72,
 		Pause: 27
@@ -632,18 +651,24 @@ var Game = {
 	},
 
 	gameOver: function () {
+		setTimeout(function () {
+			$.register(ConfigMenu);
+		}, 2000);
 	},
 
 	spawnNext: function () {
 		$.keyHold($.noop);
-		$.refresh($.noop, Game.refreshInterval);
-		Game.nextPiece();
-		this.spawnTimer = setTimeout(function () {
-			Game.spawnTimer = null;
-			!Game.dropped && Game.drawPiecePreview();
-			$.register(Game);
-		}, this.spawnDelay);
+		$.refresh($.noop, this.refreshInterval);
+		this.nextPiece();
+		this.spawnTimer = setTimeout(this.endSpawnNext.bind(this), this.spawnDelay);
 	},
+
+	endSpawnNext: function () {
+		this.spawnTimer = null;
+		!this.dropped && this.drawPiecePreview();
+		$.register(this);
+	},
+
 
 	endPiece: function () {
 		this.velocity += 0.25 / 1000;
@@ -699,7 +724,6 @@ var Game = {
 		    piece = $.inherit(Shapes[this.shapeQueue[0]]),
 		    offset;
 
-		//piece.init();
 		offset = (6 - piece.shape.length) / 2 * blockSize;
 		piece.sprite.moveTo(x + offset, y + offset);
 
@@ -713,13 +737,15 @@ var Game = {
 
 	loaded: function () {
 		Game.shapes.forEach(initBlock);
+		ConfigMenu.init();
 	},
 
 	start: function () {
 		this.field = $.inherit(Field);
 		this.field.init();
-		this.nextPiece();
+		this.checkShapeQueue();
 		this.drawPiecePreview();
+		this.nextPiece();
 	},
 
 	keyHold: function (key) {
@@ -751,9 +777,9 @@ var Game = {
 			rotation = Piece.Rotation.CCW;
 		}
 
-		if (!this.spawnTimer && key === Game.Config.Drop) {
+		if (!this.spawnTimer && key === Game.Config.HardDrop) {
 			this.currentPiece.velocity = 10;
-			this.dropped = true;
+			//this.dropped = true;
 		}
 
 		if (key === Game.Config.Pause) {
@@ -763,10 +789,21 @@ var Game = {
 		rotation && this.tryRotation(rotation);
 	},
 
+	countdown: function (elapsed, now) {
+		this.duration = 1000;
+
+		$.timed(this, elapsed, function (progress) {
+		}, function () {
+			Game.drawPiecePreview();
+			$.register(this);
+		});
+		this.field.draw();
+	},
+
 	refresh: function (elapsed, now) {
 		var currentPiece = this.currentPiece;
 
-		if ($.keys[Game.Config.Accel]) {
+		if ($.keys[Game.Config.SoftDrop]) {
 			currentPiece.velocity += .05;
 			this.dropped = true;
 		}
@@ -792,21 +829,209 @@ var PauseMenu = {
 	}
 };
 
+var KeyUpdate = {
+	refreshInterval: 100,
+
+	keyHold: $.noop,
+
+	keyPress: function (key) {
+		var c = this.control;
+
+		c.value(key);
+		c.redraw();
+		$.register(ConfigMenu);
+	},
+
+	refresh: $.noop
+}
+
+var Control = {
+	init: function () {
+		var sprite;
+
+		sprite = this.sprite = new $.Sprite(this.width, this.height);
+		sprite.oContext.font = this.font = "bold 25px courier";
+		sprite.oContext.fillStyle = "#000";
+		sprite.moveTo(this.x, this.y);
+		this.redraw();
+	},
+
+	redraw: $.noop,
+
+	clear: function () {
+		this.sprite.oContext.clearRect(0, 0, this.width, this.height);
+	},
+
+	contains: function (x, y) {
+		var left = this.x,
+		    top = this.y,
+		    right = left + this.width,
+		    bottom = top + this.height;
+
+		return  x >= left && x <= right &&
+			y >= top && y <= bottom;
+	},
+
+	mouseDown: function () {
+		this.trigger();
+	},
+
+	draw: function () {
+		this.sprite.draw();
+	}
+};
+
+var LabelControl = $.inherit(Control, {
+	redraw: function () {
+		this.clear();
+		this.drawLabel();
+	},
+
+	drawLabel: function () {
+		var sprite = this.sprite;
+
+		sprite.oContext.fillText(this.label, 5, 25);
+		sprite.copyPixels();
+	}
+});
+
+var BindingControl = $.inherit(LabelControl, {
+	value: function (v) {
+		var o = this.object,
+		    p = this.property;
+
+		if (v === undefined) {
+			return o[p];
+		}
+
+		o[p] = v;
+		return v;
+	},
+
+	trigger: function () {
+		KeyUpdate.control = this;
+		$.register(KeyUpdate);
+	},
+
+	redraw: function () {
+		LabelControl.redraw.call(this);
+		this.drawValue();
+	},
+
+	drawValue: function () {
+		var c = document.createElement("canvas"),
+		    width,
+		    v = this.convertValue(),
+		    ctx = c.getContext("2d"),
+		    sprite = this.sprite;
+
+		ctx.font = this.font;
+		width = ctx.measureText(v).width;
+		sprite.oContext.fillText(v, this.width - width - 5, 25);
+		sprite.copyPixels();
+	},
+
+	convertValue: function () {
+		var v = this.value(),
+		    map = {
+			32: "Space",
+			37: "Left",
+			38: "Up",
+			39: "Right",
+			40: "Down",
+			192: "`"
+		    };
+
+		if (map[v]) {
+			v = map[v];
+		} else {
+			v = String.fromCharCode(v);
+		}
+
+		return v;
+	},
+});
+
 var ConfigMenu = {
+	refreshInterval: 100,
 	options: [
-		"Left", "setLeft",
-		"Right", "setRight",
-		"Soft Drop", "setSoftDrop",
-		"Hard Drop", "setHardDrop",
-		"Rotate Left", "setRotateCCW",
-		"Rotate Right", "setRotateCW"
+		"Left", "Left",
+		"Right", "Right",
+		"Soft Drop", "SoftDrop",
+		"Hard Drop", "HardDrop",
+		"Rotate Left", "RotateCCW",
+		"Rotate Right", "RotateCW"
 	],
 
-	setLeft: function (key) {
-		Game.Config.Left = key;
+	controls: [],
+
+	init: function () {
+		var i, len,
+		    x = 20, y = 50,
+		    width = 300, height = 30,
+		    options = this.options,
+		    controls = this.controls,
+		    button,
+		    control;
+
+		for (i = 0, len = options.length; i < len; i += 2) {
+			control = $.inherit(BindingControl, {
+				label: options[i],
+				property: options[i + 1],
+				object: Game.Config,
+				x: x,
+				y: y,
+				width: width,
+				height: height
+			});
+			control.init();
+			controls.push(control);
+
+			y += height + 5;
+		}
+
+		button = $.inherit(LabelControl, {
+			label: "Play game",
+			x: x + 80,
+			y: controls.last().y + 50,
+			width: width,
+			height: height,
+			trigger: startGame
+		});
+		button.init();
+
+		controls.push(button);
+	},
+
+	clear: function () {
+		$.context.clearRect(0, 0, $.width, $.height);
 	},
 
 	refresh: function () {
+		var i, len,
+		    controls = this.controls,
+		    control;
+
+		this.clear();
+
+		for (i = 0, len = controls.length; i < len; i++) {
+			controls[i].draw();
+		}
+	},
+
+	mouseDown: function (x, y) {
+		var i, len,
+		    controls = this.controls,
+		    control;
+
+		for (i = 0, len = controls.length; i < len; i++) {
+			control = controls[i];
+
+			if (control.contains(x, y)) {
+				control.mouseDown();
+				break;
+			}
+		}
 	},
 
 	keyHold: $.noop,
@@ -831,10 +1056,15 @@ function initBlock(piece) {
 	piece.initSprites();
 }
 
+function startGame() {
+	Game.start();
+	$.refresh(Game.countdown.bind(Game));
+}
+
 addEventListener("load", function () {
 	$.init(600, 800);
 	loadImages();
 	$.loaded(Game.loaded);
-	$.start(Game.start.bind(Game));
-	$.register(Game);
+	$.start();
+	$.register(ConfigMenu);
 }, false);
