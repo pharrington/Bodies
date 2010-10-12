@@ -1,3 +1,42 @@
+function argsArray(args) {
+	return Array.prototype.slice.call(args);
+}
+
+Function.prototype.partial = function () {
+	var f = this, args = argsArray(arguments);
+
+	return function () {
+		var i, len;
+
+		for (i = 0, len = arguments.length; i < len; i++) {
+			args.push(arguments[i]);
+		}
+
+		return f.apply(this, args);
+	};
+};
+
+Function.prototype.bind = function (o) {
+	var f = this;
+
+	return function () {
+		var args = argsArray(arguments);
+
+		return f.apply(o, args);
+	};
+};
+
+Function.prototype.curry = function () {
+	var a = arguments, f = this;
+
+	return function (arg) {
+		var args = argsArray(a);
+		args.push(arg);
+
+		return f.apply(window, args);
+	};
+};
+
 Function.prototype.inherit = function (proto) {
 	this.prototype = new proto;
 	this.prototype._super = proto.prototype;
@@ -294,10 +333,7 @@ Bodies = $ = {
 };
 
 function addMouseCallback(event, callback) {
-	if (!$.callbacks[event]) {
-		$.callbacks[event] = [];
-	}
-	$.callbacks[event].push(callback);
+	$.callbacks[event] = callback;
 }
 
 function runKeyHoldCallbacks(now) {
@@ -324,50 +360,26 @@ function runKeyHoldCallbacks(now) {
 	}
 }
 
-function attachEvents() {
-	/* superstitious use of code duplication right here */
-	$.canvas.addEventListener("mousedown", function (e) {
-		var point = $.coordinates(e),
-	    	callbacks;
+function runMouseCallbacks(eventName, e) {
+	var point = $.coordinates(e),
+	    i, len,
+	    callback;
 	
-		e.preventDefault();
-		if ($.callbacks.mousedown) {
-			callbacks = $.callbacks.mousedown;
-			for (var i = 0; i < callbacks.length; i++) {
-				callbacks[i](point.x, point.y, e);
-			}
-		}
-	}, false);
+	e.preventDefault();
+	callback = $.callbacks[eventName];
 
-	$.canvas.addEventListener("mouseup", function (e) {
-		var point = $.coordinates(e),
-	    	callbacks;
-	
-		e.preventDefault();
-		if ($.callbacks.mouseup) {
-			callbacks = $.callbacks.mouseup;
-			for (var i = 0; i < callbacks.length; i++) {
-				callbacks[i](point.x, point.y, e);
-			}
-		}
-	}, false);
+	callback && callback(point.x, point.y);
+}
+
+function attachEvents() {
+	["mousedown", "mouseup", "mouseup"].forEach(function (name) {
+		$.canvas.addEventListener(name, runMouseCallbacks.curry(name), false);
+	});
 
 	$.canvas.addEventListener("contextmenu", function (e) {
 		e.preventDefault();
 	}, false);
 
-	$.canvas.addEventListener("mousemove", function (e) {
-		var point = $.coordinates(e),
-	    	mmCallbacks;
-	
-		e.preventDefault();
-		if ($.callbacks.mousemove) {
-			mmCallbacks = $.callbacks.mousemove;
-			for (var i = 0; i < mmCallbacks.length; i++) {
-				mmCallbacks[i](point.x, point.y, e);
-			}
-		}
-	}, false);
 	
 	addEventListener("keydown", function (e) {
 		var keys = $.keys,
