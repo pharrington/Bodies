@@ -2,10 +2,6 @@
  * its only trivially faster than Math.floor for positive numbers, but easier to type :\
  */
 
-function argsArray(args) {
-	return Array.prototype.slice.call(args);
-}
-
 Array.prototype.last = function () {
 	return this[this.length - 1];
 };
@@ -24,30 +20,6 @@ Array.prototype.compact = function () {
 	}
 
 	return this;
-};
-
-Function.prototype.partial = function () {
-	var f = this, args = argsArray(arguments);
-
-	return function () {
-		var i, len;
-
-		for (i = 0, len = arguments.length; i < len; i++) {
-			args.push(arguments[i]);
-		}
-
-		return f.apply(this, args);
-	};
-};
-
-Function.prototype.bind = function (o) {
-	var f = this;
-
-	return function () {
-		var args = argsArray(arguments);
-
-		return f.apply(o, args);
-	};
 };
 
 $.extend = function (base, attrs) {
@@ -540,10 +512,11 @@ var Game = {
 	currentPiece: null,
 	groundedTimer: null,
 	spawnTimer: null,
+	velocity: null,
 
 	groundedTimeout: 500,
 	spawnDelay: 300,
-	velocity: 0.75 / 1000,
+	startVelocity: 0.75 / 1000,
 	keyHoldDelay: 200,
 	keyHoldInterval: 20,
 	refreshInterval: 15,
@@ -560,6 +533,8 @@ var Game = {
 		RotateCCW: 72,
 		Pause: 27
 	},
+
+	mouseDown: $.noop,
 
 	checkGrounded: function () {
 		var field = this.field,
@@ -741,6 +716,7 @@ var Game = {
 	},
 
 	start: function () {
+		this.velocity = this.startVelocity;
 		this.field = $.inherit(Field);
 		this.field.init();
 		this.checkShapeQueue();
