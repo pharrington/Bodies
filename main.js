@@ -368,11 +368,11 @@ function runMouseCallbacks(eventName, e) {
 	e.preventDefault();
 	callback = $.callbacks[eventName];
 
-	callback && callback(point.x, point.y);
+	callback && callback(point.x, point.y, e);
 }
 
 function attachEvents() {
-	["mousedown", "mouseup", "mouseup"].forEach(function (name) {
+	["mousedown", "mouseup", "mousemove"].forEach(function (name) {
 		$.canvas.addEventListener(name, runMouseCallbacks.curry(name), false);
 	});
 
