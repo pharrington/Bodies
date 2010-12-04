@@ -22,30 +22,6 @@ Array.prototype.compact = function () {
 	return this;
 };
 
-Function.prototype.partial = function () {
-	var f = this, args = argsArray(arguments);
-
-	return function () {
-		var i, len;
-
-		for (i = 0, len = arguments.length; i < len; i++) {
-			args.push(arguments[i]);
-		}
-
-		return f.apply(this, args);
-	};
-};
-
-Function.prototype.bind = function (o) {
-	var f = this;
-
-	return function () {
-		var args = argsArray(arguments);
-
-		return f.apply(o, args);
-	};
-};
-
 $.extend = function (base, attrs) {
 	var prop;
 
@@ -604,14 +580,12 @@ var Game = {
 		return gameover;
 	},
 
-	checkShapeQueue: function () {
-		var queue = this.shapeQueue || [],
+	initShapeQueue: function () {
+		var queue = this.shapeQueue = [],
 		    i;
 
-		if (!queue.length) {
-			for (i = 0; i < 4; i++) {
-				queue.push(this.randomShape());
-			}
+		for (i = 0; i < 4; i++) {
+			queue.push(this.randomShape());
 		}
 	},
 
@@ -642,7 +616,6 @@ var Game = {
 	nextPiece: function () {
 		var queue = this.shapeQueue;
 
-		this.checkShapeQueue();
 		queue.push(this.randomShape());
 		this.currentPiece = $.inherit(Shapes[queue.shift()]);
 		this.currentPiece.init();
@@ -743,7 +716,7 @@ var Game = {
 		this.velocity = this.startVelocity;
 		this.field = $.inherit(Field);
 		this.field.init();
-		this.checkShapeQueue();
+		this.initShapeQueue();
 		this.drawPiecePreview();
 		this.nextPiece();
 	},
@@ -910,6 +883,8 @@ var BindingControl = $.inherit(LabelControl, {
 
 	trigger: function () {
 		KeyUpdate.control = this;
+		this.label = "_";
+		this.redraw();
 		$.register(KeyUpdate);
 	},
 

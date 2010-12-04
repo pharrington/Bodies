@@ -580,14 +580,12 @@ var Game = {
 		return gameover;
 	},
 
-	checkShapeQueue: function () {
-		var queue = this.shapeQueue || [],
+	initShapeQueue: function () {
+		var queue = this.shapeQueue = [],
 		    i;
 
-		if (!queue.length) {
-			for (i = 0; i < 4; i++) {
-				queue.push(this.randomShape());
-			}
+		for (i = 0; i < 4; i++) {
+			queue.push(this.randomShape());
 		}
 	},
 
@@ -618,7 +616,6 @@ var Game = {
 	nextPiece: function () {
 		var queue = this.shapeQueue;
 
-		this.checkShapeQueue();
 		queue.push(this.randomShape());
 		this.currentPiece = $.inherit(Shapes[queue.shift()]);
 		this.currentPiece.init();
@@ -719,7 +716,7 @@ var Game = {
 		this.velocity = this.startVelocity;
 		this.field = $.inherit(Field);
 		this.field.init();
-		this.checkShapeQueue();
+		this.initShapeQueue();
 		this.drawPiecePreview();
 		this.nextPiece();
 	},

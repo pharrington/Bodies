@@ -141,6 +141,7 @@ function plotCorners(length, cells) {
 	var cellLength = length / cells,
 	    range = cellLength / 20,
 	    axis = [],
+	    c,
 	    i;
 
 	for (i = 0; i <= cells; i++ ) {
@@ -233,7 +234,7 @@ function bezier(t, segment) {
 	return ti*ti*ti*p0 + 3*t*p1*ti*ti + 3*ti*p2*t*t + t*t*t*p3;
 }
 
-function bezierMax1(p0, p1, p2, p3) {
+function bezierMaxHelper(p0, p1, p2, p3) {
 	if (p0 + 3 * p2 === 3 * p1 + p3) {
 		return 0.5;
 	}
@@ -248,9 +249,9 @@ function bezierMax1(p0, p1, p2, p3) {
 }
 
 function bezierMax(segment) {
-	var t = bezierMax1.apply(null, segment);
+	var t = bezierMaxHelper.apply(null, segment);
 	if (isNaN(t)) {
-		t = 1 - bezierMax1.apply(null, segment.copy().reverse());
+		t = 1 - bezierMaxHelper.apply(null, segment.copy().reverse());
 	}
 	return isNaN(t) ? 0 : t;
 }
@@ -663,12 +664,14 @@ function init() {
 	    jigsaw,
 	    x, y;
 
-	clear();
-	pieces = cutImage(image);
-	stack = new DrawStack();
-	for (var i = 0; i < pieces.length; i++) {
-		stack.push(pieces[i]);
-	}
+	$.loaded(function () {
+		clear();
+		pieces = cutImage(image);
+		stack = new DrawStack();
+		for (var i = 0; i < pieces.length; i++) {
+			stack.push(pieces[i]);
+		}
+	});
 }
 
 function redrawRegion(clip) {
