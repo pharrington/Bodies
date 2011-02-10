@@ -18,28 +18,31 @@ function mark(red) {
 
 window.addEventListener("load", function() {
 	var s1, s2;
-	Bodies(600, 600);
-	Bodies.loadImage("oval", "oval.gif");
+	$.init("field", 600, 600);
+	$.loadImage("oval", "oval.gif");
 
-	Bodies.mouseMove(function (x, y) {
+	$.mouseMove(function (x, y) {
 		s1.moveTo(x, y);
 	});
 
-	Bodies.loaded(function () {
-		s1 = new Bodies.Sprite("oval");
-		s2 = new Bodies.Sprite("oval");
+	$.loaded(function () {
+		new $.Sprite("oval", true);
+		s1 = new $.Sprite("oval", true);
+		s2 = new $.Sprite("oval", true);
 		s1.moveTo(0, 0);
 		s2.moveTo(200, 200);
 	});
 
-	Bodies.refresh(function(context) {
-		if (Bodies.testCollision(s1, s2)) {
+	$.refresh(function(context) {
+		if ($.testCollision(s1, s2)) {
 			mark.call(s2, true);
 		} else {
 			mark.call(s2, false);
 		}
-		context.clearRect(0, 0, 600, 600);
+		$.context.clearRect(0, 0, 600, 600);
 		s1.draw();
 		s2.draw();
 	});
+
+	$.start();
 }, true);

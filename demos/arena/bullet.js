@@ -107,7 +107,7 @@ BulletEmitter.Action.prototype.update = function (id, now) {
 };
 
 BulletEmitter.Bullet = function (mover, origin) {
-	$.Sprite.call(this, "enemybullet", true);
+	$.Sprite.call(this, "enemybullet", {precompute: true});
 	this.mover = mover;
 	this._super.moveTo.call(this, origin.x, origin.y);
 	this.wall = false;
