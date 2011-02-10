@@ -72,12 +72,15 @@ $.Sprite.prototype.resize = function (width, height) {
 $.Sprite.prototype.moveTo = function (x, y) {
 	this.x = x;
 	this.y = y;
+
 	this.ox = x - this.dx;
 	this.oy = y - this.dy;
-	this.left = Math.floor(this.x);
-	this.top = Math.floor(this.y);
-	this.right = this.x + this.width;
-	this.bottom = this.y + this.height;
+
+	this.left = Math.floor(x);
+	this.top = Math.floor(y);
+
+	this.right = this.left + this.width;
+	this.bottom = this.top + this.height;
 	return this;
 };
 
@@ -90,10 +93,11 @@ $.Sprite.prototype.rotateTo = function (angle) {
 
 	if (this.precompute) {
 		increment = Math.PI * 2 / this.steps;
+
 		if (angle < 0) { angle += Math.PI * 2; }
+
 		rotated = $.Sprite.precomputed[this.resourceName][Math.floor(angle / increment) * increment];
-		this.canvas = rotated.canvas;
-		this.pixels = rotated.pixels;
+		copyCachedProperties(rotated, this);
 		return;
 	}
 
@@ -142,6 +146,17 @@ $.Sprite.prototype.update = function (dt) {
 	this.moveTo(this.x + this.vx * dt, this.y + this.vy * dt);
 };
 
+function copyCachedProperties(from, to) {
+	var props = ["pixels", "canvas", "width", "height", "dx", "dy"],
+	    prop,
+	    i, len;
+
+	for (i = 0, len = props.length; i < len; i++) {
+		prop = props[i];
+		to[prop] = from[prop];
+	}
+}
+
 function preRotate(sprite) {
 	var group = $.Sprite.precomputed[sprite.resourceName],
 	    resource,
@@ -159,16 +174,23 @@ function preRotate(sprite) {
 	for (var i = 0; i < steps; ++i) {
 		rotation = i * increment;
 		resource = group[rotation] = {};
+
+		resource.rotation = rotation;
+		resource.oWidth = sprite.oWidth;
+		resource.oHeight = sprite.oHeight;
+		resource.halfBaseWidth = sprite.halfBaseWidth;
+		resource.halfBaseHeight = sprite.halfBaseHeight;
+
+
 		resource.canvas = document.createElement("canvas");
 		resource.oCanvas = sprite.oCanvas;
-		resource.width = resource.canvas.width = sprite.width;
-		resource.halfWidth = sprite.halfWidth;
-		resource.halfBaseWidth = sprite.halfBaseWidth;
-		resource.height = resource.canvas.height = sprite.height;
-		resource.halfHeight = sprite.halfHeight;
-		resource.halfBaseHeight = sprite.halfBaseHeight;
+
+		/* this also sets the canvas resource dimensions */
+		setRotatedDimensions.call(resource);
 		resource.context = resource.canvas.getContext("2d");
+
 		$.Sprite.prototype.rotateTo.call(resource, rotation);
+
 		delete resource.context;
 		delete resource.imageData;
 	}
@@ -183,8 +205,8 @@ function setRotatedDimensions() {
 	    sin = Math.sin(angle),
 	    cos = Math.cos(angle);
 
-	this.canvas.width = this.imageWidth = this.width = Math.abs(oh * sin) + Math.abs(ow * cos);
-	this.canvas.height = this.imageHeight = this.height = Math.abs(oh * cos) + Math.abs(ow * sin);
+	this.canvas.width = this.imageWidth = this.width = Math.floor(Math.abs(oh * sin) + Math.abs(ow * cos));
+	this.canvas.height = this.imageHeight = this.height = Math.floor(Math.abs(oh * cos) + Math.abs(ow * sin));
 	this.halfWidth = this.width / 2;
 	this.halfHeight = this.height / 2;
 	this.scanWidth = this.width * 4;

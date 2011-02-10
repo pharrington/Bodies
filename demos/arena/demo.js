@@ -2,7 +2,7 @@
  * whats a better way to structure this?
  */
 function Ship() {
-	$.Sprite.call(this, "moth", true);
+	$.Sprite.call(this, "moth", {precompute: true});
 	this.bullets = [];
 	this.lastShotTime = 0;
 	this.eject = true;
@@ -42,7 +42,7 @@ Ship.prototype.damaged = function (bullet) {
 };
 
 function Enemy(spawn) {
-	$.Sprite.call(this, "enemy", true);
+	$.Sprite.call(this, "enemy", {precompute: true});
 	
 	this._super.moveTo.call(this, spawn.x, spawn.y);
 	this.spawnDelay = spawn.delay;
@@ -184,7 +184,7 @@ addEventListener("load", function () {
 	$.loaded(function () {
 		/* prerotate sprites */
 		["moth", "bullet", "enemy", "enemybullet"].forEach(function (resource) {
-			new $.Sprite(resource, true);
+			new $.Sprite(resource, {precompute: true});
 		});
 		ship = new Ship();
 		ship.moveTo(44, 3560);

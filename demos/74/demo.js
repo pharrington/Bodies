@@ -1013,6 +1013,112 @@ var ConfigMenu = {
 	}
 };
 
+var AI = {
+	Weights: {
+		MAXHEIGHT: -0,
+		RIGHTHEIGHT: -0,
+		DEEPWELLS: -0,
+		EDGEHEIGHT: 0,
+		LINESCLEARED: 0,
+	},
+
+	height: function (grid) {
+		var row, col;
+
+		for (row = 0; row < 20; row++) {
+			for (col = 0; col < 10; col++) {
+				if (grid[row][col]) {
+					return 20 - row;
+				}
+			}
+		}
+
+		return 0;
+	},
+
+	weighMaxHeight: function (grid) {
+		var height = this.height(grid);
+
+		return height * this.MAXHEIGHT;
+	},
+
+	placePiece: function (piece, field, visited) {
+		/*
+		 * if piece not valid
+		 *   return
+		 * if grid visited
+		 *   return
+		 *
+		 * store grid
+		 * if piece bottomed
+		 *   rank grid
+		 * else 
+		 *   rotate piece
+		 *   recurse
+		 *   move left
+		 *   recurse
+		 *   move right
+		 *   recurse
+		 *
+		 *   move down
+		 *   recurse
+		 */
+		if (field.collision(piece)) {
+			return;
+		}
+
+		if (visited.contains(field)) {
+			return;
+		}
+
+		visited.store(field);
+		if (field.atBottom(piece)) {
+			rank = this.rank(field.grid);
+		} else {
+			piece.rotateCW();
+			this.placePiece(piece, field, visited);
+
+			piece.moveLeft();
+			this.placePiece(piece, field, visited);
+
+			piece.moveRight();
+			this.placePiece(piece, field, visited);
+
+			piece.moveDown();
+			this.placePiece(piece, field, visited);
+		}
+	},
+
+	rank: function (grid) {
+		var col, row,
+		    result = 0,
+		    colHeight = 0,
+		    oldHeight = 0,
+		    weights = this.Weights;
+
+		result += this.weighMaxHeight(grid);
+
+		for (col = 0, colHeight = 0; col < 10; col++) {
+			for (row = 0; row < 20; row++) {
+				if (grid[row][col]) {
+					colHeight = 20 - row;
+				}
+			}
+
+			oldHeight = colHeight;
+			if (col === 0 || col === 8) {
+				result += this.weighEdgeHeight(colHeight);
+			} else {
+				result += this.weighHeight(colHeight);
+			}
+
+			if (col) {
+				result += this.weightWell(Math.abs(colHeight - oldHeight));
+			}
+		}
+	}
+};
+
 function loadImages() {
 	["orange", "red", "yellow", "green", "cyan", "blue", "purple"].forEach(function (color) {
 		$.loadImage(color, color + ".gif");
