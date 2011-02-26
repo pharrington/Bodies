@@ -41,7 +41,7 @@ $.timed = function (obj, elapsed, callback, complete) {
 	progress = obj.elapsed / obj.duration;
 
 	if (progress < 1) {
-		callback.call(obj, progress);
+		callback.call(obj, progress, elapsed);
 	} else {
 		obj.elapsed = 0;
 		complete.call(obj);
@@ -78,6 +78,7 @@ var Piece = {
 	blockSize: 32,
 	imageSize: 30,
 	spacing: 2,
+	spacingColor: "#444",
 	shapeSize: null,
 	offset: null,
 	delta: 0,
@@ -130,7 +131,7 @@ var Piece = {
 
 		sprite = new $.Sprite(width, height);
 		context = sprite.oContext;
-		context.fillStyle = "#000";
+		context.fillStyle = this.spacingColor;
 
 		for (i = 0; i < len; i++) {
 			y = i * this.blockSize;
@@ -305,7 +306,10 @@ var Shapes = {
 var Field = {
 	canvas: null,
 	context: null,
-	fillColor: "#888",
+	fillColor: new Pixel(10, 10, 10),
+	mergeAlpha: 0.7,
+	blockSize: null,
+	spacing: null,
 	width: null,
 	height: null,
 	offset: {x: 0, y: 0},
@@ -327,20 +331,20 @@ var Field = {
 
 	initCanvas: function () {
 		var canvas = document.createElement("canvas"),
-		    size = Piece.blockSize,
-		    spacing = Piece.spacing;
+		    size = this.blockSize = Piece.blockSize,
+		    spacing = this.spacing = Piece.spacing;
 
 		canvas.width = this.width = 10 * size + spacing;
 		canvas.height = this.height = 20 * size + spacing;
 		this.context = canvas.getContext("2d");
-		this.context.fillStyle = this.fillColor;
+		this.context.fillStyle = this.fillColor.toString();
 		this.context.fillRect(0, 0, this.width, this.height);
 		this.canvas = canvas;
 	},
 
 	filled: function (block) { return block; },
 
-	clearRows: function () {
+	clearRows: function (unanimated) {
 		var row,
 		    i, len,
 		    cleared = [],
@@ -350,7 +354,7 @@ var Field = {
 			row = grid[i];
 			if (row.every(Field.filled)) {
 				grid[i] = null;
-				cleared.push(i);
+				cleared.push({index: i, blocks: row});
 			}
 		}
 
@@ -364,15 +368,16 @@ var Field = {
 			grid.unshift(row);
 		}
 
-		cleared.length && this.animate(cleared);
-		return cleared.length;
+		!unanimated && cleared.length && this.animate(cleared);
+		return cleared;
 	},
 
 	animate: function (rows) {
 		Game.clearSpawnTimer();
-		Dissolve.field = this;
-		Dissolve.rows = rows;
-		$.register(Dissolve);
+		Fireworks.field = this;
+		Fireworks.rows = rows;
+		Fireworks.init();
+		$.register(Fireworks);
 	},
 
 	
@@ -390,19 +395,23 @@ var Field = {
 
 	redraw: function () {
 		var x, y,
-		    block;
+		    block,
+		    context = this.context;
 
-		this.context.fillRect(0, 0, this.width, this.height);
-		this.context.fillStyle = "#000";
+		context.fillRect(0, 0, this.width, this.height);
+		context.save();
+
+		context.globalAlpha = this.mergeAlpha;
+		context.fillStyle = "#000";
 
 		for (y = 0; y < 20; y++) {
 			for (x = 0; x < 10; x++) {
 				block = this.grid[y][x];
-				block && this.drawBlock(block, x, y);
+				block && this.drawBlock(block.image, x, y);
 			}
 		}
 
-		this.context.fillStyle = this.fillColor;
+		context.restore();
 	},
 
 	dead: function () {
@@ -440,70 +449,419 @@ var Field = {
 		return collide;
 	},
 
+	oob: function (piece) {
+		var oob = false;
+
+		this.applyPiece(piece, function (shape, grid, sx, sy, gx, gy) {
+			if (shape[sy][sx] && (gy >= 20 || gx < 0 || gx >= 10)) {
+				oob = true;
+				return false;
+			}
+		});
+		return oob;
+	},
+
 	merge: function (piece) {
-		this.context.fillStyle = "#000";
+		var context = this.context;
+
+		context.save();
+
+		context.fillStyle = "#000";
+		context.globalAlpha = this.mergeAlpha;
 		this.applyPiece(piece, function (shape, grid, sx, sy, gx, gy) {
 			if (gy >= 0 && shape[sy][sx]) {
-				grid[gy][gx] = piece.block;
+				grid[gy][gx] = {image: piece.block, color: piece.image};
 				this.drawBlock(piece.block, gx, gy);
 			}
 		});
-		this.context.fillStyle = this.fillColor;
+
+		context.restore();
 	}
 };
 
-var Dissolve = {
+function setPixel(data, idx, color) {
+	data[idx] = color.r;
+	data[idx + 1] = color.g;
+	data[idx + 2] = color.b;
+	data[idx + 3] = 255;
+}
+
+var Fireworks = {
 	elapsed: 0,
-	duration: 500,
-	refreshInterval: 17,
+	duration: 750,
+	refreshInterval: 30,
 
 	keyPress: $.noop,
 	keyHold: $.noop,
 
-	refresh: function (elapsed) {
+	particles: [],
+	gravity: 0.05,
+	count: 200,
+	speed: 0.35,
 
-		$.timed(this, elapsed, this.step, this.complete);
+	width: null,
+	height: null,
+	offset: null,
+
+	bgColor: new Pixel(0, 0, 0, 0),
+	imageData: null,
+
+	colors: {
+		cyan: ["#c0f8fc", "#0bd0df", "#012337", "#ffffff", "#18e2f4", "#0382cb"],
+		yellow: ["#faf0bc", "#f0e314", "#a4a01b",  "#a40214", "#be1f30", "#608b40", "#ffffff"],
+		red: ["#f08e9a", "#f2164a", "#c90c03", "#66060f", "#63f453", "#ffffff"],
+		blue: ["#177cf4", "#0326cb", "#c0dcfc", "#91b1f1", "#062365", "#3125c1", "#4b468e", "#f2f136", "#ffffff"],
+		orange: ["#f59231", "#edb903", "#f6d6ac", "#8d5d09", "#7f50f3", "#522fa8", "#ffffff"],
+		purple: ["#ccaef8", "#6417f1", "#8203cb", "#330662", "#e10bf9", "#1b0ada", "#0b37f9", "#ffffff"],
+		green: ["#d0fcbc", "#5bf418", "#08cb03", "#156206", "#94dd0b", "#fafa0c", "#ffffff"]
+	},
+
+	addParticle: function (x, y, color) {
+		var accel = new Vector(0, this.gravity),
+		    speed = Math.random() * this.speed,
+		    vel,
+		    angle,
+		    particle,
+		    colors,
+		    color;
+
+		colors = this.colors[color];
+		color = colors[Math.floor(Math.random() * colors.length)];
+
+		angle = Math.random() * Math.PI * 2;
+		vel = new Vector(speed * Math.cos(angle), speed * Math.sin(angle));
+		particle = new Particle(new Vector(x, y), vel, accel);
+		particle.color = Pixel.fromString(color);
+		this.particles.push(particle);
+	},
+
+	init: function () {
+		var x, y,
+		    offset,
+		    blockSize = Piece.blockSize,
+		    spacing = Piece.spacing,
+		    row,
+		    i, j;
+
+		offset = new Vector(this.field.offset);
+		this.particles = [];
+		this.width = 400;
+		this.height = $.height;
+		this.initCanvas();
+
+		this.clearRows(this.rows);
+
+		for (i = 0; i < this.rows.length; i++) {
+			row = this.rows[i];
+
+			y = row.index * blockSize + spacing
+			for (x = 0; x < 10; x++) {
+				for (j = 0; j < this.count; j++) {
+					this.addParticle(offset.x + blockSize / 2 + x * (blockSize + spacing),
+							 offset.y + blockSize / 2 + y,
+							 row.blocks[i].color);
+				}
+			}
+		}
+	},
+
+	initCanvas: function () {
+		var canvas;
+
+		if (this.canvas) { return; }
+
+		canvas = this.canvas = document.createElement("canvas");
+		canvas.width = this.width;
+		canvas.height = this.height;
+		this.context = canvas.getContext("2d");
+		this.imageData = this.context.createImageData(this.width, this.height);
+	},
+
+	clearRows: function (rows) {
+		var i, len,
+		    context = this.field.context;
+
+		for (i = 0, len = rows.length; i < len; i++) {
+			this.clearRow(rows[i].index, context);
+		}
 
 		this.field.draw();
 	},
 
-	step: function (progress) {
-		var context = this.field.context,
-		    rows = this.rows,
-		    i, len;
+	clearRow: function (row, context) {
+		var size = Piece.blockSize,
+		    spacing = Piece.spacing,
+		    data = context.getImageData(0, row * size, 10 * size + spacing, size + spacing),
+		    pixels = data.data,
+		    p, i, len,
+		    fillColor = this.field.fillColor;
 
-		for (i = 0, len = rows.length; i < len; i++) {
-			this.dissolve(rows[i], progress, context);
+		// len is block size^2 * tetris grid columns * 4 ints per pixel
+		for (i = 0, len = (size * 10 + spacing) * size * 4; i < len; i += 4) {
+			setPixel(pixels, i, fillColor);
+		}
+
+		// clear the spacing line below if no blocks are below us
+		p = i;
+
+		for (i = 0, len = (size * 10 + spacing) * spacing * 4; i < len; i += 4, p += 4) {
+			if (row === 19 || !this.field.grid[row + 1][Math.floor(((i / 4) % (size * 10 + spacing)) / size)]) {
+				setPixel(pixels, p, fillColor);
+			}
+		}
+
+		context.putImageData(data, 0, row * size);
+	},
+
+	refresh: function (elapsed) {
+		$.timed(this, elapsed, this.step, this.complete);
+	},
+
+	step: function (_, dt) {
+		this.animate(dt);
+
+		$.context.clearRect(0, 0, $.width, $.height);
+		this.field.draw();
+		Game.drawPiecePreview();
+		$.context.drawImage(this.canvas, 0, 0);
+		$.context.drawImage(this.canvas, 0, 1);
+		$.context.drawImage(this.canvas, 1, 0);
+		$.context.drawImage(this.canvas, 1, 1);
+	},
+
+	clear: function () {
+		var i,
+		    pixels = this.imageData.data,
+		    len = this.width * this.height * 4;
+
+		for (i = 0; i < len; i++) {
+			pixels[i] = 0;
 		}
 	},
 
 	complete: function () {
 		$.register(Game);
 		Game.spawnNext();
+
+		this.clear();
+		$.context.clearRect(0, 0, $.width, $.height);
+
 		this.field.redraw();
+		this.field.draw();
 		Game.drawPiecePreview();
 	},
 
-	dissolve: function (row, percent, context) {
-		var size = Piece.blockSize,
-		    spacing = Piece.spacing,
-		    data = context.getImageData(0, row * size, 10 * size + spacing, size),
-		    pixels = data.data,
+	animate: function (dt) {
+		var particles = this.particles,
+		    particle,
 		    i, len;
 
-		// len is block size^2 * tetris grid columns * 4 ints per pixel
-		for (i = 0, len = (size * 10 + spacing) * size * 4; i < len; i += 4) {
-			if (percent * percent >= Math.random()) {
-				pixels[i] = 128;
-				pixels[i + 1] = 128;
-				pixels[i + 2] = 128;
-				pixels[i + 3] = 255;
+		for (i = 0, len = particles.length; i < len; i++) {
+			particle = particles[i];
+
+			particle.draw(this.imageData, this.bgColor);
+			particle.update(dt);
+			particle.draw(this.imageData);
+		}
+
+		this.context.putImageData(this.imageData, 0, 0);
+	}
+};
+
+var Outline = {
+	outlineColor: "#eee",
+	occupied: null,
+
+	Cell: function () {},
+
+	merge: function (piece) {
+		var sx, sy,
+		    shape = piece.shape,
+		    gx = piece.gridPosition.x,
+		    gy = piece.gridPosition.y,
+		    x = gx, y = gy,
+		    occupied = this.occupied,
+		    adjacent,
+		    cell;
+
+		for (sy = 0; sy < 4 && y < 20; sy++, y++) {
+			if (y < 0) { continue; }
+
+			for (sx = 0, x = gx; sx < 4 && x < 10; sx++, x++) {
+				if (!shape[sy] || !shape[sy][sx]) { continue; }
+
+				cell = occupied[y][x];
+
+				this._mergeTop(cell, x, y);
+				this._mergeRight(cell, x, y);
+				this._mergeBottom(cell, x, y);
+				this._mergeLeft(cell, x, y);
+			}
+		}
+	},
+
+	rebuild: function (grid) {
+		var x, y,
+		    cell;
+
+		for (y = 0; y < 20; y++) {
+			for (x = 0; x < 10; x++) {
+				cell = this.occupied[y][x];
+
+				cell.bottom = cell.top = cell.left = cell.right = false;
 			}
 		}
 
-		context.putImageData(data, 0, row * size);
+		for (y = 0; y < 20; y++) {
+			for (x = 0; x < 10; x++) {
+				if (grid[y][x]) {
+					cell = this.occupied[y][x];
+
+					this._mergeTop(cell, x, y);
+					this._mergeRight(cell, x, y);
+					this._mergeBottom(cell, x, y);
+					this._mergeLeft(cell, x, y);
+				}
+			}
+		}
+	},
+
+	_mergeTop: function (cell, x, y) {
+		var adjacent;
+
+		if (y > 0) {
+			adjacent = this.occupied[y - 1][x];
+			if (adjacent.bottom) {
+				adjacent.bottom = false;
+			} else {
+				cell.top = true;
+			}
+		}
+	},
+
+	_mergeRight: function (cell, x, y) {
+		var adjacent;
+
+		if (x < 9) {
+			adjacent = this.occupied[y][x + 1];
+			if (adjacent.left) {
+				adjacent.left = false;
+			} else {
+				cell.right = true;
+			}
+		}
+	},
+
+	_mergeBottom: function (cell, x, y) {
+		var adjacent;
+
+		if (y < 19) {
+			adjacent = this.occupied[y + 1][x];
+			if (adjacent.top) {
+				adjacent.top = false;
+			} else {
+				cell.bottom = true;
+			}
+		}
+	},
+
+	_mergeLeft: function (cell, x, y) {
+		var adjacent;
+
+		if (x > 0) {
+			adjacent = this.occupied[y][x - 1];
+			if (adjacent.right) {
+				adjacent.right = false;
+			} else {
+				cell.left = true;
+			}
+		}
+	},
+
+	init: function (field) {
+		var canvas = document.createElement("canvas"),
+		    context,
+		    x, y;
+
+		canvas.width = this.width = field.width;
+		canvas.height = this.height = field.height;
+
+		context = canvas.getContext("2d");
+		context.lineCap = "square";
+		context.strokeStyle = this.outlineColor;
+		context.lineWidth = this.spacing = field.spacing;
+
+		this.blockSize = field.blockSize;
+		this.offset = field.offset;
+		this.canvas = canvas;
+		this.context = context;
+
+		this.occupied = [];
+
+		for (y = 0; y < 20; y++) {
+			this.occupied[y] = [];
+			for (x = 0; x < 10; x++) {
+				this.occupied[y][x] = new Outline.Cell;
+			}
+		}
+	},
+
+	refresh: function () {
+		var x, y,
+		    dx, dy,
+		    context = this.context,
+		    occupied = this.occupied,
+		    cell,
+		    spacing = this.spacing,
+		    size = this.blockSize,
+		    hspacing = spacing / 2,
+		    top, left, bottom, right;
+
+		context.clearRect(0, 0, this.width, this.height);
+
+		for (y = 0, dy = 0; y < 20; y++, dy += size) {
+			for (x = 0, dx = 0; x < 10; x++, dx += size) {
+				cell = occupied[y][x];
+
+				top = dy + hspacing;
+				bottom = top + size;
+				left = dx + hspacing;
+				right = left + size;
+
+				context.beginPath();
+
+				if (cell.top) {
+					context.moveTo(left, top);
+					context.lineTo(right, top);
+				}
+
+				if (cell.right) {
+					context.moveTo(right, top);
+					context.lineTo(right, bottom);
+				}
+
+				if (cell.bottom) {
+					context.moveTo(right, bottom);
+					context.lineTo(left, bottom);
+				}
+
+				if (cell.left) {
+					context.moveTo(left, bottom);
+					context.lineTo(left, top);
+				}
+
+				context.closePath();
+				context.stroke();
+			}
+		}
+	},
+
+	draw: function () {
+		$.context.drawImage(this.canvas, this.offset.x, this.offset.y);
 	}
 };
+
+$.extend(Outline.Cell.prototype, {top: false, right: false, bottom: false, left: false});
 
 var Game = {
 	elapsed: 0,
@@ -517,8 +875,8 @@ var Game = {
 	groundedTimeout: 500,
 	spawnDelay: 300,
 	startVelocity: 0.75 / 1000,
-	keyHoldDelay: 200,
-	keyHoldInterval: 20,
+	keyHoldDelay: 150,
+	keyHoldInterval: 18,
 	refreshInterval: 15,
 	dropped: false,
 
@@ -643,12 +1001,23 @@ var Game = {
 
 
 	endPiece: function () {
+		var cleared;
+
 		this.velocity += 0.25 / 1000;
 		this.groundedTimer = null;
+
+		this.outline.merge(this.currentPiece);
 		this.field.merge(this.currentPiece);
-		if (!this.checkGameOver()) {
-			!this.field.clearRows() && this.spawnNext();
+
+		cleared = this.field.clearRows();
+
+		if (!cleared.length) {
+			this.checkGameOver() || this.spawnNext();
+		} else {
+			this.outline.rebuild(this.field.grid);
 		}
+
+		this.outline.refresh();
 	},
 
 	tryMove: function (direction) {
@@ -685,7 +1054,10 @@ var Game = {
 
 	drawGame: function (piece) {
 		this.field.draw();
-		piece.draw();
+		this.outline.draw();
+		if (!this.spawnTimer) {
+			piece.draw();
+		}
 	},
 
 	drawPiecePreview: function () {
@@ -719,6 +1091,9 @@ var Game = {
 		this.initShapeQueue();
 		this.drawPiecePreview();
 		this.nextPiece();
+
+		this.outline = $.inherit(Outline);
+		this.outline.init(this.field);
 	},
 
 	keyHold: function (key) {
@@ -1010,112 +1385,6 @@ var ConfigMenu = {
 	keyHold: $.noop,
 
 	keyPress: function (key) {
-	}
-};
-
-var AI = {
-	Weights: {
-		MAXHEIGHT: -0,
-		RIGHTHEIGHT: -0,
-		DEEPWELLS: -0,
-		EDGEHEIGHT: 0,
-		LINESCLEARED: 0,
-	},
-
-	height: function (grid) {
-		var row, col;
-
-		for (row = 0; row < 20; row++) {
-			for (col = 0; col < 10; col++) {
-				if (grid[row][col]) {
-					return 20 - row;
-				}
-			}
-		}
-
-		return 0;
-	},
-
-	weighMaxHeight: function (grid) {
-		var height = this.height(grid);
-
-		return height * this.MAXHEIGHT;
-	},
-
-	placePiece: function (piece, field, visited) {
-		/*
-		 * if piece not valid
-		 *   return
-		 * if grid visited
-		 *   return
-		 *
-		 * store grid
-		 * if piece bottomed
-		 *   rank grid
-		 * else 
-		 *   rotate piece
-		 *   recurse
-		 *   move left
-		 *   recurse
-		 *   move right
-		 *   recurse
-		 *
-		 *   move down
-		 *   recurse
-		 */
-		if (field.collision(piece)) {
-			return;
-		}
-
-		if (visited.contains(field)) {
-			return;
-		}
-
-		visited.store(field);
-		if (field.atBottom(piece)) {
-			rank = this.rank(field.grid);
-		} else {
-			piece.rotateCW();
-			this.placePiece(piece, field, visited);
-
-			piece.moveLeft();
-			this.placePiece(piece, field, visited);
-
-			piece.moveRight();
-			this.placePiece(piece, field, visited);
-
-			piece.moveDown();
-			this.placePiece(piece, field, visited);
-		}
-	},
-
-	rank: function (grid) {
-		var col, row,
-		    result = 0,
-		    colHeight = 0,
-		    oldHeight = 0,
-		    weights = this.Weights;
-
-		result += this.weighMaxHeight(grid);
-
-		for (col = 0, colHeight = 0; col < 10; col++) {
-			for (row = 0; row < 20; row++) {
-				if (grid[row][col]) {
-					colHeight = 20 - row;
-				}
-			}
-
-			oldHeight = colHeight;
-			if (col === 0 || col === 8) {
-				result += this.weighEdgeHeight(colHeight);
-			} else {
-				result += this.weighHeight(colHeight);
-			}
-
-			if (col) {
-				result += this.weightWell(Math.abs(colHeight - oldHeight));
-			}
-		}
 	}
 };
 

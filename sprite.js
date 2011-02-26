@@ -138,6 +138,16 @@ $.Sprite.prototype.updatePixels = function (update) {
 	}
 };
 
+$.Sprite.prototype.readPixels = function (callback) {
+	if (this.foreign) { throw "Cannot update pixels of foreign source"; }
+
+	var context = this.oContext,
+	    data = context.getImageData(0, 0, this.oWidth, this.oHeight),
+	    pixels = data.data;
+
+	callback(this.oWidth, this.oHeight, pixels);
+};
+
 $.Sprite.prototype.draw = function () {
 	$.context.drawImage(this.canvas, this.left, this.top);
 };
