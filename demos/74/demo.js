@@ -48,17 +48,6 @@ $.timed = function (obj, elapsed, callback, complete) {
 	}
 };
 
-$.inherit = function (proto, attrs) {
-	var maker = function () {},
-	    o;
-
-	maker.prototype = proto;
-	o = new maker;
-	typeof attrs === "object" && $.extend(o, attrs);
-
-	return o;
-};
-
 function cycle(array, index) {
 	var len = array.length;
 
@@ -70,7 +59,7 @@ function cycle(array, index) {
 
 var Piece = {
 	Direction: { Left: -1, Right: 1},
-	Rotation: { CCW: -1, CW: 1},
+	Rotation: { CCW: -2, CW: 2},
 	shapeIndex: 0,
 	spriteIndex: 0,
 	sprites: null,
@@ -81,10 +70,13 @@ var Piece = {
 	spacingColor: "#444",
 	shapeSize: null,
 	offset: null,
+	gridPosition: null,
 	delta: 0,
 
 	init: function () {
-		this.gridPosition = {x: 3, y: -2};
+		var y = this.shapes[0].length === 3 ? -1 : 0;
+
+		this.gridPosition = {x: 3, y: y};
 	},
 
 	initSprites: function () {
@@ -103,6 +95,8 @@ var Piece = {
 			this.shapeIndex++;
 			break;
 		}
+
+		this.shapeIndex %= this.shapes.length;
 		this.setShape();
 	},
 
@@ -189,7 +183,7 @@ var Piece = {
 			}
 		}
 
-		y = g.y * size;
+		y = (g.y - 2) * size;
 		x = g.x * size;
 
 		this.velocity = Game.velocity;
@@ -304,6 +298,9 @@ var Shapes = {
 };
 
 var Field = {
+	rowOffset: 2,
+	rows: 22,
+	columns: 10,
 	canvas: null,
 	context: null,
 	fillColor: new Pixel(10, 10, 10),
@@ -313,15 +310,17 @@ var Field = {
 	width: null,
 	height: null,
 	offset: {x: 0, y: 0},
-	grid: new Array(20),
+	grid: null,
 
 	init: function () {
-		var i, j, len = this.grid.length,
+		var i, j,
 		    row;
 
-		for (i = 0; i < len; i++) {
+		this.grid = [];
+
+		for (i = 0; i < this.rows; i++) {
 			row = [];
-			for (j = 0; j < 10; j++) {
+			for (j = 0; j < this.columns; j++) {
 				row.push(false);
 			}
 			this.grid[i] = row;
@@ -329,13 +328,25 @@ var Field = {
 		this.initCanvas();
 	},
 
+	copy: function (other) {
+		var x, y,
+		    grid = this.grid,
+		    ogrid = other.grid;
+
+		for (y = 0; y < this.rows; y++) {
+			for (x = 0; x < this.columns; x++) {
+				grid[y][x] = ogrid[y][x];
+			}
+		}
+	},
+
 	initCanvas: function () {
 		var canvas = document.createElement("canvas"),
 		    size = this.blockSize = Piece.blockSize,
 		    spacing = this.spacing = Piece.spacing;
 
-		canvas.width = this.width = 10 * size + spacing;
-		canvas.height = this.height = 20 * size + spacing;
+		canvas.width = this.width = this.columns * size + spacing;
+		canvas.height = this.height = (this.rows - this.rowOffset) * size + spacing;
 		this.context = canvas.getContext("2d");
 		this.context.fillStyle = this.fillColor.toString();
 		this.context.fillRect(0, 0, this.width, this.height);
@@ -360,9 +371,9 @@ var Field = {
 
 		grid.compact();
 
-		while (grid.length !== 20) {
+		while (grid.length !== this.rows) {
 			row = [];
-			for (i = 0; i < 10; i++) {
+			for (i = 0; i < this.columns; i++) {
 				row.push(false);
 			}
 			grid.unshift(row);
@@ -385,6 +396,7 @@ var Field = {
 		var size = Piece.blockSize,
 		    spacing = Piece.spacing;
 
+		y -= this.rowOffset;
 		this.context.fillRect(x * size, y * size, size + spacing, size + spacing);
 		this.context.drawImage(block, x * size + spacing, y * size + spacing);
 	},
@@ -404,20 +416,14 @@ var Field = {
 		context.globalAlpha = this.mergeAlpha;
 		context.fillStyle = "#000";
 
-		for (y = 0; y < 20; y++) {
-			for (x = 0; x < 10; x++) {
+		for (y = this.rowOffset; y < this.rows; y++) {
+			for (x = 0; x < this.columns; x++) {
 				block = this.grid[y][x];
 				block && this.drawBlock(block.image, x, y);
 			}
 		}
 
 		context.restore();
-	},
-
-	dead: function () {
-		var row = this.grid[0];
-
-		return row[4] || row[5];
 	},
 
 	applyPiece: function (piece, callback) {
@@ -438,27 +444,43 @@ var Field = {
 	},
 
 	collision: function (piece) {
-		var collide = false;
+		var sx, sy,
+		    gx, gy,
+		    shape = piece.shape,
+		    len = shape.length,
+		    grid = this.grid,
+		    rows = this.rows,
+		    cols = this.columns;
 
-		this.applyPiece(piece, function (shape, grid, sx, sy, gx, gy) {
-			if (shape[sy][sx] && (gy >= 20 || gx < 0 || gx >= 10 || (gy >= 0 && grid[gy][gx]))) {
-				collide = true;
-				return false;
+		for (sy = 0, gy = piece.gridPosition.y; sy < len; sy++, gy++) {
+			for (sx = 0, gx = piece.gridPosition.x; sx < len; sx++, gx++) {
+				if (shape[sy][sx] && (gy >= rows || gx < 0 || gx >= cols || (gy >= 0 && grid[gy][gx]))) {
+					return true;
+				}
 			}
-		});
-		return collide;
+		}
+
+		return false;
 	},
 
 	oob: function (piece) {
-		var oob = false;
+		var sx, sy,
+		    gx, gy,
+		    shape = piece.shape,
+		    len = shape.length,
+		    grid = this.grid,
+		    rows = this.rows,
+		    cols = this.columns;
 
-		this.applyPiece(piece, function (shape, grid, sx, sy, gx, gy) {
-			if (shape[sy][sx] && (gy >= 20 || gx < 0 || gx >= 10)) {
-				oob = true;
-				return false;
+		for (sy = 0, y = piece.gridPosition.y; sy < len; sy++, y++) {
+			for (sx = 0, x = piece.gridPosition.x; sx < len; sx++, x++) {
+				if (shape[sy][sx] && (gy >= rows || gy <= -3 || gx < 0 || gx >= cols)) {
+					return true;
+				}
 			}
-		});
-		return oob;
+		}
+
+		return false;
 	},
 
 	merge: function (piece) {
@@ -489,6 +511,8 @@ function setPixel(data, idx, color) {
 var Outline = {
 	outlineColor: "#eee",
 	occupied: null,
+	rows: null,
+	columns: null,
 
 	Cell: function () {},
 
@@ -502,10 +526,10 @@ var Outline = {
 		    adjacent,
 		    cell;
 
-		for (sy = 0; sy < 4 && y < 20; sy++, y++) {
+		for (sy = 0; sy < 4 && y < this.rows; sy++, y++) {
 			if (y < 0) { continue; }
 
-			for (sx = 0, x = gx; sx < 4 && x < 10; sx++, x++) {
+			for (sx = 0, x = gx; sx < 4 && x < this.columns; sx++, x++) {
 				if (!shape[sy] || !shape[sy][sx]) { continue; }
 
 				cell = occupied[y][x];
@@ -522,16 +546,16 @@ var Outline = {
 		var x, y,
 		    cell;
 
-		for (y = 0; y < 20; y++) {
-			for (x = 0; x < 10; x++) {
+		for (y = 0; y < this.rows; y++) {
+			for (x = 0; x < this.columns; x++) {
 				cell = this.occupied[y][x];
 
 				cell.bottom = cell.top = cell.left = cell.right = false;
 			}
 		}
 
-		for (y = 0; y < 20; y++) {
-			for (x = 0; x < 10; x++) {
+		for (y = 0; y < this.rows; y++) {
+			for (x = 0; x < this.columns; x++) {
 				if (grid[y][x]) {
 					cell = this.occupied[y][x];
 
@@ -560,7 +584,7 @@ var Outline = {
 	_mergeRight: function (cell, x, y) {
 		var adjacent;
 
-		if (x < 9) {
+		if (x < this.columns - 1) {
 			adjacent = this.occupied[y][x + 1];
 			if (adjacent.left) {
 				adjacent.left = false;
@@ -573,7 +597,7 @@ var Outline = {
 	_mergeBottom: function (cell, x, y) {
 		var adjacent;
 
-		if (y < 19) {
+		if (y < this.rows - 1) {
 			adjacent = this.occupied[y + 1][x];
 			if (adjacent.top) {
 				adjacent.top = false;
@@ -609,6 +633,9 @@ var Outline = {
 		context.strokeStyle = this.outlineColor;
 		context.lineWidth = this.spacing = field.spacing;
 
+		this.rowOffset = field.rowOffset;
+		this.rows = field.rows;
+		this.columns = field.columns;
 		this.blockSize = field.blockSize;
 		this.offset = field.offset;
 		this.canvas = canvas;
@@ -616,9 +643,9 @@ var Outline = {
 
 		this.occupied = [];
 
-		for (y = 0; y < 20; y++) {
+		for (y = 0; y < this.rows; y++) {
 			this.occupied[y] = [];
-			for (x = 0; x < 10; x++) {
+			for (x = 0; x < this.columns; x++) {
 				this.occupied[y][x] = new Outline.Cell;
 			}
 		}
@@ -627,6 +654,7 @@ var Outline = {
 	refresh: function () {
 		var x, y,
 		    dx, dy,
+		    rowOffset = this.rowOffset,
 		    context = this.context,
 		    occupied = this.occupied,
 		    cell,
@@ -637,8 +665,8 @@ var Outline = {
 
 		context.clearRect(0, 0, this.width, this.height);
 
-		for (y = 0, dy = 0; y < 20; y++, dy += size) {
-			for (x = 0, dx = 0; x < 10; x++, dx += size) {
+		for (y = rowOffset, dy = 0; y < this.rows; y++, dy += size) {
+			for (x = 0, dx = 0; x < this.columns; x++, dx += size) {
 				cell = occupied[y][x];
 
 				top = dy + hspacing;
@@ -691,14 +719,21 @@ var Game = {
 	velocity: null,
 
 	groundedTimeout: 500,
-	spawnDelay: 300,
-	startVelocity: 0.75 / 1000,
+	//spawnDelay: 300,
+	//startVelocity: 0.75 / 1000,
+	//velocityIncrement: 0.25 / 1000,
+	spawnDelay: 0,
+	velocityIncrement: 0,
+	startVelocity: 0.75 / 1000 + .025,
 	keyHoldDelay: 150,
 	keyHoldInterval: 18,
 	refreshInterval: 15,
 	dropped: false,
 
+	clearedRows: 0,
 	level: 0,
+
+	inputSource: null,
 
 	Config: {
 		Left: 65,
@@ -749,7 +784,7 @@ var Game = {
 	checkGameOver: function () {
 		var gameover = false;
 
-		if (this.field.dead()) {
+		if (this.field.collision(this.currentPiece)) {
 			gameover = true;
 			$.refresh(this.gameOver.bind(this));
 		}
@@ -768,7 +803,7 @@ var Game = {
 	ejectUp: function (piece) {
 		var field = this.field;
 
-		while (field.collision(piece)) {
+		while (field.collision(piece) && piece.gridPosition.y >= -2) {
 			piece.moveUp();
 		}
 	},
@@ -790,25 +825,42 @@ var Game = {
 	},
 
 	nextPiece: function () {
-		var queue = this.shapeQueue;
+		var queue = this.shapeQueue,
+		    gameOver;
 
 		queue.push(this.randomShape());
 		this.currentPiece = $.inherit(Shapes[queue.shift()]);
 		this.currentPiece.init();
 		this.currentPiece.velocity = this.velocity;
+		gameOver = this.checkGameOver();
+
+		gameOver || this.inputSource.nextPiece();
+		return gameOver;
 	},
 
 	gameOver: function () {
 		setTimeout(function () {
-			$.register(ConfigMenu);
-		}, 2000);
+			if (n) {
+				console.log("Played pieces: " + n);
+				console.log("Cleared Rows: " + Game.clearedRows);
+				clr.push(Game.clearedRows);
+				all.push(n);
+			}
+
+			n = 0;
+			startGame();
+			//$.register(ConfigMenu);
+		//}, 2000);
+		}, 100);
 	},
 
 	spawnNext: function () {
 		$.keyHold($.noop);
 		$.refresh($.noop, this.refreshInterval);
-		this.nextPiece();
-		this.spawnTimer = setTimeout(this.endSpawnNext.bind(this), this.spawnDelay);
+
+		if (!this.nextPiece()) {
+			this.spawnTimer = setTimeout(this.endSpawnNext.bind(this), this.spawnDelay);
+		}
 	},
 
 	endSpawnNext: function () {
@@ -821,21 +873,28 @@ var Game = {
 	endPiece: function () {
 		var cleared;
 
-		this.velocity += 0.25 / 1000;
+		this.velocity += this.velocityIncrement;
 		this.groundedTimer = null;
 
 		this.outline.merge(this.currentPiece);
 		this.field.merge(this.currentPiece);
 
 		cleared = this.field.clearRows();
+		this.clearedRows += cleared.length;
+
+		this.inputSource.endPiece();
 
 		if (!cleared.length) {
-			this.checkGameOver() || this.spawnNext();
+			this.spawnNext();
 		} else {
 			this.outline.rebuild(this.field.grid);
 		}
 
 		this.outline.refresh();
+	},
+
+	hardDrop: function () {
+		this.currentPiece.velocity = 10;
 	},
 
 	tryMove: function (direction) {
@@ -902,57 +961,31 @@ var Game = {
 		ConfigMenu.init();
 	},
 
+	resetScore: function () {
+		this.clearedRows = 0;
+		this.level = 0;
+	},
+
+	setInputSource: function (is) {
+		this.inputSource = is;
+		is.game = this;
+		this.keyHold = is.keyHold;
+		this.keyPress = is.keyPress;
+	},
+
 	start: function () {
+		this.resetScore();
 		this.velocity = this.startVelocity;
 		this.field = $.inherit(Field);
 		this.field.init();
 		this.initShapeQueue();
 		this.drawPiecePreview();
+
+		this.inputSource.start(this);
 		this.nextPiece();
 
 		this.outline = $.inherit(Outline);
 		this.outline.init(this.field);
-	},
-
-	keyHold: function (key) {
-		if (!this.spawnTimer) {
-			this.move(key);
-		}
-	},
-
-	move: function (key) {
-		var direction;
-
-		if (key === Game.Config.Left) {
-			direction = Piece.Direction.Left;
-		} else if (key === Game.Config.Right) {
-			direction = Piece.Direction.Right;
-		}
-
-		direction && this.tryMove(direction);
-	},
-
-	keyPress: function (key) {
-		var rotation;
-
-		if (key === Game.Config.RotateCW) {
-			rotation = Piece.Rotation.CW;
-		}
-
-		if (key === Game.Config.RotateCCW) {
-			rotation = Piece.Rotation.CCW;
-		}
-
-		if (!this.spawnTimer && key === Game.Config.HardDrop) {
-			this.currentPiece.velocity = 10;
-			//this.dropped = true;
-		}
-
-		if (key === Game.Config.Pause) {
-			this.pause();
-		}
-
-		rotation && this.tryRotation(rotation);
 	},
 
 	countdown: function (elapsed, now) {
@@ -966,13 +999,15 @@ var Game = {
 		this.field.draw();
 	},
 
+	dropPiece: function () {
+		this.currentPiece.velocity += .05;
+		this.dropped = true;
+	},
+
 	refresh: function (elapsed, now) {
 		var currentPiece = this.currentPiece;
 
-		if ($.keys[Game.Config.SoftDrop]) {
-			currentPiece.velocity += .05;
-			this.dropped = true;
-		}
+		this.inputSource.refresh(elapsed, now);
 
 		currentPiece.update(elapsed);
 		this.checkGrounded();
@@ -1231,6 +1266,9 @@ addEventListener("load", function () {
 	$.init(600, 800);
 	loadImages();
 	$.loaded(Game.loaded);
+	Game.setInputSource(InputSource.AI);
 	$.start();
 	$.register(ConfigMenu);
 }, false);
+
+clr = [];

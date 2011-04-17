@@ -1,20 +1,38 @@
 var AI = {
+	base: null,
 	states: [],
+	currentBumpiness: 0,
 
-	Weights: {
-		MAXHEIGHT: -10,
-		RIGHTHEIGHT: -20,
-		DEEPWELLS: -4,
-		EDGEHEIGHT: 3
+	WEIGHTS: {
+		MAXHEIGHT: -2,
+		WELLS: -3,
+		HEIGHT: 0,
+		HOLES: -8,
+		BUMPINESS: 0
+	},
+
+	/*
+	POWERS: {
+		MAXHEIGHT: 2,
+		WELLS: 3,
+		HOLES: 6
+	},
+	*/
+
+	POWERS: {
+		MAXHEIGHT: 1,
+		WELLS: 1,
+		HOLES: 1
 	},
 
 	height: function (grid) {
-		var row, col;
+		var row, col,
+		    field = this.base.field;
 
-		for (row = 0; row < 20; row++) {
-			for (col = 0; col < 10; col++) {
+		for (row = 0; row < field.rows; row++) {
+			for (col = 0; col < field.columns; col++) {
 				if (grid[row][col]) {
-					return 20 - row;
+					return field.rows - row;
 				}
 			}
 		}
@@ -22,18 +40,121 @@ var AI = {
 		return 0;
 	},
 
-	piecePath: function (piece, field, dest, path) {
-		var p = instance(piece),
+	resetBumpiness: function () {
+		this.currentBumpiness = 0;
+	},
+
+	accumulateBumpiness: function (height) {
+		this.currentBumpiness += height;
+	},
+
+	weighBumpiness: function () {
+		return this.currentBumpiness * this.WEIGHTS.BUMPINESS;
+	},
+
+	weighMaxHeight: function (height) {
+		return Math.pow(height, this.POWERS.MAXHEIGHT) * this.WEIGHTS.MAXHEIGHT;
+	},
+
+	weighHeight: function (height) {
+		return height * this.WEIGHTS.HEIGHT;
+	},
+
+	weighWell: function (height) {
+		var adjustedHeight = Math.abs(height);
+
+		return Math.pow(adjustedHeight, this.POWERS.WELLS) * this.WEIGHTS.WELLS;
+	},
+
+	weighHoles: function (holes) {
+		//holes = Math.min(holes, 2);
+
+		return Math.pow(holes * 2, this.POWERS.HOLES) * this.WEIGHTS.HOLES;
+	},
+
+	rank: function (grid) {
+		var col, row,
+		    result = 0,
+		    colHeight = 0,
+		    oldHeight = 0,
+		    maxHeight = 0,
+		    holes = 0,
+		    field = this.base.field;
+
+		this.resetBumpiness();
+
+		for (col = 0; col < field.columns; col++) {
+			colHeight = 0;
+			holes = 0;
+
+			for (row = 0; row < field.rows; row++) {
+				if (!colHeight && grid[row][col]) {
+					colHeight = field.rows - row;
+
+					if (colHeight > maxHeight) {
+						maxHeight = colHeight;
+					}
+
+				} else if (colHeight && !grid[row][col]) {
+					holes++;
+				}
+			}
+
+			result += this.weighHeight(colHeight);
+
+			if (col) {
+				this.accumulateBumpiness(colHeight - oldHeight);
+				result += this.weighWell(colHeight - oldHeight);
+			}
+
+			result += this.weighHoles(holes);
+			oldHeight = colHeight;
+		}
+
+		result += this.weighMaxHeight(maxHeight);
+		result += this.weighBumpiness();
+
+		return result;
+	},
+
+	init: function (game) {
+		if (this.base) { return; }
+
+		var states = this.states,
+		    field = game.field,
+		    maxStates = (field.columns * 4) + (field.columns - 1);
+		    i;
+
+		this.base = game;
+
+		for (i = 0; i < maxStates; i++) {
+			states[i] = $.inherit(game, {
+				field: $.inherit(field, {
+					grid: new Array(field.rows),
+					drawBlock: $.noop,
+					animate: $.noop
+				})
+			});
+
+			for (j = 0; j < field.rows; j++) {
+				states[i].field.grid[j] = new Array(field.columns);
+			}
+		}
+	},
+
+	piecePath: function (piece, field, dest) {
+		var piece = $.inherit(piece, {
+				gridPosition: $.inherit(piece.gridPosition)
+			}),
 		    path = [],
 		    delta,
-		    initialDirection,
 		    direction,
-		    idx,
-		    desty = piece.gridPosition.y,
-		    x, y;
+		    desty = piece.gridPosition.y;
 
 		// return point
-		if ($.equals(piece.gridPosition, dest.gridPosition) && piece.shapeIndex === dest.shapeIndex) {
+		if (piece.gridPosition.x === dest.gridPosition.x &&
+		    piece.gridPosition.y === dest.gridPosition.y &&
+		    piece.shapeIndex === dest.shapeIndex) {
 			return path;
 		}
 
@@ -41,7 +162,7 @@ var AI = {
 			path.push(Piece.Rotation.CCW);
 			piece.rotateCCW();
 		} else {
-			while (piece.shapeIndex !== dest.shapIndex) {
+			while (piece.shapeIndex !== dest.shapeIndex) {
 				path.push(Piece.Rotation.CW);
 				piece.rotateCW();
 			}
@@ -56,181 +177,164 @@ var AI = {
 			direction = 0;
 		}
 
-		initialDirection = direction;
-
 		while (piece.gridPosition.x !== dest.gridPosition.x) {
 			path.push(direction);
 			piece.move(direction);
 		}
 
-		while (piece.gridPosition.y !== dest.gridPosition.y && !field.collision(piece)) {
+		while (piece.gridPosition.y !== dest.gridPosition.y &&
+		       !(field.collision(piece) || field.oob(piece))) {
 			desty++;
 			piece.moveDown();
 		}
 
-		// return point
-		if ($.equals(piece.gridPosition, dest.gridPosition)) {
+		if (piece.gridPosition.x === dest.gridPosition.x &&
+		    piece.gridPosition.y === dest.gridPosition.y) {
 			path.push(desty + 10);
 			return path;
-		}
-
-		// we're blocked, move around barrier
-
-		x = dest.gridPosition.x;
-		y = dest.gridPosition.y;
-
-		dest.moveLeft();
-
-		if (field.collision(dest)) {
-			dest.moveRight();
-			dest.moveRight();
-
-			//return point;
-			if (field.collision(dest)) {
-				return null;
-			} else {
-				direction = Piece.Direction.Right;
-			}
 		} else {
-			direction = Piece.Direction.Left;
-		}
-
-		if (initialDirection !== direction) {
-			idx = path.indexOf(initialDirection);
-
-			if (idx !== -1) {
-				path.splice(idx, 1);
-			}
-		}
-
-		dest.gridPosition.x = x;
-		dest.gridPosition.y = y;
-
-		desty--;
-		path.push(desty + 10);
-
-		while (field.collision(piece)) {
-			path.push(direction);
-			piece.move(direction);
-
-			//return point
-			if (field.oob(piece)) {
-				return null;
-			}
-		}
-
-		while (piece.gridPosition.y !== dest.gridPosition.y) {
-			desty++;
-			piece.moveDown();
-
-			//return point
-			if (field.collision(piece)) {
-				return null;
-			}
-		}
-		path.push(desty + 10);
-
-		direction *= -1;
-
-		while (piece.gridPosition.x !== dest.gridPosition.x) {
-			path.push(direction);
-			piece.move(direction);
-
-			//return point
-			if (field.collision(piece)) {
-				return null;
-			}
-		}
-
-		return path;
-	},
-
-	weighMaxHeight: function (grid) {
-		var height = this.height(grid);
-
-		return height * this.WEIGHTS.MAXHEIGHT;
-	},
-
-	weighEdgeHeight: function (height) {
-		return height * this.WEIGHTS.EDGEHEIGHT;
-	},
-
-	weighHeight: function (height) {
-		return height * this.WEIGHTS.HEIGHT;
-	},
-
-	weighWell: function (height) {
-		return Math.abs(height) * this.WEIGHTS.DEEPWELLS;
-	},
-
-	weighRightHeight: function (height) {
-		return height * this.WEIGHTS.RIGHTHEIGHT;
-	},
-
-	rank: function (grid) {
-		var col, row,
-		    result = 0,
-		    colHeight = 0,
-		    oldHeight = 0,
-		    weights = this.Weights;
-
-		result += this.weighMaxHeight(grid);
-
-		for (col = 0, colHeight = 0; col < 10; col++) {
-			for (row = 0; row < 20; row++) {
-				if (grid[row][col]) {
-					colHeight = 20 - row;
-				}
-			}
-
-			oldHeight = colHeight;
-			if (col === 0 || col === 8) {
-				result += this.weighEdgeHeight(colHeight);
-			} else if (col === 9) {
-				result += this.weighRightHeight(colHeight);
-			} else {
-				result += this.weighHeight(colHeight);
-			}
-
-			if (col) {
-				result += this.weightWell(colHeight - oldHeight);
-			}
-		}
-
-		return result;
-	},
-
-	init: function (game) {
-		var states = this.states,
-		    i;
-
-		this.base = game;
-
-		for (i = 0; i < 40; i++) {
-			states[i] = $.inherit(game, {
-				field: $.inherit(game.field, {
-					grid: new Array(20);
-				});
-			});
-
-			for (j = 0; j < 20; j++) {
-				states[i].field.grid[j] = new Array(10);
-			}
+			return null;
 		}
 	},
 
 	generateMove: function () {
 		var state,
+		    field,
+		    i = 0,
 		    x,
 		    shape,
-		    piece;
+		    piece,
+		    basePiece = this.base.currentPiece,
+		    rank,
+		    best = { rank: -Number.MAX_VALUE },
+		    path,
+		    dest,
+		    cols = this.base.field.columns;
 
-		for (x = -2; x < 10; x++) {
-			piece = $.inherit(this.base.currentPiece);
+		for (x = -2; x < cols; x++) {
+			for (shape = 0; shape < basePiece.shapes.length; shape++) {
+				piece = $.inherit(basePiece, {
+					gridPosition: $.inherit(basePiece.gridPosition),
+					shapeIndex: shape
+				});
+				piece.setShape();
 
-			for (shape = 0; shape < piece.shapes.length; shape++) {
-				piece.rotateCW();
+				state = this.states[i];
+				field = state.field;
+
+				field.copy(this.base.field);
+
+				piece.gridPosition.x = x;
+				piece.gridPosition.y = -2;
+
+				while (!field.collision(piece)) {
+					piece.moveDown();
+				}
+				piece.moveUp();
+
+				dest = $.inherit(piece, {
+					shapeIndex: piece.shapeIndex
+				});
+
+				path = this.piecePath(basePiece, field, dest);
+
+				if (!(field.collision(piece) || field.oob(piece)) && path) {
+					field.merge(piece);
+					field.clearRows(true);
+
+					rank = this.rank(field.grid);
+					if (rank > best.rank) {
+						best.dest = dest;
+						best.rank = rank;
+						best.path = path;
+					}
+				}
+
+				i++;
 			}
 		}
+
+		return best;
+	},
+
+	movePiece: function (dt) {
+		var path = this.currentPath,
+		    piece = this.base.currentPiece,
+		    currentMove;
+
+		if (!path) {
+			this.startPiece();
+		}
+
+		if (this.destination.gridPosition.x === piece.gridPosition.x &&
+		    this.destination.gridPosition.y === piece.gridPosition.y) {
+			this.base.dropPiece();
+			return;
+		}
+
+		if (!path) {
+			return;
+		}
+
+		currentMove = path[0];
+
+		if (this.handleMove(currentMove, piece, dt)) {
+			path.shift();
+		}
+	},
+
+	handleMove: function (code, piece, dt) {
+		var desty,
+		    game = this.base,
+		    nextMove = true;
+
+		switch (code) {
+			case Piece.Direction.Left:
+			case Piece.Direction.Right:
+				game.tryMove(code);
+				break;
+
+			case Piece.Rotation.CW:
+			case Piece.Rotation.CCW:
+				game.tryRotation(code);
+				break;
+
+			default:
+				desty = code - 10;
+				if (piece.gridPosition.y !== desty) {
+					this.moveDown(desty, piece, dt);
+					nextMove = false;
+				}
+		}
+
+		return nextMove;
+	},
+
+	moveDown: function (desty, piece, dt) {
+		piece.velocity = 10;
+		//if ((piece.velocity + .05) * dt + piece.gridPosition.y + 1< desty) {
+			//this.base.dropPiece();
+		//}
+	},
+
+	startPiece: function () {
+		var piece = this.base.currentPiece,
+		    field = this.base.field,
+		    move;
+
+		move = this.generateMove();
+		this.destination = move.dest;
+		this.currentPath = move.path;
+
+		if (!this.currentPath) {
+			console.log("!");
+		}
+	},
+
+	endPiece: function () {
+		this.currentPath = null;
+		n++;
 	}
 };
+var n = 0;
+var all = [];

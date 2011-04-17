@@ -1,6 +1,6 @@
 var Fireworks = {
 	elapsed: 0,
-	duration: 750,
+	duration: 1,
 	refreshInterval: 30,
 
 	keyPress: $.noop,
@@ -50,6 +50,7 @@ var Fireworks = {
 	init: function () {
 		var x, y,
 		    offset,
+		    field = this.field,
 		    blockSize = Piece.blockSize,
 		    spacing = Piece.spacing,
 		    row,
@@ -67,7 +68,7 @@ var Fireworks = {
 			row = this.rows[i];
 
 			y = row.index * blockSize + spacing
-			for (x = 0; x < 10; x++) {
+			for (x = 0; x < field.columns; x++) {
 				for (j = 0; j < this.count; j++) {
 					this.addParticle(offset.x + blockSize / 2 + x * (blockSize + spacing),
 							 offset.y + blockSize / 2 + y,
@@ -106,18 +107,19 @@ var Fireworks = {
 		    data = context.getImageData(0, row * size, 10 * size + spacing, size + spacing),
 		    pixels = data.data,
 		    p, i, len,
+		    field = this.field,
 		    fillColor = this.field.fillColor;
 
 		// len is block size^2 * tetris grid columns * 4 ints per pixel
-		for (i = 0, len = (size * 10 + spacing) * size * 4; i < len; i += 4) {
+		for (i = 0, len = (size * field.columns + spacing) * size * 4; i < len; i += 4) {
 			setPixel(pixels, i, fillColor);
 		}
 
 		// clear the spacing line below if no blocks are below us
 		p = i;
 
-		for (i = 0, len = (size * 10 + spacing) * spacing * 4; i < len; i += 4, p += 4) {
-			if (row === 19 || !this.field.grid[row + 1][Math.floor(((i / 4) % (size * 10 + spacing)) / size)]) {
+		for (i = 0, len = (size * field.columns + spacing) * spacing * 4; i < len; i += 4, p += 4) {
+			if (row === field.rows - 1 || !this.field.grid[row + 1][Math.floor(((i / 4) % (size * 10 + spacing)) / size)]) {
 				setPixel(pixels, p, fillColor);
 			}
 		}
