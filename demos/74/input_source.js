@@ -100,3 +100,68 @@ InputSource.AI = $.inherit(InputSource.Base, {
 		AI.init(game);
 	}
 });
+
+InputSource.Replay = $.inherit(InputSource.Base, {
+	elapsed: 0,
+	stateList: null,
+	stateIndex: null,
+
+	keyPress: function (key) {
+		if (key === Game.Config.Pause) {
+			this.pause();
+		}
+	},
+
+	refresh: function (elapsed) {
+		var state = this.stateList[this.stateIndex];
+
+		if (!state) { return; }
+		this.elapsed += elapsed;
+
+		if (this.elapsed >= state.delay) {
+			this.play();
+			this.elapsed = 0;
+		}
+	},
+
+	play: function () {
+		var state = this.stateList[this.stateIndex],
+		    game = this.game;
+
+		if (state.pieceY < game.currentPiece.gridPosition.y) {
+			/* this changes the games internal state */
+			game.endPiece();
+		}
+
+		state.syncPiece(game.currentPiece);
+		this.stateIndex++;
+	},
+
+	nextPiece: function () {
+	},
+
+	endPiece: function () {
+	},
+
+	loadReplay: function (str) {
+		var state,
+		    stateList,
+		    i = 0, len = str.length;
+
+		this.stateIndex = 0;
+		stateList = this.stateList = [];
+
+		while (i < str.length) {
+			state = $.inherit(StateSink.State);
+			i += state.unserialize(str, i);
+			stateList.push(state);
+		}
+	},
+
+	start: function (game) {
+		InputSource.Base.start.call(this, game);
+		game.velocity = 0;
+		game.velocityIncrement = 0;
+		game.checkGrounded = $.noop;
+	}
+});

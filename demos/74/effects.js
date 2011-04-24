@@ -1,6 +1,6 @@
 var Fireworks = {
 	elapsed: 0,
-	duration: 1,
+	duration: 0,
 	refreshInterval: 30,
 
 	keyPress: $.noop,
@@ -48,6 +48,8 @@ var Fireworks = {
 	},
 
 	init: function () {
+		if (!this.duration) { return; }
+
 		var x, y,
 		    offset,
 		    field = this.field,
@@ -148,6 +150,8 @@ var Fireworks = {
 	},
 
 	clear: function () {
+		if (!this.imageData) { return; }
+
 		var i,
 		    pixels = this.imageData.data,
 		    len = this.width * this.height * 4;

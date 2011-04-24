@@ -37,8 +37,12 @@ $.extend = function (base, attrs) {
 $.timed = function (obj, elapsed, callback, complete) {
 	var progress;
 
-	obj.elapsed += elapsed;
-	progress = obj.elapsed / obj.duration;
+	if (!obj.duration) {
+		progress = 1;
+	} else {
+		obj.elapsed += elapsed;
+		progress = obj.elapsed / obj.duration;
+	}
 
 	if (progress < 1) {
 		callback.call(obj, progress, elapsed);
@@ -181,9 +185,13 @@ var Piece = {
 			while (!Game.field.collision(this) && blocks--) {
 				g.y++;
 			}
+
+			if (Game.field.collision(this)) {
+				g.y--;
+			}
 		}
 
-		y = (g.y - 2) * size;
+		y = (g.y - Field.rowOffset) * size;
 		x = g.x * size;
 
 		this.velocity = Game.velocity;
@@ -196,6 +204,7 @@ var Piece = {
 };
 
 var Shapes = {
+	PieceList: ["I", "T", "O", "Z", "S", "L", "J"],
 	I: $.inherit(Piece, {
 		image: "orange",
 		shapes: [
@@ -297,9 +306,20 @@ var Shapes = {
 	})
 };
 
+(function setShapeCodes() {
+	var i, len,
+	    shape,
+	    list = Shapes.PieceList;
+
+	for (i = 0, len = list.length; i < len; i++) {
+		shape = Shapes[list[i]];
+		if (shape) { shape.code = i; }
+	}
+})();
+
 var Field = {
-	rowOffset: 2,
-	rows: 22,
+	rowOffset: 1,
+	rows: 21,
 	columns: 10,
 	canvas: null,
 	context: null,
@@ -711,20 +731,21 @@ $.extend(Outline.Cell.prototype, {top: false, right: false, bottom: false, left:
 
 var Game = {
 	elapsed: 0,
-	shapes: ["I", "T", "O", "S", "Z", "L", "J"],
-	shapeQueue: [],
+	shapes: ["I", "T", "O", "Z", "S", "L", "J"],
 	currentPiece: null,
 	groundedTimer: null,
 	spawnTimer: null,
 	velocity: null,
 
 	groundedTimeout: 500,
-	//spawnDelay: 300,
-	//startVelocity: 0.75 / 1000,
-	//velocityIncrement: 0.25 / 1000,
+	spawnDelay: 300,
+	startVelocity: 0.75 / 1000,
+	velocityIncrement: 0.25 / 1000,
+	/*
 	spawnDelay: 0,
 	velocityIncrement: 0,
 	startVelocity: 0.75 / 1000 + .025,
+	*/
 	keyHoldDelay: 150,
 	keyHoldInterval: 18,
 	refreshInterval: 15,
@@ -733,7 +754,9 @@ var Game = {
 	clearedRows: 0,
 	level: 0,
 
+	queueSource: null,
 	inputSource: null,
+	stateSinks: null,
 
 	Config: {
 		Left: 65,
@@ -752,7 +775,6 @@ var Game = {
 		    piece = this.currentPiece,
 		    dropped = this.dropped;
 
-		this.ejectUp(piece);
 		piece.moveDown();
 		if (field.collision(piece)) {
 			if (dropped) {
@@ -791,15 +813,6 @@ var Game = {
 		return gameover;
 	},
 
-	initShapeQueue: function () {
-		var queue = this.shapeQueue = [],
-		    i;
-
-		for (i = 0; i < 4; i++) {
-			queue.push(this.randomShape());
-		}
-	},
-
 	ejectUp: function (piece) {
 		var field = this.field;
 
@@ -808,38 +821,28 @@ var Game = {
 		}
 	},
 
-	randomShape: function () {
-		var shape,
-		    random = function () { return Game.shapes[~~(Math.random() * 7)] },
-		    queue = this.shapeQueue;
-		    inQueue = true,
-		    i = 0;
-
-		while (inQueue && i < 4) {
-			shape = random();
-			if (queue.indexOf(shape) === -1) { inQueue = false; }
-			i++;
-		}
-
-		return shape;
-	},
-
 	nextPiece: function () {
-		var queue = this.shapeQueue,
-		    gameOver;
+		var gameOver;
 
-		queue.push(this.randomShape());
-		this.currentPiece = $.inherit(Shapes[queue.shift()]);
+		this.currentPiece = $.inherit(Shapes[this.queueSource.next()]);
 		this.currentPiece.init();
 		this.currentPiece.velocity = this.velocity;
 		gameOver = this.checkGameOver();
 
-		gameOver || this.inputSource.nextPiece();
+		if (!gameOver) {
+			this.inputSource.nextPiece();
+		}
+
+		this.stateSinks && this.stateSinks.forEach(function (s) {
+			s.nextPiece();
+		});
+
 		return gameOver;
 	},
 
 	gameOver: function () {
 		setTimeout(function () {
+			/*
 			if (n) {
 				console.log("Played pieces: " + n);
 				console.log("Cleared Rows: " + Game.clearedRows);
@@ -849,9 +852,10 @@ var Game = {
 
 			n = 0;
 			startGame();
-			//$.register(ConfigMenu);
-		//}, 2000);
-		}, 100);
+			*/
+			$.register(ConfigMenu);
+		}, 2000);
+		//}, 100);
 	},
 
 	spawnNext: function () {
@@ -883,6 +887,9 @@ var Game = {
 		this.clearedRows += cleared.length;
 
 		this.inputSource.endPiece();
+		this.stateSinks && this.stateSinks.forEach(function (s) {
+			s.endPiece();
+		});
 
 		if (!cleared.length) {
 			this.spawnNext();
@@ -942,9 +949,13 @@ var Game = {
 		    size = blockSize * 6,
 		    x = blockSize * 11,
 		    y = 5,
-		    piece = $.inherit(Shapes[this.shapeQueue[0]]),
+		    shape = this.queueSource.queue[0],
+		    piece,
 		    offset;
 
+		if (!shape) { return; }
+
+		piece = $.inherit(Shapes[this.queueSource.queue[0]]),
 		offset = (6 - piece.shape.length) / 2 * blockSize;
 		piece.sprite.moveTo(x + offset, y + offset);
 
@@ -966,6 +977,14 @@ var Game = {
 		this.level = 0;
 	},
 
+	addStateSink: function (sink) {
+		if (!this.stateSinks) {
+			this.stateSinks = [];
+		}
+
+		this.stateSinks.push(sink);
+	},
+
 	setInputSource: function (is) {
 		this.inputSource = is;
 		is.game = this;
@@ -973,16 +992,26 @@ var Game = {
 		this.keyPress = is.keyPress;
 	},
 
+	setQueueSource: function (qs) {
+		this.queueSource = qs;
+	},
+
 	start: function () {
+		var game = this;
+
 		this.resetScore();
 		this.velocity = this.startVelocity;
 		this.field = $.inherit(Field);
 		this.field.init();
-		this.initShapeQueue();
-		this.drawPiecePreview();
 
 		this.inputSource.start(this);
+		this.queueSource.start(this);
+		this.stateSinks && this.stateSinks.forEach(function (s) {
+			s.start(game);
+		});
+
 		this.nextPiece();
+		this.drawPiecePreview();
 
 		this.outline = $.inherit(Outline);
 		this.outline.init(this.field);
@@ -1010,6 +1039,11 @@ var Game = {
 		this.inputSource.refresh(elapsed, now);
 
 		currentPiece.update(elapsed);
+
+		this.stateSinks && this.stateSinks.forEach(function (s) {
+			s.refresh(elapsed, now);
+		});
+
 		this.checkGrounded();
 		this.drawGame(currentPiece);
 		this.dropped = false;
@@ -1266,7 +1300,9 @@ addEventListener("load", function () {
 	$.init(600, 800);
 	loadImages();
 	$.loaded(Game.loaded);
-	Game.setInputSource(InputSource.AI);
+	Game.setQueueSource(QueueSource.Replay);
+	Game.setInputSource(InputSource.Replay);
+	Game.addStateSink(StateSink.Replay);
 	$.start();
 	$.register(ConfigMenu);
 }, false);
