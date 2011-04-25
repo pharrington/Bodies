@@ -122,8 +122,8 @@ var AI = {
 
 		var states = this.states,
 		    field = game.field,
-		    maxStates = (field.columns * 4) + (field.columns - 1);
-		    i;
+		    maxStates = (field.columns * 4) + (field.columns - 1),
+		    ;
 
 		this.base = game;
 
