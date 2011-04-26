@@ -128,19 +128,13 @@ InputSource.Replay = $.inherit(InputSource.Base, {
 		var state = this.stateList[this.stateIndex],
 		    game = this.game;
 
-		if (state.pieceY < game.currentPiece.gridPosition.y) {
-			/* this changes the games internal state */
+		state.syncPiece(game.currentPiece);
+
+		if (state.terminate) {
 			game.endPiece();
 		}
 
-		state.syncPiece(game.currentPiece);
 		this.stateIndex++;
-	},
-
-	nextPiece: function () {
-	},
-
-	endPiece: function () {
 	},
 
 	loadReplay: function (str) {

@@ -14,11 +14,19 @@ var StateSink = {
 	State: {
 		headerSize: 1,
 		intOffset: 2,
-		delay: null,
+		delay: 0,
 		pieceX: null,
 		pieceY: null,
 		pieceShape: null,
 		code: null,
+		terminate: false,
+
+		equals: function (s) {
+			return this.pieceX === s.pieceX &&
+				this.pieceY === s.pieceY &&
+				this.pieceShape === s.pieceShape &&
+				this.code === s.code;
+		},
 
 		compare: function (p) {
 			var pos = p.gridPosition;
@@ -66,8 +74,9 @@ var StateSink = {
 			    bytes;
 
 			xshape = ((this.pieceX + offset) & 63) << 3 |
-				 (this.pieceShape & 3);
-			ypiece = ((this.pieceY +offset) & 63) << 3 |
+				 ((this.pieceShape & 3) << 1 |
+				 this.terminate & 1);
+			ypiece = ((this.pieceY + offset) & 63) << 3 |
 				 (this.code & 7);
 
 			bytes = String.fromCharCode(xshape) + String.fromCharCode(ypiece) + delay;
@@ -83,7 +92,8 @@ var StateSink = {
 
 			this.pieceX = (xshape >> 3) - io;
 			this.pieceY = (ypiece >> 3) - io;
-			this.pieceShape = xshape & 3;
+			this.pieceShape = (xshape >> 1) & 3;
+			this.terminate = xshape & 1;
 			this.code = Shapes[Shapes.PieceList[ypiece & 7]].code;
 			this.delay = parseInt(str.substr(offset + 3, len - 2), 10);
 			return len + this.headerSize;
@@ -96,15 +106,12 @@ StateSink.Replay = $.inherit(StateSink.Base, {
 	elapsed: null,
 	states: null,
 
-	nextPiece: function () {
-	},
-
 	refresh: function (elapsed) {
-		var currentState = this.currentState,
+		var prevState = this.currentState,
 		    currentPiece = this.game.currentPiece;
 
-		if (!(currentState && currentState.compare(currentPiece))) {
-			currentState && this.states.push(currentState);
+		if (!(prevState && prevState.compare(currentPiece))) {
+			prevState && this.states.push(prevState);
 
 			this.currentState = StateSink.State.fromPiece(this.game.currentPiece);
 			this.currentState.delay = this.elapsed;
@@ -112,6 +119,25 @@ StateSink.Replay = $.inherit(StateSink.Base, {
 		}
 
 		this.elapsed += elapsed;
+	},
+
+	endPiece: function () {
+		var states = this.states,
+		    state = this.currentState;
+
+		if (state.delay === this.elapsed) {
+			state.terminate = true;
+			states.push(state);
+		} else {
+			states.push(state);
+			state = StateSink.State.fromPiece(this.game.currentPiece);
+			state.terminate = true;
+			state.delay = this.elapsed;
+			states.push(state);
+		}
+
+		this.currentState = null;
+		this.elapsed = 0;
 	},
 
 	start: function (game) {

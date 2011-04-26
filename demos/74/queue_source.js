@@ -71,7 +71,7 @@ QueueSource.Replay = $.inherit(QueueSource.Base, {
 		for (i = 1, len = states.length; i < len; i++) {
 			current = states[i];
 
-			if (current.pieceY < prev.pieceY) {
+			if (prev.terminate) {
 				q.push(Game.shapes[current.code]);
 			}
 

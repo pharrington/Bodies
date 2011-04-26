@@ -822,12 +822,18 @@ var Game = {
 	},
 
 	nextPiece: function () {
-		var gameOver;
+		var gameOver,
+		    shape;
 
-		this.currentPiece = $.inherit(Shapes[this.queueSource.next()]);
-		this.currentPiece.init();
-		this.currentPiece.velocity = this.velocity;
-		gameOver = this.checkGameOver();
+		shape = Shapes[this.queueSource.next()];
+		if (shape) {
+			this.currentPiece = $.inherit(shape);
+			this.currentPiece.init();
+			this.currentPiece.velocity = this.velocity;
+			gameOver = this.checkGameOver();
+		} else {
+			gameOver = true;
+		}
 
 		if (!gameOver) {
 			this.inputSource.nextPiece();
@@ -1300,8 +1306,8 @@ addEventListener("load", function () {
 	$.init(600, 800);
 	loadImages();
 	$.loaded(Game.loaded);
-	Game.setQueueSource(QueueSource.Replay);
-	Game.setInputSource(InputSource.Replay);
+	Game.setQueueSource(QueueSource.TGM);
+	Game.setInputSource(InputSource.Player);
 	Game.addStateSink(StateSink.Replay);
 	$.start();
 	$.register(ConfigMenu);
