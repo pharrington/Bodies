@@ -5,7 +5,7 @@ var AI = {
 
 	WEIGHTS: {
 		MAXHEIGHT: -2,
-		WELLS: -3,
+		WELLS: -2.75,
 		HEIGHT: 0,
 		HOLES: -8,
 		BUMPINESS: 0
@@ -122,7 +122,7 @@ var AI = {
 
 		var states = this.states,
 		    field = game.field,
-		    maxStates = (field.columns * 4) + (field.columns - 1);
+		    maxStates = (field.columns * 4) + (field.columns - 1),
 		    i;
 
 		this.base = game;
@@ -214,18 +214,17 @@ var AI = {
 		for (x = -2; x < cols; x++) {
 			for (shape = 0; shape < basePiece.shapes.length; shape++) {
 				piece = $.inherit(basePiece, {
-					gridPosition: $.inherit(basePiece.gridPosition),
+					gridPosition: {x: 0, y: 0},
 					shapeIndex: shape
 				});
+				piece.init();
+				piece.gridPosition.x = x;
 				piece.setShape();
 
 				state = this.states[i];
 				field = state.field;
 
 				field.copy(this.base.field);
-
-				piece.gridPosition.x = x;
-				piece.gridPosition.y = -2;
 
 				while (!field.collision(piece)) {
 					piece.moveDown();
