@@ -1016,8 +1016,8 @@ var Game = {
 			s.start(game);
 		});
 
-		this.nextPiece();
 		this.drawPiecePreview();
+		this.nextPiece();
 
 		this.outline = $.inherit(Outline);
 		this.outline.init(this.field);
