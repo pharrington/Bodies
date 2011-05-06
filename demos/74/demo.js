@@ -78,9 +78,10 @@ var Piece = {
 	delta: 0,
 
 	init: function () {
-		var y = this.shapes[0].length === 3 ? -1 : 0;
+		var x = this.shapes[0].length === 2 ? 4 : 3,
+		    y = this.shapes[0].length === 3 ? -1 : 0;
 
-		this.gridPosition = {x: 3, y: y};
+		this.gridPosition = {x: x, y: y};
 	},
 
 	initSprites: function () {
