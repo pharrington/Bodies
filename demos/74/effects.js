@@ -1,31 +1,23 @@
 var Fireworks = {
-	elapsed: 0,
-	duration: 0,
-	refreshInterval: 30,
+	elapsed: null,
+	duration: 600,
 
-	keyPress: $.noop,
-	keyHold: $.noop,
-
-	particles: [],
-	gravity: 0.05,
-	count: 200,
-	speed: 0.35,
+	gravity: 0.02,
+	count: 17,
+	speed: 0.43,
 
 	width: null,
 	height: null,
 	offset: null,
 
-	bgColor: new Pixel(0, 0, 0, 0),
-	imageData: null,
-
 	colors: {
-		cyan: ["#c0f8fc", "#0bd0df", "#012337", "#ffffff", "#18e2f4", "#0382cb"],
-		yellow: ["#faf0bc", "#f0e314", "#a4a01b",  "#a40214", "#be1f30", "#608b40", "#ffffff"],
-		red: ["#f08e9a", "#f2164a", "#c90c03", "#66060f", "#63f453", "#ffffff"],
-		blue: ["#177cf4", "#0326cb", "#c0dcfc", "#91b1f1", "#062365", "#3125c1", "#4b468e", "#f2f136", "#ffffff"],
-		orange: ["#f59231", "#edb903", "#f6d6ac", "#8d5d09", "#7f50f3", "#522fa8", "#ffffff"],
-		purple: ["#ccaef8", "#6417f1", "#8203cb", "#330662", "#e10bf9", "#1b0ada", "#0b37f9", "#ffffff"],
-		green: ["#d0fcbc", "#5bf418", "#08cb03", "#156206", "#94dd0b", "#fafa0c", "#ffffff"]
+		cyan: ["#c0f8fc", "#0bd0df", "#012337", "#ffffff", "#ffffff", "#18e2f4", "#0382cb"],
+		yellow: ["#faf0bc", "#f0e314", "#a4a01b",  "#a40214", "#be1f30", "#608b40", "#ffffff", "#ffffff"],
+		red: ["#f03b51", "#f2164a", "#c90c03", "#d20c1f", "#ffffff", "#ffffff"],
+		blue: ["#177cf4", "#0326cb", "#c0dcfc", "#91b1f1", "#062365", "#3125c1", "#4b468e", "#f2f136", "#ffffff", "#ffffff"],
+		orange: ["#f59231", "#edb903", "#f6d6ac", "#8d5d09", "#7f50f3", "#522fa8", "#ffffff", "#ffffff"],
+		purple: ["#ccaef8", "#6417f1", "#8203cb", "#e10bf9", "#1b0ada", "#0b37f9", "#ffffff", "#ffffff"],
+		green: ["#d0fcbc", "#5bf418", "#08cb03", "#63f453", "#94dd0b", "#fafa0c", "#ffffff", "#ffffff"]
 	},
 
 	addParticle: function (x, y, color) {
@@ -42,13 +34,19 @@ var Fireworks = {
 
 		angle = Math.random() * Math.PI * 2;
 		vel = new Vector(speed * Math.cos(angle), speed * Math.sin(angle));
-		particle = new Particle(new Vector(x, y), vel, accel);
-		particle.color = Pixel.fromString(color);
-		this.particles.push(particle);
+		vel.y -= 0.05;
+
+		particle = this.particleSystem.createParticle();
+		particle.duration = this.duration;
+		particle.setPosition(new Vector(x, y));
+		particle.setVelocity(vel);
+		particle.setAcceleration(accel);
+		particle.setColor(color);
 	},
 
 	init: function () {
 		if (!this.duration) { return; }
+		this.elapsed = 0;
 
 		var x, y,
 		    offset,
@@ -59,12 +57,6 @@ var Fireworks = {
 		    i, j;
 
 		offset = new Vector(this.field.offset);
-		this.particles = [];
-		this.width = 400;
-		this.height = $.height;
-		this.initCanvas();
-
-		this.clearRows(this.rows);
 
 		for (i = 0; i < this.rows.length; i++) {
 			row = this.rows[i];
@@ -73,126 +65,38 @@ var Fireworks = {
 			for (x = 0; x < field.columns; x++) {
 				for (j = 0; j < this.count; j++) {
 					this.addParticle(offset.x + blockSize / 2 + x * (blockSize + spacing),
-							 offset.y + blockSize / 2 + y,
+							 offset.y + y,
 							 row.blocks[i].color);
 				}
 			}
 		}
 	},
 
-	initCanvas: function () {
-		var canvas;
+	refresh: function (dt) {
+		if (this.elapsed === null) { return; }
 
-		if (this.canvas) { return; }
+		var ctx = $.context,
+		    percent;
 
-		canvas = this.canvas = document.createElement("canvas");
-		canvas.width = this.width;
-		canvas.height = this.height;
-		this.context = canvas.getContext("2d");
-		this.imageData = this.context.createImageData(this.width, this.height);
-	},
+		this.elapsed += dt;
+		percent = this.elapsed / this.duration;
 
-	clearRows: function (rows) {
-		var i, len,
-		    context = this.field.context;
-
-		for (i = 0, len = rows.length; i < len; i++) {
-			this.clearRow(rows[i].index, context);
+		if (percent >= 1) {
+			this.elapsed = null;
 		}
 
-		this.field.draw();
-	},
-
-	clearRow: function (row, context) {
-		var size = Piece.blockSize,
-		    spacing = Piece.spacing,
-		    data = context.getImageData(0, row * size, 10 * size + spacing, size + spacing),
-		    pixels = data.data,
-		    p, i, len,
-		    field = this.field,
-		    fillColor = this.field.fillColor;
-
-		// len is block size^2 * tetris grid columns * 4 ints per pixel
-		for (i = 0, len = (size * field.columns + spacing) * size * 4; i < len; i += 4) {
-			setPixel(pixels, i, fillColor);
-		}
-
-		// clear the spacing line below if no blocks are below us
-		p = i;
-
-		for (i = 0, len = (size * field.columns + spacing) * spacing * 4; i < len; i += 4, p += 4) {
-			if (row === field.rows - 1 || !this.field.grid[row + 1][Math.floor(((i / 4) % (size * 10 + spacing)) / size)]) {
-				setPixel(pixels, p, fillColor);
-			}
-		}
-
-		context.putImageData(data, 0, row * size);
-	},
-
-	refresh: function (elapsed) {
-		$.timed(this, elapsed, this.step, this.complete);
-	},
-
-	step: function (percent, dt) {
-		var ctx = $.context;
 		this.animate(dt);
-
-		ctx.clearRect(0, 0, $.width, $.height);
-		this.field.draw();
-		Game.drawPiecePreview();
-		ctx.save();
-		ctx.globalAlpha = 1 - percent;
-		ctx.drawImage(this.canvas, 0, 0);
-		ctx.drawImage(this.canvas, 0, 1);
-		ctx.drawImage(this.canvas, 1, 0);
-		ctx.drawImage(this.canvas, 1, 1);
-		ctx.restore();
-	},
-
-	clear: function () {
-		if (!this.imageData) { return; }
-
-		var i,
-		    pixels = this.imageData.data,
-		    len = this.width * this.height * 4;
-
-		for (i = 0; i < len; i++) {
-			pixels[i] = 0;
-		}
-	},
-
-	complete: function () {
-		$.register(Game);
-		Game.spawnNext();
-
-		this.clear();
-		$.context.clearRect(0, 0, $.width, $.height);
-
-		this.field.redraw();
-		this.field.draw();
-		Game.drawPiecePreview();
 	},
 
 	animate: function (dt) {
-		var particles = this.particles,
-		    particle,
-		    i, len;
-
-		for (i = 0, len = particles.length; i < len; i++) {
-			particle = particles[i];
-
-			particle.draw(this.imageData, this.bgColor);
-			particle.update(dt);
-			particle.draw(this.imageData);
-		}
-
-		this.context.putImageData(this.imageData, 0, 0);
+		this.particleSystem.update(dt, $.context);
 	}
 };
 
-var Streak = {
-	piece: null,
+var Dummy = {
+	rows: null,
+	field: null,
 
-	init: function () {
-	}
+	init: $.noop,
+	refresh: $.noop
 };

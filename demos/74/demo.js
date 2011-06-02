@@ -324,7 +324,7 @@ var Field = {
 	columns: 10,
 	canvas: null,
 	context: null,
-	fillColor: new Pixel(10, 10, 10),
+	fillColor: new Color(10, 10, 10),
 	mergeAlpha: 0.7,
 	blockSize: null,
 	spacing: null,
@@ -390,6 +390,12 @@ var Field = {
 			}
 		}
 
+		if (!unanimated) {
+			this.eraseRows(cleared);
+			Game.outline.rebuild(grid);
+			Game.outline.refresh();
+		}
+
 		grid.compact();
 
 		while (grid.length !== this.rows) {
@@ -405,13 +411,32 @@ var Field = {
 	},
 
 	animate: function (rows) {
-		Game.clearSpawnTimer();
-		Fireworks.field = this;
-		Fireworks.rows = rows;
-		Fireworks.init();
-		$.register(Fireworks);
+		var game = Game,
+		    effects = game.effects;
+
+		game.setLineClearTimer();
+
+		effects.field = this;
+		effects.rows = rows;
+		effects.init();
 	},
 
+	eraseRows: function (rows) {
+		var $this = this;
+
+		rows.forEach(function (row) {
+			$this.eraseRow(row.index);
+		});
+	},
+
+	eraseRow: function (index) {
+		var size = Piece.blockSize,
+		    y = (index - this.rowOffset) * size,
+		    spacing = Piece.spacing,
+		    columns = this.columns;
+
+		this.context.fillRect(0, y + spacing, size * columns + spacing, size);
+	},
 	
 	drawBlock: function (block, x, y) {
 		var size = Piece.blockSize,
@@ -576,6 +601,9 @@ var Outline = {
 		}
 
 		for (y = 0; y < this.rows; y++) {
+
+			if (!grid[y]) { continue; }
+
 			for (x = 0; x < this.columns; x++) {
 				if (grid[y][x]) {
 					cell = this.occupied[y][x];
@@ -739,7 +767,8 @@ var Game = {
 	velocity: null,
 
 	groundedTimeout: 500,
-	spawnDelay: 300,
+	lineClearDelay: 200,
+	spawnDelay: 100,
 	startVelocity: 0.75 / 1000,
 	velocityIncrement: 0.25 / 1000,
 	/*
@@ -747,8 +776,8 @@ var Game = {
 	velocityIncrement: 0,
 	startVelocity: 0.75 / 1000 + .025,
 	*/
-	keyHoldDelay: 150,
-	keyHoldInterval: 18,
+	keyHoldDelay: 150, // DAS (Delayed Auto Shift)
+	keyHoldInterval: 18, // ARR (Auto Repeat Rate)
 	refreshInterval: 15,
 	dropped: false,
 
@@ -758,6 +787,8 @@ var Game = {
 	queueSource: null,
 	inputSource: null,
 	stateSinks: null,
+
+	effects: null,
 
 	Config: {
 		Left: 65,
@@ -849,20 +880,8 @@ var Game = {
 
 	gameOver: function () {
 		setTimeout(function () {
-			/*
-			if (n) {
-				console.log("Played pieces: " + n);
-				console.log("Cleared Rows: " + Game.clearedRows);
-				clr.push(Game.clearedRows);
-				all.push(n);
-			}
-
-			n = 0;
-			startGame();
-			*/
 			$.register(ConfigMenu);
 		}, 2000);
-		//}, 100);
 	},
 
 	spawnNext: function () {
@@ -870,8 +889,26 @@ var Game = {
 		$.refresh($.noop, this.refreshInterval);
 
 		if (!this.nextPiece()) {
-			this.spawnTimer = setTimeout(this.endSpawnNext.bind(this), this.spawnDelay);
+			this.setSpawnTimer();
 		}
+	},
+
+	setSpawnTimer: function () {
+		this.spawnTimer = setTimeout(this.endSpawnNext.bind(this), this.spawnDelay);
+	},
+
+	setLineClearTimer: function () {
+		this.currentPiece = null;
+		this.clearSpawnTimer();
+		this.spawnTimer = setTimeout(this.endLineClear.bind(this), this.lineClearDelay);
+	},
+
+	endLineClear: function () {
+		this.spawnNext();
+		this.outline.rebuild(this.field.grid);
+		this.outline.refresh();
+		this.field.redraw();
+		this.endSpawnNext();
 	},
 
 	endSpawnNext: function () {
@@ -879,7 +916,6 @@ var Game = {
 		!this.dropped && this.drawPiecePreview();
 		$.register(this);
 	},
-
 
 	endPiece: function () {
 		var cleared;
@@ -894,26 +930,33 @@ var Game = {
 		this.clearedRows += cleared.length;
 
 		this.inputSource.endPiece();
-		this.stateSinks && this.stateSinks.forEach(function (s) {
+		this.currentPiece && this.stateSinks && this.stateSinks.forEach(function (s) {
 			s.endPiece();
 		});
 
 		if (!cleared.length) {
 			this.spawnNext();
+			this.outline.refresh();
 		} else {
-			this.outline.rebuild(this.field.grid);
+			//this.outline.rebuild(this.field.grid);
 		}
 
-		this.outline.refresh();
 	},
 
 	hardDrop: function () {
-		this.currentPiece.velocity = 10;
+		var piece = this.currentPiece;
+
+		if (!piece) { return; }
+
+		piece.velocity = 10;
+		this.dropped = true;
 	},
 
 	tryMove: function (direction) {
 		var field = this.field,
 		    piece = this.currentPiece;
+
+		if (!piece) { return; }
 
 		piece.move(direction);
 		if (field.collision(piece)) {
@@ -924,6 +967,8 @@ var Game = {
 	tryRotation: function (rotation) {
 		var field = this.field,
 		    piece = this.currentPiece;
+
+		if (!piece) { return; }
 
 		piece.rotate(rotation);
 
@@ -946,7 +991,8 @@ var Game = {
 	drawGame: function (piece) {
 		this.field.draw();
 		this.outline.draw();
-		if (!this.spawnTimer) {
+
+		if (piece && !this.spawnTimer) {
 			piece.draw();
 		}
 	},
@@ -975,6 +1021,7 @@ var Game = {
 	},
 
 	loaded: function () {
+		Fireworks.particleSystem = new ParticleSystem();
 		Game.shapes.forEach(initBlock);
 		ConfigMenu.init();
 	},
@@ -1036,23 +1083,29 @@ var Game = {
 	},
 
 	dropPiece: function () {
-		this.currentPiece.velocity += .05;
-		this.dropped = true;
+		var piece = this.currentPiece;
+
+		if (!piece) { return; }
+
+		piece.velocity += .075;
 	},
 
 	refresh: function (elapsed, now) {
 		var currentPiece = this.currentPiece;
 
-		this.inputSource.refresh(elapsed, now);
+		if (currentPiece) {
+			this.inputSource.refresh(elapsed, now);
 
-		currentPiece.update(elapsed);
+			currentPiece.update(elapsed);
 
-		this.stateSinks && this.stateSinks.forEach(function (s) {
-			s.refresh(elapsed, now);
-		});
+			this.stateSinks && this.stateSinks.forEach(function (s) {
+				s.refresh(elapsed, now);
+			});
+			this.checkGrounded();
+		}
 
-		this.checkGrounded();
 		this.drawGame(currentPiece);
+		this.effects.refresh(elapsed);
 		this.dropped = false;
 	},
 
@@ -1310,8 +1363,7 @@ addEventListener("load", function () {
 	Game.setQueueSource(QueueSource.TGM);
 	Game.setInputSource(InputSource.Player);
 	Game.addStateSink(StateSink.Replay);
+	Game.effects = Fireworks;
 	$.start();
 	$.register(ConfigMenu);
 }, false);
-
-clr = [];

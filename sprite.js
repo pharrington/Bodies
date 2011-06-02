@@ -13,7 +13,7 @@ $.Sprite = function (imageName, height, options) {;
 		width = imageName;
 	} else {
 		image = $.resource(imageName);
-		options = height;
+		options = height || {};
 		width = image.width;
 		height = image.height;
 		this.resource = image;
@@ -148,8 +148,9 @@ $.Sprite.prototype.readPixels = function (callback) {
 	callback(this.oWidth, this.oHeight, pixels);
 };
 
-$.Sprite.prototype.draw = function () {
-	$.context.drawImage(this.canvas, this.left, this.top);
+$.Sprite.prototype.draw = function (ctx) {
+	ctx = ctx || $.context;
+	ctx.drawImage(this.canvas, this.left, this.top);
 };
 
 $.Sprite.prototype.update = function (dt) {

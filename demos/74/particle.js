@@ -10,32 +10,32 @@ $.extend = function (base, attrs) {
         return base;
 };
 
-function Pixel(r, g, b, a) {
+function Color(r, g, b, a) {
 	this.r = r;
 	this.g = g;
 	this.b = b;
 
-	this.a = a === undefined ? 255 : a;
+	this.a = a === undefined ? 1 : a;
 }
 
-$.extend(Pixel, {
+$.extend(Color, {
 	fromString: function (str) {
 		if (str[0] === "#") {
 			str = str.substr(1);
 		}
 
-		return new Pixel(parseInt(str.substr(0, 2), 16),
+		return new Color(parseInt(str.substr(0, 2), 16),
 				 parseInt(str.substr(2, 2), 16),
 				 parseInt(str.substr(4, 2), 16),
-				 255);
+				 1);
 	},
 
 	fromImageData: function (pixels, idx) {
-		return new Pixel(pixels[idx], pixels[idx + 1], pixels[idx + 2], pixels[idx + 3]);
+		return new Color(pixels[idx], pixels[idx + 1], pixels[idx + 2], pixels[idx + 3]);
 	}
 });
 
-$.extend(Pixel.prototype, {
+$.extend(Color.prototype, {
 	toString: function () {
 		return "rgba(" +
 			this.r + "," +
@@ -45,38 +45,66 @@ $.extend(Pixel.prototype, {
 	}
 });
 
-function Particle(p, v, a) {
-	this.position = p;
-	this.velocity = v || new Vector(0, 0);
-	this.acceleration = a || new Vector(0, 0);
-
-	this._nVelocity = new Vector(this.velocity.x, this.velocity.y);
+function Particle() {
 }
 
 $.extend(Particle.prototype, {
 	color: null,
+	image: null,
+	duration: 0,
+	position: new Vector(0, 0),
+	velocity: new Vector(0, 0),
+	acceleration: new Vector(0, 0),
+	_nVelocity: new Vector(0, 0),
+	active: null,
 
-	draw: function (imageData, color) {
-		var p = this.position,
-		    c = color || this.color,
-		    idx,
-		    pixels = imageData.data;
-		   
-		if (p.x < 0 || p.y < 0 || p.x > imageData.width || p.y > imageData.height) { return; }
-		idx = (Math.floor(p.y) * imageData.width + Math.floor(p.x)) * 4;
+	setVelocity: function (v) {
+		this.velocity = v;
+		this._nVelocity = v.copy();
+	},
 
-		pixels[idx] = c.r;
-		pixels[idx + 1] = c.g;
-		pixels[idx + 2] = c.b;
-		pixels[idx + 3] = c.a;
+	setAcceleration: function (a) {
+		this.acceleration = a;
+	},
+
+	setPosition: function (p) {
+		this.position = p;
+	},
+
+	setColor: function (color) {
+		this.color = Color.fromString(color);
+	},
+
+	draw: function (ctx) {
+		var p = this.position;
+
+		ctx.fillStyle = this.color.toString();
+		ctx.beginPath();
+		ctx.arc(p.x, p.y, 3, Math.PI * 2, 0);
+		ctx.fill();
 	},
 
 	update: function (dt) {
+		var pos = this.position,
+		    percent,
+		    tempVelocity = this._nVelocity;
+
+		if (this.active === null) { return; }
+
+		this.active += dt;
+		if (this.active >= this.duration) {
+			this.active = null;
+			return;
+		}
+
+		percent = this.active / this.duration;
+		this.color.a = 1 - (percent * percent);
+
 		this.velocity.iadd(this.acceleration);
-		this._nVelocity.x = this.velocity.x;
-		this._nVelocity.y = this.velocity.y;
-		this._nVelocity.imul(dt);
-		this.position.iadd(this._nVelocity);
+		tempVelocity.x = this.velocity.x;
+		tempVelocity.y = this.velocity.y;
+		tempVelocity.imul(dt);
+		pos.iadd(tempVelocity);
 	}
 });
 
@@ -146,6 +174,10 @@ $.extend(Vector.prototype, {
 		    y = this.y;
 
 		return Math.sqrt(x * x + y * y);
+	},
+
+	copy: function () {
+		return new Vector(this.x, this.y);
 	}
 });
 
@@ -161,5 +193,67 @@ $.extend(Attractor.prototype, {
 
 		distance.idiv(length * length / this.power);
 		particle.acceleration.iadd(distance);
+	}
+});
+
+function ParticleSystem() {
+	var canctx;
+
+	this.inactiveParticles = [];
+	this.activeParticles = [];
+	this._preallocate(1200);
+	canctx = $.createCanvas(332, 662);
+	this.canvas = canctx[0];
+	this.context = canctx[1];
+}
+
+$.extend(ParticleSystem.prototype, {
+	inactiveParticles: null,
+	activeParticles: null,
+
+	_preallocate: function (count) {
+		while (count--) {
+			this.inactiveParticles.push(new Particle);
+		}
+	},
+
+	createParticle: function () {
+		var particle = this.inactiveParticles.shift();
+
+		if (!particle) {
+			particle = new Particle;
+		}
+
+		this.activeParticles.push(particle);
+		particle.active = 0;
+
+		return particle;
+	},
+
+	update: function (dt, context) {
+		var particles = this.activeParticles,
+		    particle,
+		    buffer = this.context,
+		    i = particles.length;
+
+		buffer.save();
+		buffer.globalCompositeOperation = "source-in";
+		buffer.fillColor = "rgba(20, 20, 20, 0.6)";
+		buffer.fillRect(0, 0, 332, 662);
+		buffer.restore();
+
+		while (i--) {
+			particle = particles[i];
+			particle.update(dt);
+
+			if (particle.active === null) {
+				this.inactiveParticles.push(particle);
+				particles.splice(i, 1);
+				continue;
+			}
+
+			particle.draw(buffer);
+		}
+		context.drawImage(this.canvas, 0, 0);
 	}
 });

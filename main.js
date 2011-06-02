@@ -84,14 +84,26 @@ Bodies = $ = {
 		calculateOffsets();
 	},
 	
+	createCanvas: function (width, height) {
+		var canvas, context;
+
+		canvas = document.createElement("canvas");
+		canvas.width = width;
+		canvas.height = height;
+		context = canvas.getContext("2d");
+
+		return [canvas, context];
+	},
+
 	loadImage: function (name, path) {
 		var image = new Image();
 		loadingImages += 1;
+
 		image.onload = function () {
+			$.images[name] = this;
 			loadingImages -= 1;
 		};
 		image.src = path;
-		$.images[name] = image;
 	},
 	
 	resource: function (name) {

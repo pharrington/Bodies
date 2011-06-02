@@ -151,7 +151,6 @@ var AI = {
 		    direction,
 		    desty = piece.gridPosition.y;
 
-		// return point
 		if (piece.gridPosition.x === dest.gridPosition.x &&
 		    piece.gridPosition.y === dest.gridPosition.y &&
 		    piece.shapeIndex === dest.shapeIndex) {
@@ -311,9 +310,6 @@ var AI = {
 
 	moveDown: function (desty, piece, dt) {
 		piece.velocity = 10;
-		//if ((piece.velocity + .05) * dt + piece.gridPosition.y + 1< desty) {
-			//this.base.dropPiece();
-		//}
 	},
 
 	startPiece: function () {
@@ -324,16 +320,9 @@ var AI = {
 		move = this.generateMove();
 		this.destination = move.dest;
 		this.currentPath = move.path;
-
-		if (!this.currentPath) {
-			console.log("!");
-		}
 	},
 
 	endPiece: function () {
 		this.currentPath = null;
-		n++;
 	}
 };
-var n = 0;
-var all = [];
