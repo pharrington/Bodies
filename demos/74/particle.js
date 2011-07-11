@@ -46,65 +46,136 @@ $.extend(Color.prototype, {
 });
 
 function Particle() {
+	this.position = new Vector(0, 0);
+	this.velocity = new Vector(0, 0);
+	this.acceleration = new Vector(0, 0);
 }
 
 $.extend(Particle.prototype, {
 	color: null,
 	image: null,
+	gradient: null,
+	delay: 0,
 	duration: 0,
+	radius: 3,
 	position: new Vector(0, 0),
 	velocity: new Vector(0, 0),
 	acceleration: new Vector(0, 0),
 	_nVelocity: new Vector(0, 0),
 	active: null,
 
-	setVelocity: function (v) {
-		this.velocity = v;
+	draw: $.noop,
+
+	setVelocity: function (x, y) {
+		var v = this.velocity;
+
+		v.x = x; v.y = y;
 		this._nVelocity = v.copy();
 	},
 
-	setAcceleration: function (a) {
-		this.acceleration = a;
+	setAcceleration: function (x, y) {
+		var a = this.acceleration;
+
+		a.x = x; a.y = y;
 	},
 
-	setPosition: function (p) {
-		this.position = p;
+	setPosition: function (x, y) {
+		var p = this.position;
+
+		p.x = x; p.y = y;
 	},
 
 	setColor: function (color) {
-		this.color = Color.fromString(color);
+		this.color = color;
 	},
 
-	draw: function (ctx) {
-		var p = this.position;
+	drawCircle: function (ctx) {
+		if (this.delay > 0) { return; }
 
-		ctx.fillStyle = this.color.toString();
+		var p = this.position,
+		    percent = this.active / this.duration;
+
+		ctx.fillStyle = this.color;
+		ctx.globalAlpha = 1 - (percent * percent);
+
 		ctx.beginPath();
-		ctx.arc(p.x, p.y, 3, Math.PI * 2, 0);
+		ctx.arc(~~p.x, ~~p.y, this.radius, Math.PI * 2, 0);
+		ctx.fill();
+	},
+
+	drawGlow: function (ctx) {
+		if (this.delay > 0) { return; }
+
+		var p = this.position,
+		    percent = this.active / this.duration;
+
+		ctx.shadowBlur = this.radius;
+		ctx.shadowColor = this.color;
+		ctx.fillStyle = this.color;
+		ctx.globalAlpha = 1 - (percent * percent);
+
+		ctx.beginPath();
+		ctx.arc(~~p.x, ~~p.y, this.radius, Math.PI * 2, 0);
+		ctx.fill();
+
+		ctx.shadowBlur = this.radius / 2;
+		ctx.fillStyle = "rgba(255, 255, 255, 0.9)";
+		ctx.beginPath();
+		ctx.arc(~~p.x, ~~p.y, this.radius / 2, Math.PI * 2, 0);
+		ctx.fill();
+	},
+
+	createGradient: function (ctx) {
+		var gradient = ctx.createRadialGradient(0, 0, 1, 0, 0, this.radius);
+	},
+
+	drawGradient: function (ctx) {
+		if (this.delay > 0) { return; }
+
+		var p = this.position,
+		    x = ~~p.x, y = ~~p.y,
+		    radius = this.radius,
+		    percent = this.active / this.duration,
+		    gradient = ctx.createRadialGradient(x, y, radius / 2, x, y, radius);
+
+		gradient.addColorStop(0, "rgba(255, 255, 255, 0.9)");
+		gradient.addColorStop(1, this.color);
+
+		ctx.fillStyle = gradient;
+		ctx.globalAlpha = 1 - (percent * percent);
+
+		ctx.beginPath();
+		ctx.arc(x, y, radius, Math.PI * 2, 0);
 		ctx.fill();
 	},
 
 	update: function (dt) {
 		var pos = this.position,
-		    percent,
 		    tempVelocity = this._nVelocity;
 
 		if (this.active === null) { return; }
 
-		this.active += dt;
-		if (this.active >= this.duration) {
-			this.active = null;
-			return;
+		if (this.delay > 0) {
+			this.delay -= dt;
+			if (this.delay > 0) { return; }
 		}
 
-		percent = this.active / this.duration;
-		this.color.a = 1 - (percent * percent);
+		this.active += dt;
+		if (this.active >= this.duration) {
+			this.reset();
+			return;
+		}
 
 		this.velocity.iadd(this.acceleration);
 		tempVelocity.x = this.velocity.x;
 		tempVelocity.y = this.velocity.y;
 		tempVelocity.imul(dt);
 		pos.iadd(tempVelocity);
+	},
+
+	reset: function () {
+		this.active = null;
+		this.delay = 0;
 	}
 });
 
@@ -196,7 +267,7 @@ $.extend(Attractor.prototype, {
 	}
 });
 
-function ParticleSystem() {
+function ParticleSystem(preset) {
 	var canctx;
 
 	this.inactiveParticles = [];
@@ -205,9 +276,28 @@ function ParticleSystem() {
 	canctx = $.createCanvas(332, 662);
 	this.canvas = canctx[0];
 	this.context = canctx[1];
+
+	this.setPreset(preset);
 }
 
+ParticleSystem.Presets = {
+	blur: {
+		fillColor: "rgba(200, 200, 200, 0.6)",
+		composite: "source-in",
+		clearOp: "fillRect"
+	},
+
+	clear: {
+		fillColor: "rgba(0, 0, 0, 0)",
+		composite: "source-over",
+		clearOp: "clearRect"
+	}
+};
+
 $.extend(ParticleSystem.prototype, {
+	fillColor: "#000000",
+	composite: "source-over",
+	clearOp: "clearRect",
 	inactiveParticles: null,
 	activeParticles: null,
 
@@ -215,6 +305,19 @@ $.extend(ParticleSystem.prototype, {
 		while (count--) {
 			this.inactiveParticles.push(new Particle);
 		}
+	},
+
+	setPreset: function (str) {
+		var presets = ParticleSystem.Presets,
+		    preset;
+
+		if (!presets.hasOwnProperty(str)) { return; }
+
+		preset = presets[str];
+		for (key in preset) {
+			if (!preset.hasOwnProperty(key)) { continue; }
+			this[key] = preset[key];
+		};
 	},
 
 	createParticle: function () {
@@ -226,6 +329,7 @@ $.extend(ParticleSystem.prototype, {
 
 		this.activeParticles.push(particle);
 		particle.active = 0;
+		particle.draw = Particle.prototype.drawGlow;
 
 		return particle;
 	},
@@ -236,10 +340,13 @@ $.extend(ParticleSystem.prototype, {
 		    buffer = this.context,
 		    i = particles.length;
 
+		if (!i) { return; }
+
 		buffer.save();
-		buffer.globalCompositeOperation = "source-in";
-		buffer.fillColor = "rgba(20, 20, 20, 0.6)";
-		buffer.fillRect(0, 0, 332, 662);
+		buffer.shadowBlur = 0;
+		buffer.globalCompositeOperation = this.composite;
+		buffer.fillColor = this.fillColor;
+		buffer[this.clearOp](0, 0, 332, 662);
 		buffer.restore();
 
 		while (i--) {

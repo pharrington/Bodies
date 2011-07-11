@@ -1,3 +1,4 @@
+var SPEED = 1;
 $.inherit = function (proto, attrs) {
 	var maker = function () {},
 	    o;
@@ -7,6 +8,16 @@ $.inherit = function (proto, attrs) {
 	typeof attrs === "object" && $.extend(o, attrs);
 
 	return o;
+};
+
+var Inputs = {
+	Left: 0x01,
+	Right: 0x02,
+	RotateCW: 0x04,
+	RotateCCW: 0x08,
+	HardDrop: 0x10,
+	SoftDrop: 0x20,
+	Hold: 0x40
 };
 
 var InputSource = {
@@ -27,52 +38,35 @@ var InputSource = {
 
 InputSource.Player = $.inherit(InputSource.Base, {
 	keyHold: function (key) {
-		if (!this.spawnTimer) {
-			this.inputSource.move(key);
-		}
-	},
+		if (this.spawnTimer) { return; }
 
-	move: function (key) {
-		var direction,
-		    game = this.game;
-
-		if (key === game.Config.Left) {
-			direction = Piece.Direction.Left;
-		} else if (key === game.Config.Right) {
-			direction = Piece.Direction.Right;
-		}
-
-		direction && game.tryMove(direction);
+		this.inputSource.acceptMoves(key, ["Left", "Right"]);
 	},
 
 	keyPress: function (key) {
-		var rotation;
-
-		if (key === Game.Config.Pause) {
+		if (key === this.Config.Pause) {
 			this.pause();
+			return;
 		}
 
-		if (key === Game.Config.RotateCW) {
-			rotation = Piece.Rotation.CW;
-		}
-
-		if (key === Game.Config.RotateCCW) {
-			rotation = Piece.Rotation.CCW;
-		}
-
-		if (!this.spawnTimer && key === Game.Config.HardDrop) {
-			this.hardDrop();
-		}
-
-		rotation && this.tryRotation(rotation);
+		this.inputSource.acceptMoves(key, ["RotateCW", "RotateCCW", "Hold", "HardDrop"]);
 	},
 
-	refresh: function (elapsed, now) {
-		var game = this.game;
-
-		if ($.keys[game.Config.SoftDrop]) {
-			game.dropPiece();
+	refresh: function (elapsed) {
+		if ($.keys[this.game.Config.SoftDrop]) {
+			this.game.input(Inputs.SoftDrop);
 		}
+	},
+
+	acceptMoves: function (key, moves) {
+		var game = this.game,
+		    config = game.Config;
+
+		moves.forEach(function (move) {
+			if (key === config[move]) {
+				game.input(Inputs[move]);
+			}
+		});
 	}
 });
 
@@ -103,8 +97,47 @@ InputSource.AI = $.inherit(InputSource.Base, {
 
 InputSource.Replay = $.inherit(InputSource.Base, {
 	elapsed: 0,
+	recorded: 0,
+	stateIndex: 0,
 	stateList: null,
-	stateIndex: null,
+
+	readHeader: function (str, offset, size) {
+		return JSON.parse(str.substr(offset, size));
+	},
+
+	loadHeader: function (header) {
+		var game = Game;
+
+		InputSink.SavedProperties.forEach(function (p) {
+			game[p] = header[p];
+		});
+
+		game.queueSource.seed = header.queueSeed;
+	},
+
+	headerSize: function (str) {
+		return ((str.charCodeAt(0) << 8) & 255) | (str.charCodeAt(1) & 255);
+	},
+
+	loadReplay: function (str) {
+		var headerSize = this.headerSize(str),
+		    headerOffset = 2,
+		    header = this.readHeader(str, headerOffset, headerSize),
+		    state,
+		    stateList,
+		    i, len;
+
+		this.stateIndex = 0;
+		stateList = this.stateList = [];
+
+		this.loadHeader(header);
+
+		for (i = headerOffset + headerSize, len = str.length; i < len; i += 1) {
+			state = $.inherit(InputSink.State);
+			state.unserialize(str, i);
+			stateList.push(state);
+		}
+	},
 
 	keyPress: function (key) {
 		if (key === Game.Config.Pause) {
@@ -113,49 +146,6 @@ InputSource.Replay = $.inherit(InputSource.Base, {
 	},
 
 	refresh: function (elapsed) {
-		var state = this.stateList[this.stateIndex];
-
-		if (!state) { return; }
-		this.elapsed += elapsed;
-
-		if (this.elapsed >= state.delay) {
-			this.play();
-			this.elapsed = 0;
-		}
-	},
-
-	play: function () {
-		var state = this.stateList[this.stateIndex],
-		    game = this.game;
-
-		state.syncPiece(game.currentPiece);
-
-		if (state.terminate) {
-			game.endPiece();
-		}
-
-		this.stateIndex++;
-	},
-
-	loadReplay: function (str) {
-		var state,
-		    stateList,
-		    i = 0, len = str.length;
-
-		this.stateIndex = 0;
-		stateList = this.stateList = [];
-
-		while (i < str.length) {
-			state = $.inherit(StateSink.State);
-			i += state.unserialize(str, i);
-			stateList.push(state);
-		}
-	},
-
-	start: function (game) {
-		InputSource.Base.start.call(this, game);
-		game.velocity = 0;
-		game.velocityIncrement = 0;
-		game.checkGrounded = $.noop;
+		this.game.input(this.stateList[this.stateIndex++].input);
 	}
 });

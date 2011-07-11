@@ -3,8 +3,18 @@ var QueueSource = {
 		queueSize: 1,
 		queue: null,
 		game: null,
+		rng: null,
+		seed: null,
 
 		generatePiece: $.noop,
+
+		initRNG: function () {
+			if (!this.seed) {
+				this.seed = Date.now();
+			}
+
+			this.rng = Alea(this.seed);
+		},
 
 		next: function () {
 			var q = this.queue,
@@ -20,6 +30,7 @@ var QueueSource = {
 			    q = this.queue = [],
 			    i;
 
+			this.initRNG();
 			this.game = game;
 
 			for (i = 0; i < size; i++) {
@@ -41,7 +52,7 @@ QueueSource.TGM = $.inherit(QueueSource.Base, {
 		    i = 0;
 
 		while (inQueue && i < 4) {
-			shape = random();
+			shape = random.call(this);
 			if (queue.indexOf(shape) === -1) { inQueue = false; }
 			i++;
 		}
@@ -52,7 +63,16 @@ QueueSource.TGM = $.inherit(QueueSource.Base, {
 
 QueueSource.Naive = $.inherit(QueueSource.Base, {
 	generatePiece: function () {
-		return Game.shapes[~~(Math.random() * 7)];
+		return Game.shapes[~~(this.rng() * 7)];
+	}
+});
+
+QueueSource.Test = $.inherit(QueueSource.Base, {
+	pieces: ["I", "T", "S", "O", "Z"],
+	index: 0,
+
+	generatePiece: function () {
+		return this.pieces[this.index++ % 5];
 	}
 });
 
@@ -61,22 +81,18 @@ QueueSource.Replay = $.inherit(QueueSource.Base, {
 
 	loadReplay: function(replay) {
 		var q = this.queue = [],
-		    states = replay.stateList,
-		    current, prev,
-		    i, len;
+		    held = false,
+		    states = replay.stateList;
 
-		prev = states[0];
-		q.push(Game.shapes[prev.code]);
-
-		for (i = 1, len = states.length; i < len; i++) {
-			current = states[i];
-
-			if (prev.terminate) {
-				q.push(Game.shapes[current.code]);
+		states.forEach(function (state) {
+			if (state.terminate) {
+				if (!(state.hold && held)) {
+					q.push(Game.shapes[state.code]);
+				}
 			}
 
-			prev = current;
-		}
+			if (state.hold) { held = true; }
+		});
 	},
 
 	start: function (game) {

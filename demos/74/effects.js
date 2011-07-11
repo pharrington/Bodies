@@ -1,14 +1,11 @@
-var Fireworks = {
-	elapsed: null,
+var FX = {};
+
+FX.Fireworks = {
 	duration: 600,
 
 	gravity: 0.02,
-	count: 17,
+	count: 12,
 	speed: 0.43,
-
-	width: null,
-	height: null,
-	offset: null,
 
 	colors: {
 		cyan: ["#c0f8fc", "#0bd0df", "#012337", "#ffffff", "#ffffff", "#18e2f4", "#0382cb"],
@@ -21,8 +18,7 @@ var Fireworks = {
 	},
 
 	addParticle: function (x, y, color) {
-		var accel = new Vector(0, this.gravity),
-		    speed = Math.random() * this.speed,
+		var speed = Math.random() * this.speed,
 		    vel,
 		    angle,
 		    particle,
@@ -33,20 +29,23 @@ var Fireworks = {
 		color = colors[Math.floor(Math.random() * colors.length)];
 
 		angle = Math.random() * Math.PI * 2;
-		vel = new Vector(speed * Math.cos(angle), speed * Math.sin(angle));
-		vel.y -= 0.05;
 
 		particle = this.particleSystem.createParticle();
 		particle.duration = this.duration;
-		particle.setPosition(new Vector(x, y));
-		particle.setVelocity(vel);
-		particle.setAcceleration(accel);
+		particle.setPosition(x, y);
+		particle.setVelocity(
+			speed * Math.cos(angle),
+			speed * Math.sin(angle) - 0.05);
+		particle.setAcceleration(0, this.gravity);
 		particle.setColor(color);
+		particle.radius = 3;
+		if (Math.random() < 0.35) {
+			particle.delay = Math.random() * 200;
+		}
 	},
 
 	init: function () {
 		if (!this.duration) { return; }
-		this.elapsed = 0;
 
 		var x, y,
 		    offset,
@@ -73,27 +72,24 @@ var Fireworks = {
 	},
 
 	refresh: function (dt) {
-		if (this.elapsed === null) { return; }
+		this.particleSystem.update(dt, $.context);
+	},
+};
 
-		var ctx = $.context,
-		    percent;
-
-		this.elapsed += dt;
-		percent = this.elapsed / this.duration;
-
-		if (percent >= 1) {
-			this.elapsed = null;
-		}
-
-		this.animate(dt);
+FX.Streak = {
+	start: function (piece) {
+		
 	},
 
-	animate: function (dt) {
-		this.particleSystem.update(dt, $.context);
+	end: function (piece) {
+	},
+
+	refresh: function (dt) {
+		
 	}
 };
 
-var Dummy = {
+FX.Dummy = {
 	rows: null,
 	field: null,
 

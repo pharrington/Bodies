@@ -68,6 +68,8 @@ Bodies = $ = {
 	keys: [],
 
 	init: function(id, width, height) {
+		var canctx;
+
 		if (typeof id === "string") {
 			this.id = id;
 		} else if (typeof id === "number") {
@@ -76,10 +78,23 @@ Bodies = $ = {
 		}
 
 		$ = this;
+		$.width = width;
+		$.height = height;
 		$.canvas = document.getElementById(this.id);
-		$.canvas.width = $.width = width;
-		$.canvas.height = $.height = height;
-		$.context = $.canvas.getContext("2d");
+
+		if ($.canvas) {
+			$.canvas.width = width;
+			$.canvas.height = height;
+			$.context = $.canvas.getContext("2d");
+		} else {
+			canctx = $.createCanvas(width, height);
+			$.canvas = canctx[0];
+			$.context = canctx[1];
+
+			$.canvas.id = this.id;
+			document.body.appendChild($.canvas);
+		}
+
 		attachEvents();
 		calculateOffsets();
 	},

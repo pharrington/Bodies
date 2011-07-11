@@ -225,10 +225,7 @@ var AI = {
 
 				field.copy(this.base.field);
 
-				while (!field.collision(piece)) {
-					piece.moveDown();
-				}
-				piece.moveUp();
+				field.moveToBottom(piece);
 
 				dest = $.inherit(piece, {
 					shapeIndex: piece.shapeIndex
@@ -264,11 +261,14 @@ var AI = {
 			this.startPiece();
 		}
 
+		/*
+		 * commented out as hard drops, not soft drops currently lock the piece
 		if (this.destination.gridPosition.x === piece.gridPosition.x &&
 		    this.destination.gridPosition.y === piece.gridPosition.y) {
-			this.base.dropPiece();
+		    	this.base.input(Inputs.SoftDrop);
 			return;
 		}
+		*/
 
 		if (!path) {
 			return;
@@ -288,13 +288,17 @@ var AI = {
 
 		switch (code) {
 			case Piece.Direction.Left:
+				game.input(Inputs.Left);
+				break;
 			case Piece.Direction.Right:
-				game.tryMove(code);
+				game.input(Inputs.Right);
 				break;
 
 			case Piece.Rotation.CW:
+				game.input(Inputs.RotateCW);
+				break;
 			case Piece.Rotation.CCW:
-				game.tryRotation(code);
+				game.input(Inputs.RotateCCW);
 				break;
 
 			default:
@@ -309,7 +313,7 @@ var AI = {
 	},
 
 	moveDown: function (desty, piece, dt) {
-		piece.velocity = 10;
+		this.base.input(Inputs.HardDrop);
 	},
 
 	startPiece: function () {

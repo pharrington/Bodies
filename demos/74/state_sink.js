@@ -1,3 +1,72 @@
+var InputSink = {
+	SavedProperties: [
+		"groundedTimeout",
+		"lineClearDelay",
+		"spawnDelay",
+		"velocityIncrement",
+		"startVelocity"
+	],
+
+	Base: {
+		game: null,
+		inputs: null,
+
+		start: function (game) {
+			this.game = game;
+			this.inputs = [];
+		},
+
+		refresh: function (elapsed, moves) {
+			this.inputs.push($.inherit(InputSink.State, {
+				input: moves,
+				delay: elapsed
+			}));
+		}
+	},
+
+	State: {
+		delay: null,
+		input: null,
+
+		serialize: function () {
+			return String.fromCharCode(this.input & 255);
+		},
+
+		unserialize: function (str, offset) {
+			offset = offset || 0;
+			
+			this.input = str.charCodeAt(offset) & 255;
+		}
+	}
+};
+
+InputSink.LocalStorage = $.inherit(InputSink.Base, {
+	generateHeader: function () {
+		var game = this.game,
+		    header = {},
+		    properties = InputSink.SavedProperties;
+
+		properties.forEach(function (p) {
+			header[p] = game[p];
+		});
+
+		header.queueSeed = game.queueSource.seed;
+
+		return JSON.stringify(header);
+	},
+
+	save: function () {
+		var header = this.generateHeader(),
+		    len = header.length;
+	       
+		return String.fromCharCode((len >> 8) & 255) + String.fromCharCode(len & 255) +
+			header +
+			this.inputs.reduce(function (str, state) {
+				return str + state.serialize();
+			}, "");
+	}
+});
+
 var StateSink = {
 	Base: {
 		game: null,
@@ -20,6 +89,7 @@ var StateSink = {
 		pieceShape: null,
 		code: null,
 		terminate: false,
+		hold: false,
 
 		equals: function (s) {
 			return this.pieceX === s.pieceX &&
@@ -66,6 +136,18 @@ var StateSink = {
 			return piece;
 		},
 
+		/*
+		 * bits
+		 * xshape
+		 * 0     terminate
+		 * 1 - 2 pieceShape
+		 * 3 - 6 pieceX
+		 * 7     hold
+		 *
+		 * ypiece
+		 * 0 - 2 code
+		 * 3 - 7 pieceY
+		 */
 		serialize: function () {
 			var xshape = 0,
 			    ypiece = 0,
@@ -73,10 +155,11 @@ var StateSink = {
 			    offset = this.intOffset,
 			    bytes;
 
-			xshape = ((this.pieceX + offset) & 63) << 3 |
-				 ((this.pieceShape & 3) << 1 |
+			xshape = ((this.hold & 1) << 7 |
+				 ((this.pieceX + offset) & 15) << 3 |
+				 (this.pieceShape & 3) << 1 |
 				 this.terminate & 1);
-			ypiece = ((this.pieceY + offset) & 63) << 3 |
+			ypiece = ((this.pieceY + offset) & 31) << 3 |
 				 (this.code & 7);
 
 			bytes = String.fromCharCode(xshape) + String.fromCharCode(ypiece) + delay;
@@ -90,10 +173,11 @@ var StateSink = {
 			    ypiece = str.charCodeAt(offset + 2) & 255,
 			    io = this.intOffset;
 
-			this.pieceX = (xshape >> 3) - io;
+			this.pieceX = ((xshape >> 3) & 15) - io;
 			this.pieceY = (ypiece >> 3) - io;
 			this.pieceShape = (xshape >> 1) & 3;
 			this.terminate = xshape & 1;
+			this.hold = xshape >> 7;
 			this.code = Shapes[Shapes.PieceList[ypiece & 7]].code;
 			this.delay = parseInt(str.substr(offset + 3, len - 2), 10);
 			return len + this.headerSize;
@@ -131,6 +215,7 @@ StateSink.Replay = $.inherit(StateSink.Base, {
 		} else {
 			states.push(state);
 			state = StateSink.State.fromPiece(this.game.currentPiece);
+			state.hold = this.game.hasHeldPiece;
 			state.terminate = true;
 			state.delay = this.elapsed;
 			states.push(state);
