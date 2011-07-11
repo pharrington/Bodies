@@ -780,22 +780,15 @@ var Game = {
 	velocity: null,
 
 	groundedTimeout: 30,
-	lineClearDelay: 12,
+	lineClearDelay: 10,
 	spawnDelay: 6,
 	startVelocity: 0.75 / 1000,
 	velocityIncrement: 0.25 / 1000,
 	timers: null,
-	/*
-	groundedTimeout: 20,
-	lineClearDelay: 0,
-	spawnDelay: 0,
-	velocityIncrement: 0,
-	startVelocity: 0.75 / 1000 + .025,
-	*/
 
 	keyHoldDelay: 180, // DAS (Delayed Auto Shift)
 	keyHoldInterval: 10, // ARR (Auto Repeat Rate)
-	refreshInterval: 10,
+	refreshInterval: 16,
 	dropped: false,
 
 	clearedRows: 0,
@@ -1234,7 +1227,7 @@ var Game = {
 
 		this.dropFX.refresh(elapsed);
 		this.drawGame(currentPiece);
-		//this.effects.refresh(elapsed);
+		this.effects.refresh(elapsed);
 		this.dropped = false;
 	},
 
