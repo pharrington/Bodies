@@ -184,7 +184,7 @@ var Piece = {
 		    x, y;
 
 		if (dt) {
-			this.delta += dt * this.velocity;
+			this.delta += this.velocity;
 			blocks = ~~this.delta;
 
 			this.delta -= blocks;
@@ -782,8 +782,7 @@ var Game = {
 	groundedTimeout: 30,
 	lineClearDelay: 10,
 	spawnDelay: 6,
-	startVelocity: 0.75 / 1000,
-	velocityIncrement: 0.25 / 1000,
+	startVelocity: 0.012,
 	timers: null,
 
 	keyHoldDelay: 180, // DAS (Delayed Auto Shift)
@@ -796,6 +795,7 @@ var Game = {
 
 	inputBuffer: 0,
 
+	levels: null,
 	queueSource: null,
 	inputSource: null,
 	inputSink: InputSink.LocalStorage,
@@ -969,7 +969,7 @@ var Game = {
 	endPiece: function () {
 		var cleared;
 
-		this.velocity += this.velocityIncrement;
+		this.levels.endPiece();
 		this.groundedTimer = null;
 		this.hasHeldPiece = false;
 
@@ -1005,6 +1005,7 @@ var Game = {
 
 		current.reset();
 		this.heldPiece = current;
+		this.drawHoldPiece();
 	},
 
 	hardDrop: function () {
@@ -1012,7 +1013,7 @@ var Game = {
 
 		if (!piece) { return; }
 
-		piece.velocity = 10;
+		piece.velocity = 20;
 		this.dropped = true;
 
 		this.dropFX.start(piece);
@@ -1079,33 +1080,56 @@ var Game = {
 		}
 	},
 
-	drawPiecePreview: function () {
+	drawFrame: function (x, y, w, h) {
+		var ctx = $.context;
+
+		ctx.strokeStyle = "#000";
+		ctx.lineWidth = 10;
+		ctx.clearRect(x, y, w, h);
+		ctx.strokeRect(x, y, w, h);
+	},
+
+	drawFramedShape: function (x, y, piece) {
 		var blockSize = Piece.blockSize,
 		    size = blockSize * 6,
-		    x = blockSize * 11,
-		    y = 5,
-		    shape = this.queueSource.queue[0],
-		    piece,
 		    offset;
 
-		if (!shape) { return; }
+		if (!piece) { return; }
 
-		piece = $.inherit(Shapes[shape]);
-		offset = (6 - piece.shape.length) / 2 * blockSize;
-		piece.sprite.moveTo(x + offset, y + offset);
+		piece.sprite.moveTo(x, y);
 
-
-		$.context.strokeStyle = "#000";
-		$.context.lineWidth = 10;
-		$.context.clearRect(x, y, size, size);
-		$.context.strokeRect(x, y, size, size);
 		piece.draw();
 	},
 
-	loaded: function () {
-		FX.Fireworks.particleSystem = new ParticleSystem("blur");
-		Game.shapes.forEach(initBlock);
-		ConfigMenu.init();
+	drawPiecePreview: function () {
+		var blockSize = Piece.blockSize,
+		    size = ~~(blockSize * 5.5),
+		    x = ~~(blockSize * 10.5),
+		    y = 200,
+		    piece,
+		    offset;
+
+		piece = $.inherit(Shapes[this.queueSource.queue[0]]);
+		offset = (5 - piece.shape.length) / 2 * blockSize;
+
+		this.drawFrame(x, y, size, size);
+		this.drawFramedShape(x + offset, y + offset, piece);
+	},
+
+	drawHoldPiece: function () {
+		var blockSize = Piece.blockSize,
+		    size = ~~(blockSize * 5.5),
+		    x = ~~(blockSize * 10.5),
+		    y = 5,
+		    offset,
+		    piece = this.heldPiece;
+
+		this.drawFrame(x, y, size, size);
+
+		if (!piece) { return; }
+
+		offset = (5 - piece.shape.length) / 2 * blockSize;
+		this.drawFramedShape(x + offset, y + offset, piece);
 	},
 
 	resetScore: function () {
@@ -1124,6 +1148,12 @@ var Game = {
 		this.queueSource = qs;
 	},
 
+	loaded: function () {
+		FX.Fireworks.particleSystem = new ParticleSystem("blur");
+		Game.shapes.forEach(initBlock);
+		ConfigMenu.init();
+	},
+
 	start: function () {
 		var game = this;
 
@@ -1136,10 +1166,12 @@ var Game = {
 		this.field = $.inherit(Field);
 		this.field.init();
 
+		this.levels.start(this);
 		this.inputSink.start(this);
 		this.inputSource.start(this);
 		this.queueSource.start(this);
 
+		this.drawHoldPiece();
 		this.drawPiecePreview();
 		this.nextPiece();
 
@@ -1163,7 +1195,7 @@ var Game = {
 
 		if (!piece) { return; }
 
-		piece.velocity += .075;
+		piece.velocity += 1.2;
 	},
 
 	input: function (input) {
@@ -1479,9 +1511,10 @@ function startGame() {
 }
 
 addEventListener("load", function () {
-	$.init(600, 800);
+	$.init(600, 700);
 	loadImages();
 	$.loaded(Game.loaded);
+	Game.levels = LevelSystem;
 	Game.setQueueSource(QueueSource.TGM);
 	Game.setInputSource(InputSource.Player);
 	Game.effects = FX.Fireworks;
@@ -1491,15 +1524,11 @@ addEventListener("load", function () {
 }, false);
 
 window.setReplay = function () {
-	Game.setInputSource(InputSource.Replay);
-	load();
+	var r = InputSource.Replay;
+	Game.setInputSource(r);
+	r.loadReplay(localStorage.treplay);
 };
 
 window.save = function () {
 	localStorage.treplay = InputSink.LocalStorage.save();
-};
-
-window.load = function () {
-	var r = InputSource.Replay;
-	r.loadReplay(localStorage.treplay);
 };
