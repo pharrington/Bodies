@@ -4,7 +4,8 @@ var LevelSystem = {
 	properties: ["groundedTimeout", "lineClearDelay", "spawnDelay", "velocity"],
 
 	groundedTimeout: {
-		1: 30
+		1: 30,
+		400: 20
 	},
 
 	lineClearDelay: {
@@ -18,6 +19,13 @@ var LevelSystem = {
 	velocity: {
 		1:  3 / 250,
 		10: 7 / 250,
+		25: 11 / 250,
+		40: 15 / 250,
+		60: 20 / 250,
+		80: 40 / 250,
+		100: 80 / 250,
+		400: 1,
+		500: 20,
 	},
 
 	start: function (game) {
@@ -31,19 +39,16 @@ var LevelSystem = {
 	},
 
 	applyLevel: function () {
-		var level,
+		var level = this.level,
 		    table,
 		    game = this.game;
 
 		this.properties.forEach(function (p) {
 			table = this[p];
 
-			level = this.level;
-			while (!(level in table)) {
-				level--;
+			if (level in table) {
+				game[p] = table[level];
 			}
-
-			game[p] = table[level];
 		}, this);
 	}
 };
