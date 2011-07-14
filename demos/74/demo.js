@@ -803,6 +803,9 @@ var Game = {
 	dropFX: null,
 	effects: null,
 
+	levelElement: null,
+	scoreElement: null,
+
 	Config: {
 		Left: 65,
 		Right: 68,
@@ -1055,6 +1058,25 @@ var Game = {
 		}
 	},
 
+	drawGame: function (piece) {
+		this.field.draw();
+		this.outline.draw();
+
+		if (piece && !this.spawnTimer) {
+			this.drawGhost(piece);
+			piece.draw();
+		}
+	},
+
+	drawStatus: function () {
+		if (!this.levelElement) {
+			this.levelElement = document.getElementById("level").firstChild;
+		}
+		var level = this.levelElement;
+
+		level.nodeValue = this.levels.level;
+	},
+
 	drawGhost: function (piece) {
 		var ghost = $.inherit(piece, {
 			gridPosition: $.inherit(piece.gridPosition),
@@ -1068,16 +1090,6 @@ var Game = {
 		context.globalAlpha = 0.4;
 		ghost.draw();
 		context.restore();
-	},
-
-	drawGame: function (piece) {
-		this.field.draw();
-		this.outline.draw();
-
-		if (piece && !this.spawnTimer) {
-			this.drawGhost(piece);
-			piece.draw();
-		}
 	},
 
 	drawFrame: function (x, y, w, h) {
@@ -1105,7 +1117,7 @@ var Game = {
 		var blockSize = Piece.blockSize,
 		    size = ~~(blockSize * 5.5),
 		    x = ~~(blockSize * 10.5),
-		    y = 200,
+		    y = 5,
 		    piece,
 		    offset;
 
@@ -1120,7 +1132,7 @@ var Game = {
 		var blockSize = Piece.blockSize,
 		    size = ~~(blockSize * 5.5),
 		    x = ~~(blockSize * 10.5),
-		    y = 5,
+		    y = 200,
 		    offset,
 		    piece = this.heldPiece;
 
@@ -1157,6 +1169,7 @@ var Game = {
 	start: function () {
 		var game = this;
 
+		document.getElementById("game_status").style.display = "block";
 		this.timers = [];
 		this.inputBuffer = 0;
 		this.tick = this.play;
@@ -1259,6 +1272,7 @@ var Game = {
 
 		this.dropFX.refresh(elapsed);
 		this.drawGame(currentPiece);
+		this.drawStatus();
 		this.effects.refresh(elapsed);
 		this.dropped = false;
 	},
