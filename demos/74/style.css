@@ -1,0 +1,11 @@
+#game_status {
+	position: absolute;
+	z-index: 10;
+	top: 420px;
+	left: 350px;
+	width: 190px;
+	display: none;
+	font-family: "Orbitron", sans-serif;
+	font-size: 36px;
+	text-align: right;
+}

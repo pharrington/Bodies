@@ -790,11 +790,9 @@ var Game = {
 	refreshInterval: 16,
 	dropped: false,
 
-	clearedRows: 0,
-	level: 0,
-
 	inputBuffer: 0,
 
+	score: null,
 	levels: null,
 	queueSource: null,
 	inputSource: null,
@@ -803,8 +801,7 @@ var Game = {
 	dropFX: null,
 	effects: null,
 
-	levelElement: null,
-	scoreElement: null,
+	gameStatus: null,
 
 	Config: {
 		Left: 65,
@@ -893,8 +890,11 @@ var Game = {
 	},
 
 	gameOver: function () {
+		var $this = this;
+
 		$.refresh($.noop);
 		setTimeout(function () {
+			$this.gameStatus.hide();
 			$.register(ConfigMenu);
 		}, 2000);
 	},
@@ -980,9 +980,9 @@ var Game = {
 		this.field.merge(this.currentPiece);
 
 		cleared = this.field.clearRows();
-		this.clearedRows += cleared.length;
 
 		this.inputSource.endPiece();
+		this.score.clearLines(cleared.length);
 
 		if (!cleared.length) {
 			this.spawnNext();
@@ -1009,17 +1009,6 @@ var Game = {
 		current.reset();
 		this.heldPiece = current;
 		this.drawHoldPiece();
-	},
-
-	hardDrop: function () {
-		var piece = this.currentPiece;
-
-		if (!piece) { return; }
-
-		piece.velocity = 20;
-		this.dropped = true;
-
-		this.dropFX.start(piece);
 	},
 
 	tryMove: function (direction) {
@@ -1066,15 +1055,6 @@ var Game = {
 			this.drawGhost(piece);
 			piece.draw();
 		}
-	},
-
-	drawStatus: function () {
-		if (!this.levelElement) {
-			this.levelElement = document.getElementById("level").firstChild;
-		}
-		var level = this.levelElement;
-
-		level.nodeValue = this.levels.level;
 	},
 
 	drawGhost: function (piece) {
@@ -1144,11 +1124,6 @@ var Game = {
 		this.drawFramedShape(x + offset, y + offset, piece);
 	},
 
-	resetScore: function () {
-		this.clearedRows = 0;
-		this.level = 0;
-	},
-
 	setInputSource: function (is) {
 		this.inputSource = is;
 		is.game = this;
@@ -1169,20 +1144,20 @@ var Game = {
 	start: function () {
 		var game = this;
 
-		document.getElementById("game_status").style.display = "block";
 		this.timers = [];
 		this.inputBuffer = 0;
 		this.tick = this.play;
 
-		this.resetScore();
 		this.velocity = this.startVelocity;
 		this.field = $.inherit(Field);
 		this.field.init();
 
+		this.score.start(this);
 		this.levels.start(this);
 		this.inputSink.start(this);
 		this.inputSource.start(this);
 		this.queueSource.start(this);
+		this.gameStatus.start(this);
 
 		this.drawHoldPiece();
 		this.drawPiecePreview();
@@ -1209,6 +1184,19 @@ var Game = {
 		if (!piece) { return; }
 
 		piece.velocity += 1.2;
+		this.score.softDrop(piece);
+	},
+
+	hardDrop: function () {
+		var piece = this.currentPiece;
+
+		if (!piece) { return; }
+
+		piece.velocity = 20;
+		this.dropped = true;
+
+		this.dropFX.start(piece);
+		this.score.hardDrop(piece);
 	},
 
 	input: function (input) {
@@ -1270,9 +1258,10 @@ var Game = {
 			this.checkGrounded();
 		}
 
+		this.score.refresh();
 		this.dropFX.refresh(elapsed);
 		this.drawGame(currentPiece);
-		this.drawStatus();
+		this.gameStatus.draw();
 		this.effects.refresh(elapsed);
 		this.dropped = false;
 	},
@@ -1533,6 +1522,8 @@ addEventListener("load", function () {
 	Game.setInputSource(InputSource.Player);
 	Game.effects = FX.Fireworks;
 	Game.dropFX = FX.Streak;
+	Game.gameStatus = GameStatus;
+	Game.score = Score;
 	$.start();
 	$.register(ConfigMenu);
 }, false);
@@ -1540,9 +1531,9 @@ addEventListener("load", function () {
 window.setReplay = function () {
 	var r = InputSource.Replay;
 	Game.setInputSource(r);
-	r.loadReplay(localStorage.treplay);
+	r.loadReplay(atob(localStorage.treplay));
 };
 
 window.save = function () {
-	localStorage.treplay = InputSink.LocalStorage.save();
+	localStorage.treplay = btoa(InputSink.LocalStorage.save());
 };

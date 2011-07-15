@@ -2,6 +2,8 @@
 <html>
 <head>
 <title>Blocks on Blast</title>
+<link href='http://fonts.googleapis.com/css?family=Orbitron:500&v2' rel='stylesheet' type='text/css'>
+<link rel=stylesheet href=style.css>
 <script  type="text/javascript" src="alea-0.9/mash.js"></script>
 <script  type="text/javascript" src="alea-0.9/alea.js"></script>
 <script  type="text/javascript" src="../../bodies.js"></script>
@@ -10,11 +12,23 @@
 <script  type="text/javascript" src="input_source.js"></script>
 <script  type="text/javascript" src="queue_source.js"></script>
 <script  type="text/javascript" src="state_sink.js"></script>
+<script  type="text/javascript" src="game_status.js"></script>
 <script  type="text/javascript" src="levels.js"></script>
+<script  type="text/javascript" src="score.js"></script>
 <script  type="text/javascript" src="demo.js"></script>
 <script  type="text/javascript" src="ai.js"></script>
 </head>
 <body>
 <canvas id="field"></canvas>
+<div id="game_status">
+	<div class="level_display">
+		<span class="label">Level</span>
+		<div id="level">1</div>
+	</div>
+	<div class="score_display">
+		<span class="label">Score</span>
+		<div id="score">0</div>
+	</div>
+</div>
 </body>
 </html>
