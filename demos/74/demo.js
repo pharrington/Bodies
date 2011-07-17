@@ -792,6 +792,7 @@ var Game = {
 
 	inputBuffer: 0,
 
+	heldPiece: null,
 	score: null,
 	levels: null,
 	queueSource: null,
@@ -892,6 +893,7 @@ var Game = {
 	gameOver: function () {
 		var $this = this;
 
+		$this.saveReplay();
 		$.refresh($.noop);
 		setTimeout(function () {
 			$this.gameStatus.hide();
@@ -1159,6 +1161,7 @@ var Game = {
 		this.queueSource.start(this);
 		this.gameStatus.start(this);
 
+		this.heldPiece = null;
 		this.drawHoldPiece();
 		this.drawPiecePreview();
 		this.nextPiece();
@@ -1264,6 +1267,14 @@ var Game = {
 		this.gameStatus.draw();
 		this.effects.refresh(elapsed);
 		this.dropped = false;
+	},
+
+	saveReplay: function () {
+		if (this.inputSource !== InputSource.Player) {
+			return;
+		}
+
+		localStorage["blocksonblast.replay" + Date.now()] = this.score.score + "_" + btoa(InputSink.LocalStorage.save());
 	},
 
 	pause: function () {
