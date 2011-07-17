@@ -1,8 +1,35 @@
 var LevelSystem = {
-	game: null,
-	level: 1,
-	properties: ["groundedTimeout", "lineClearDelay", "spawnDelay", "velocity"],
+	Base: {
+		game: null,
+		level: 1,
+		properties: ["groundedTimeout", "lineClearDelay", "spawnDelay", "velocity"],
 
+		endPiece: $.noop,
+
+		start: function (game) {
+			this.level = 1;
+			this.game = game;
+		},
+
+
+		applyLevel: function () {
+			var level = this.level,
+			    table,
+			    game = this.game;
+
+			this.properties.forEach(function (p) {
+				table = this[p];
+
+				if (level in table) {
+					game[p] = table[level];
+				}
+			}, this);
+		}
+
+	}
+};
+
+LevelSystem.Master = $.extend(LevelSystem.Base, {
 	groundedTimeout: {
 		1: 30,
 		400: 27,
@@ -35,27 +62,8 @@ var LevelSystem = {
 		500: 20,
 	},
 
-	start: function (game) {
-		this.level = 1;
-		this.game = game;
-	},
-
 	endPiece: function () {
 		this.level++;
 		this.applyLevel();
 	},
-
-	applyLevel: function () {
-		var level = this.level,
-		    table,
-		    game = this.game;
-
-		this.properties.forEach(function (p) {
-			table = this[p];
-
-			if (level in table) {
-				game[p] = table[level];
-			}
-		}, this);
-	}
-};
+});

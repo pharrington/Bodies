@@ -1,26 +1,33 @@
 var Score = {
-	score: 0,
-	combo: 0,
-	hardDropY: 0,
-	softDropY: 0,
-	currentPiece: null,
+	Base: {
+		score: 0,
+		combo: 0,
+		hardDropY: 0,
+		softDropY: 0,
+		softDropValue: 0,
+		hardDropValue: 0,
+		currentPiece: null,
 
+		start: function (game) {
+			this.score = 0;
+			this.combo = 0;
+			this.game = game;
+			this.hardDropY = this.softDropY = 0;
+			this.currentPiece = null;
+		}
+	}
+};
+
+Score.Master = $.extend(Score.Base, {
 	softDropValue: 1,
 	hardDropValue: 4,
+
 	lineClears: {
 		0: 0,
 		1: 200,
 		2: 500,
 		3: 800,
 		4: 1600
-	},
-
-	start: function (game) {
-		this.score = 0;
-		this.combo = 0;
-		this.game = game;
-		this.hardDropY = this.softDropY = 0;
-		this.currentPiece = null;
 	},
 
 	clearLines: function (lines) {
@@ -70,4 +77,4 @@ var Score = {
 
 	softDrop: function () {
 	}
-};
+});
