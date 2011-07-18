@@ -37,6 +37,10 @@ var QueueSource = {
 				piece = this.generatePiece();
 				piece && q.push(piece);
 			}
+		},
+
+		gameOver: function () {
+			this.seed = null;
 		}
 	}
 };

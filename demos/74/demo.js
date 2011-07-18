@@ -894,6 +894,8 @@ var Game = {
 		var $this = this;
 
 		$this.saveReplay();
+		this.queueSource.gameOver();
+
 		$.refresh($.noop);
 		setTimeout(function () {
 			$this.gameStatus.hide();
