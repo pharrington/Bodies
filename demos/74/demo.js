@@ -900,6 +900,7 @@ var Game = {
 		setTimeout(function () {
 			$this.gameStatus.hide();
 			$.register(ConfigMenu);
+			UI.mainMenu();
 		}, 2000);
 	},
 
@@ -1158,10 +1159,13 @@ var Game = {
 
 		this.score.start(this);
 		this.levels.start(this);
+
+		this.gameStatus.start(this);
+		this.gameStatus.draw();
+
 		this.inputSink.start(this);
 		this.inputSource.start(this);
 		this.queueSource.start(this);
-		this.gameStatus.start(this);
 
 		this.heldPiece = null;
 		this.drawHoldPiece();
@@ -1462,7 +1466,7 @@ var ConfigMenu = {
 			y: controls.last().y + 50,
 			width: width,
 			height: height,
-			trigger: startGame
+			trigger: UI.startGame
 		});
 		button.init();
 
@@ -1519,11 +1523,6 @@ function initBlock(piece) {
 	piece.context = piece.block.getContext("2d");
 	piece.context.drawImage($.resource(piece.image), 0, 0);
 	piece.initSprites();
-}
-
-function startGame() {
-	Game.start();
-	$.refresh(Game.countdown.bind(Game));
 }
 
 addEventListener("load", function () {
