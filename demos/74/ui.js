@@ -1,12 +1,12 @@
 var UI = {
 	events: {
 		standard: ["click", function () {
-			UI.startGame();
+			UI.startGame("Master");
 		}]
 	},
 
-	startGame: function () {
-		var game = Game;
+	startGame: function (mode) {
+		var game = Modes[mode].newGame();
 
 		game.start();
 

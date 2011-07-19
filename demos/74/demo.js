@@ -1538,13 +1538,6 @@ addEventListener("load", function () {
 	$.init(600, 700);
 	loadImages();
 	$.loaded(Game.loaded);
-	Game.levels = LevelSystem.Master;
-	Game.setQueueSource(QueueSource.TGM);
-	Game.setInputSource(InputSource.Player);
-	Game.effects = FX.Fireworks;
-	Game.dropFX = FX.Streak;
-	Game.gameStatus = GameStatus;
-	Game.score = Score.Master;
 	$.start();
 	$.register(ConfigMenu);
 }, false);
