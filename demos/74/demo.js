@@ -75,17 +75,19 @@ var Piece = {
 	shapeSize: null,
 	offset: null,
 	gridPosition: null,
+	game: null,
 	delta: 0,
 
-	init: function () {
+	init: function (game) {
 		var x = this.shapes[0].length === 2 ? 4 : 3,
 		    y = this.shapes[0].length === 3 ? -1 : 0;
 
 		this.gridPosition = {x: x, y: y};
+		this.game = game;
 	},
 
 	reset: function () {
-		this.init();
+		this.init(this.game);
 		this.shapeIndex = 0;
 		this.setShape();
 	},
@@ -181,6 +183,8 @@ var Piece = {
 		    offset = this.offset,
 		    size = this.blockSize,
 		    blocks,
+		    game = this.game,
+		    field = game.field,
 		    x, y;
 
 		if (dt) {
@@ -189,19 +193,19 @@ var Piece = {
 
 			this.delta -= blocks;
 
-			while (!Game.field.collision(this) && blocks--) {
+			while (!field.collision(this) && blocks--) {
 				g.y++;
 			}
 
-			if (Game.field.collision(this)) {
+			if (field.collision(this)) {
 				g.y--;
 			}
 		}
 
-		y = (g.y - Field.rowOffset) * size;
+		y = (g.y - field.rowOffset) * size;
 		x = g.x * size;
 
-		this.velocity = Game.velocity;
+		this.velocity = game.velocity;
 		this.sprite.moveTo(x + offset.x, y + offset.y);
 	},
 
@@ -337,12 +341,14 @@ var Field = {
 	width: null,
 	height: null,
 	offset: {x: 0, y: 0},
+	game: null,
 	grid: null,
 
-	init: function () {
+	init: function (game) {
 		var i, j,
 		    row;
 
+		this.game = game;
 		this.grid = [];
 
 		for (i = 0; i < this.rows; i++) {
@@ -386,6 +392,7 @@ var Field = {
 		var row,
 		    i, len,
 		    cleared = [],
+		    outline = this.game.outline,
 		    grid = this.grid;
 
 		for (i = 0, len = grid.length; i < len; i++) {
@@ -398,8 +405,8 @@ var Field = {
 
 		if (!unanimated) {
 			this.eraseRows(cleared);
-			Game.outline.rebuild(grid);
-			Game.outline.refresh();
+			outline.rebuild(grid);
+			outline.refresh();
 		}
 
 		grid.compact();
@@ -417,7 +424,7 @@ var Field = {
 	},
 
 	animate: function (rows) {
-		var game = Game,
+		var game = this.game,
 		    effects = game.effects;
 
 		game.setLineClearTimer();
@@ -876,7 +883,7 @@ var Game = {
 		shape = Shapes[this.queueSource.next()];
 		if (shape) {
 			this.currentPiece = $.inherit(shape);
-			this.currentPiece.init();
+			this.currentPiece.init(this);
 			this.currentPiece.velocity = this.velocity;
 			gameOver = this.checkGameOver();
 		} else {
@@ -1155,7 +1162,7 @@ var Game = {
 
 		this.velocity = this.startVelocity;
 		this.field = $.inherit(Field);
-		this.field.init();
+		this.field.init(this);
 
 		this.score.start(this);
 		this.levels.start(this);
@@ -1177,11 +1184,13 @@ var Game = {
 	},
 
 	countdown: function (elapsed, now) {
+		var $this = this;
+
 		this.duration = 1000;
 
 		$.timed(this, elapsed, function (progress) {
 		}, function () {
-			Game.drawPiecePreview();
+			$this.drawPiecePreview();
 			$.register(this);
 		});
 		this.field.draw();
