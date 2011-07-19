@@ -16,18 +16,29 @@
 <script  type="text/javascript" src="levels.js"></script>
 <script  type="text/javascript" src="score.js"></script>
 <script  type="text/javascript" src="demo.js"></script>
+<script  type="text/javascript" src="ui.js"></script>
 <script  type="text/javascript" src="ai.js"></script>
 </head>
 <body>
-<canvas id="field"></canvas>
-<div id="game_status">
+<canvas id=field></canvas>
+<div id=main_menu class=menu>
+	<h1>Blocks on Blast</h1>
+	<ul>
+		<li id=standard>Standard Mode</li>
+		<li>Time Attack</li>
+		<li>High Scores</li>
+		<li>Controls</li>
+	</ul>
+</div>
+
+<div id=game_status>
 	<div class="level_display">
 		<span class="label">Level</span>
-		<div id="level">1</div>
+		<div id=level>1</div>
 	</div>
 	<div class="score_display">
 		<span class="label">Score</span>
-		<div id="score">0</div>
+		<div id=score>0</div>
 	</div>
 </div>
 </body>

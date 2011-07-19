@@ -1,3 +1,54 @@
+html, body, div, ul, li, p, img, h1, h2, h3, h4, h5, h6 {
+	position: relative;
+	margin: 0;
+	border: 0;
+	padding: 0;
+}
+
+html {
+	padding: 100px 0 0 200px;
+}
+
+body {
+	overflow: hidden;
+	font-family: "Orbitron", sans-serif;
+	cursor: default;
+}
+
+ul {
+	list-style-type: none;
+}
+
+.menu {
+	font-size: 36px;
+}
+
+.menu h1 {
+	font-size: 64px;
+	margin-bottom: 20px;
+	text-shadow: #000 4px 4px;
+}
+
+.menu h1 span {
+	margin-right: 2px;
+}
+
+.menu ul {
+	margin-left: 53px;
+}
+
+.menu li {
+	margin-bottom: 7px;
+}
+
+.menu li:hover {
+	list-style-type: disc;
+}
+
+#field {
+	display: none;
+}
+
 #game_status {
 	position: absolute;
 	z-index: 10;
@@ -5,7 +56,6 @@
 	left: 350px;
 	width: 190px;
 	display: none;
-	font-family: "Orbitron", sans-serif;
 	font-size: 36px;
 	text-align: right;
 }
