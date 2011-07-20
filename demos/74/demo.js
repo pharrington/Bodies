@@ -903,10 +903,9 @@ var Game = {
 		$this.saveReplay();
 		this.queueSource.gameOver();
 
-		$.refresh($.noop);
+		$.refresh($.noop, 1000);
 		setTimeout(function () {
 			$this.gameStatus.hide();
-			$.register(ConfigMenu);
 			UI.mainMenu();
 		}, 2000);
 	},
@@ -1150,7 +1149,6 @@ var Game = {
 	loaded: function () {
 		FX.Fireworks.particleSystem = new ParticleSystem("blur");
 		Game.shapes.forEach(initBlock);
-		ConfigMenu.init();
 	},
 
 	start: function () {
@@ -1307,217 +1305,6 @@ var PauseMenu = {
 	}
 };
 
-var KeyUpdate = {
-	refreshInterval: 100,
-
-	keyHold: $.noop,
-
-	keyPress: function (key) {
-		var c = this.control;
-
-		c.value(key);
-		c.redraw();
-		$.register(ConfigMenu);
-	},
-
-	refresh: $.noop
-}
-
-var Control = {
-	init: function () {
-		var sprite;
-
-		sprite = this.sprite = new $.Sprite(this.width, this.height);
-		sprite.oContext.font = this.font = "bold 25px courier";
-		sprite.oContext.fillStyle = "#000";
-		sprite.moveTo(this.x, this.y);
-		this.redraw();
-	},
-
-	redraw: $.noop,
-
-	clear: function () {
-		this.sprite.oContext.clearRect(0, 0, this.width, this.height);
-	},
-
-	contains: function (x, y) {
-		var left = this.x,
-		    top = this.y,
-		    right = left + this.width,
-		    bottom = top + this.height;
-
-		return  x >= left && x <= right &&
-			y >= top && y <= bottom;
-	},
-
-	mouseDown: function () {
-		this.trigger();
-	},
-
-	draw: function () {
-		this.sprite.draw();
-	}
-};
-
-var LabelControl = $.inherit(Control, {
-	redraw: function () {
-		this.clear();
-		this.drawLabel();
-	},
-
-	drawLabel: function () {
-		var sprite = this.sprite;
-
-		sprite.oContext.fillText(this.label, 5, 25);
-		sprite.copyPixels();
-	}
-});
-
-var BindingControl = $.inherit(LabelControl, {
-	value: function (v) {
-		var o = this.object,
-		    p = this.property;
-
-		if (v === undefined) {
-			return o[p];
-		}
-
-		o[p] = v;
-		return v;
-	},
-
-	trigger: function () {
-		KeyUpdate.control = this;
-		$.register(KeyUpdate);
-	},
-
-	redraw: function () {
-		LabelControl.redraw.call(this);
-		this.drawValue();
-	},
-
-	drawValue: function () {
-		var c = document.createElement("canvas"),
-		    width,
-		    v = this.convertValue(),
-		    ctx = c.getContext("2d"),
-		    sprite = this.sprite;
-
-		ctx.font = this.font;
-		width = ctx.measureText(v).width;
-		sprite.oContext.fillText(v, this.width - width - 5, 25);
-		sprite.copyPixels();
-	},
-
-	convertValue: function () {
-		var v = this.value(),
-		    map = {
-			32: "Space",
-			37: "Left",
-			38: "Up",
-			39: "Right",
-			40: "Down",
-			192: "`"
-		    };
-
-		if (map[v]) {
-			v = map[v];
-		} else {
-			v = String.fromCharCode(v);
-		}
-
-		return v;
-	},
-});
-
-var ConfigMenu = {
-	refreshInterval: 100,
-	options: [
-		"Left", "Left",
-		"Right", "Right",
-		"Soft Drop", "SoftDrop",
-		"Hard Drop", "HardDrop",
-		"Rotate Left", "RotateCCW",
-		"Rotate Right", "RotateCW",
-		"Hold Piece", "Hold"
-	],
-
-	controls: [],
-
-	init: function () {
-		var i, len,
-		    x = 20, y = 50,
-		    width = 300, height = 30,
-		    options = this.options,
-		    controls = this.controls,
-		    button,
-		    control;
-
-		for (i = 0, len = options.length; i < len; i += 2) {
-			control = $.inherit(BindingControl, {
-				label: options[i],
-				property: options[i + 1],
-				object: Game.Config,
-				x: x,
-				y: y,
-				width: width,
-				height: height
-			});
-			control.init();
-			controls.push(control);
-
-			y += height + 5;
-		}
-
-		button = $.inherit(LabelControl, {
-			label: "Play game",
-			x: x + 80,
-			y: controls.last().y + 50,
-			width: width,
-			height: height,
-			trigger: UI.startGame
-		});
-		button.init();
-
-		controls.push(button);
-	},
-
-	clear: function () {
-		$.context.clearRect(0, 0, $.width, $.height);
-	},
-
-	refresh: function () {
-		var i, len,
-		    controls = this.controls,
-		    control;
-
-		this.clear();
-
-		for (i = 0, len = controls.length; i < len; i++) {
-			controls[i].draw();
-		}
-	},
-
-	mouseDown: function (x, y) {
-		var i, len,
-		    controls = this.controls,
-		    control;
-
-		for (i = 0, len = controls.length; i < len; i++) {
-			control = controls[i];
-
-			if (control.contains(x, y)) {
-				control.mouseDown();
-				break;
-			}
-		}
-	},
-
-	keyHold: $.noop,
-
-	keyPress: $.noop
-};
-
 function loadImages() {
 	["orange", "red", "yellow", "green", "cyan", "blue", "purple"].forEach(function (color) {
 		$.loadImage(color, color + ".gif");
@@ -1539,7 +1326,6 @@ addEventListener("load", function () {
 	loadImages();
 	$.loaded(Game.loaded);
 	$.start();
-	$.register(ConfigMenu);
 }, false);
 
 window.setReplay = function () {
