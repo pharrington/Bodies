@@ -2,27 +2,33 @@ var GameStatus = {
 	game: null,
 	levelElement: null,
 	scoreElement: null,
+	offset: { x: 350, y: 420 },
 
 	start: function (game) {
+		var node;
+
 		this.game = game;
-		document.getElementById("game_status").style.display = "block";
+		node = document.getElementById("game_status");
+		node.style.display = "block";
+		node.style.left = this.offset.x + game.field.offset.x + "px";
+		node.style.top = this.offset.y + game.field.offset.y + "px";
 	},
 
 	draw: function () {
 		var game = this.game;
 
-		this.element("level").nodeValue = game.levels.level;
-		this.element("score").nodeValue = game.score.score;
+		this.setText("level", game.levels.level);
+		this.setText("score", game.score.score);
 	},
 
-	element: function (id) {
+	setText: function (id, text) {
 		var property = id + "Element";
 
 		if (!this[property]) {
 			this[property] = document.getElementById(id).firstChild;
 		}
 
-		return this[property];
+		this[property].nodeValue = text;
 	},
 
 	hide: function () {
