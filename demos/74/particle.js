@@ -295,6 +295,7 @@ ParticleSystem.Presets = {
 };
 
 $.extend(ParticleSystem.prototype, {
+	offset: {x: 0, y: 0},
 	fillColor: "#000000",
 	composite: "source-over",
 	clearOp: "clearRect",
@@ -337,6 +338,7 @@ $.extend(ParticleSystem.prototype, {
 	update: function (dt, context) {
 		var particles = this.activeParticles,
 		    particle,
+		    offset = this.offset,
 		    buffer = this.context,
 		    i = particles.length;
 
@@ -361,6 +363,6 @@ $.extend(ParticleSystem.prototype, {
 
 			particle.draw(buffer);
 		}
-		context.drawImage(this.canvas, 0, 0);
+		context.drawImage(this.canvas, offset.x, offset.y);
 	}
 });

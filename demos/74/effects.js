@@ -48,14 +48,11 @@ FX.Fireworks = {
 		if (!this.duration) { return; }
 
 		var x, y,
-		    offset,
 		    field = this.field,
 		    blockSize = Piece.blockSize,
 		    spacing = Piece.spacing,
 		    row,
 		    i, j;
-
-		offset = new Vector(this.field.offset);
 
 		for (i = 0; i < this.rows.length; i++) {
 			row = this.rows[i];
@@ -63,12 +60,16 @@ FX.Fireworks = {
 			y = row.index * blockSize + spacing
 			for (x = 0; x < field.columns; x++) {
 				for (j = 0; j < this.count; j++) {
-					this.addParticle(offset.x + blockSize / 2 + x * (blockSize + spacing),
-							 offset.y + y,
+					this.addParticle(blockSize / 2 + x * (blockSize + spacing),
+							 y,
 							 row.blocks[i].color);
 				}
 			}
 		}
+	},
+
+	setOffset: function (o) {
+		this.particleSystem.offset = o;
 	},
 
 	refresh: function (dt) {

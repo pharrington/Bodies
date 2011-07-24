@@ -467,6 +467,7 @@ var Field = {
 	redraw: function () {
 		var x, y,
 		    block,
+		    offset = this.offset,
 		    context = this.context;
 
 		context.fillRect(0, 0, this.width, this.height);
@@ -1084,7 +1085,11 @@ var Game = {
 	},
 
 	drawFrame: function (x, y, w, h) {
-		var ctx = $.context;
+		var ctx = $.context,
+		    offset = this.field.offset;
+
+		x += offset.x;
+		y += offset.y;
 
 		ctx.strokeStyle = "#000";
 		ctx.lineWidth = 10;
@@ -1095,9 +1100,12 @@ var Game = {
 	drawFramedShape: function (x, y, piece) {
 		var blockSize = Piece.blockSize,
 		    size = blockSize * 6,
-		    offset;
+		    offset = this.field.offset;
 
 		if (!piece) { return; }
+
+		x += offset.x;
+		y += offset.y;
 
 		piece.sprite.moveTo(x, y);
 
@@ -1179,6 +1187,8 @@ var Game = {
 
 		this.outline = $.inherit(Outline);
 		this.outline.init(this.field);
+
+		this.effects.setOffset(this.field.offset);
 	},
 
 	countdown: function (elapsed, now) {
