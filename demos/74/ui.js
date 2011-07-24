@@ -110,11 +110,11 @@ var ConfigMenu = {
 		control.valueText.nodeValue = this.convertValue(control.value);
 
 		this.activeControl = null;
-		document.body.removeEventListener("keydown", this.keyDown, false);
+		document.documentElement.removeEventListener("keydown", this.keyDown, false);
 	},
 
 	bindEvents: function () {
-		document.body.addEventListener("keydown", this.keyDown, false);
+		document.documentElement.addEventListener("keydown", this.keyDown, false);
 	},
 
 	init: function () {
@@ -179,7 +179,7 @@ var UI = {
 			document.getElementById(id).addEventListener(tuple[0], tuple[1], false);
 		}
 
-		document.body.addEventListener("click", function (e) {
+		document.documentElement.addEventListener("click", function (e) {
 			if (e.target.className.match(/back_to_main/)) {
 				UI.showOnly("main_menu");
 			}
