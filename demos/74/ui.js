@@ -11,11 +11,26 @@ var ConfigMenu = {
 
 	convertValue: function (v) {
 		var map = {
+			9:  "Tab",
+			16: "Shift",
+			17: "Ctrl",
+			19: "Pause",
+			20: "Caps Lock",
+			27: "Esc",
 			32: "Space",
+			33: "Page Up",
+			34: "Page Down",
+			35: "End",
+			36: "Home",
 			37: "Left",
 			38: "Up",
 			39: "Right",
 			40: "Down",
+			42: "Print Screen",
+			45: "Insert",
+			46: "Delete",
+			144: "Num Lock",
+			145: "Scroll Lock",
 			192: "`"
 		    };
 
