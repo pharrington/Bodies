@@ -420,10 +420,12 @@ function attachEvents() {
 			keyPress && keyPress(e.keyCode);
 		}
 
+		e.preventDefault();
 	}, false);
 	
 	addEventListener("keyup", function (e) {
 		$.keys[e.keyCode] = false;
+		e.preventDefault();
 	}, false);
 }
 
