@@ -1084,7 +1084,7 @@ var Game = {
 		context.restore();
 	},
 
-	drawFrame: function (x, y, w, h) {
+	drawFrame: function (x, y, w, h, label) {
 		var ctx = $.context,
 		    offset = this.field.offset;
 
@@ -1092,9 +1092,21 @@ var Game = {
 		y += offset.y;
 
 		ctx.strokeStyle = "#000";
-		ctx.lineWidth = 10;
+		ctx.lineWidth = 3;
 		ctx.clearRect(x, y, w, h);
 		ctx.strokeRect(x, y, w, h);
+
+		if (label) {
+			var width, fontSize = 28;
+
+			ctx.save();
+			ctx.fillStyle = "#000000";
+			ctx.font = fontSize + "px Orbitron";
+			width = ctx.measureText(label).width + 10;
+			ctx.clearRect(x + 5, y-3, width, fontSize);
+			ctx.fillText(label, x + 9, y+12);
+			ctx.restore();
+		}
 	},
 
 	drawFramedShape: function (x, y, piece) {
@@ -1116,14 +1128,14 @@ var Game = {
 		var blockSize = Piece.blockSize,
 		    size = ~~(blockSize * 5.5),
 		    x = ~~(blockSize * 10.5),
-		    y = 5,
+		    y = 10,
 		    piece,
 		    offset;
 
 		piece = $.inherit(Shapes[this.queueSource.queue[0]]);
 		offset = (5 - piece.shape.length) / 2 * blockSize;
 
-		this.drawFrame(x, y, size, size);
+		this.drawFrame(x, y, size, size, "Next");
 		this.drawFramedShape(x + offset, y + offset, piece);
 	},
 
@@ -1131,11 +1143,11 @@ var Game = {
 		var blockSize = Piece.blockSize,
 		    size = ~~(blockSize * 5.5),
 		    x = ~~(blockSize * 10.5),
-		    y = 200,
+		    y = 215,
 		    offset,
 		    piece = this.heldPiece;
 
-		this.drawFrame(x, y, size, size);
+		this.drawFrame(x, y, size, size, "Hold");
 
 		if (!piece) { return; }
 
@@ -1297,7 +1309,7 @@ var Game = {
 			return;
 		}
 
-		localStorage["blocksonblast.replay" + Date.now()] = this.score.score + "_" + btoa(InputSink.LocalStorage.save());
+		HighScores.save(this);
 	},
 
 	pause: function () {
