@@ -22,3 +22,15 @@ Modes.Master = {
 		return game;
 	}
 };
+
+Modes.Versus = {
+	ws: null,
+
+	createSocket: function () {
+		var ws = new WebSocket(this.server);
+	},
+
+	States: {
+		
+	}
+};
