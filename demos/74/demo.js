@@ -1313,16 +1313,19 @@ var Game = {
 	},
 
 	pause: function () {
+		PauseMenu.game = this;
 		$.register(PauseMenu);
 	}
 };
 
 var PauseMenu = {
+	game: null,
+
 	refresh: $.noop,
 	keyHold: $.noop,
 	keyPress: function (key) {
 		if (key === Game.Config.Pause) {
-			$.register(Game);
+			$.register(this.game);
 		}
 	}
 };
