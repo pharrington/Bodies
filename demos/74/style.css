@@ -6,12 +6,15 @@ html, body, div, ul, li, p, img, h1, h2, h3, h4, h5, h6 {
 }
 
 html {
-	margin: 50px 0 0 125px;
+	height: 100%;
 }
 
 body {
+	min-height: 100%;
+	margin: 50px 0 0 125px;
 	overflow: hidden;
 	font-family: "Orbitron", sans-serif;
+	text-rendering: geometricPrecision;
 	cursor: default;
 }
 
@@ -46,34 +49,21 @@ ul {
 }
 
 #main_menu li {
-	-webkit-transition: margin-left 0.2s ease-out;
-	-moz-transition: margin-left 0.2s ease-out;
-	-o-transition: margin-left 0.2s ease-out;
-	transition: margin-left 0.2s ease-out;
+	-webkit-transition: margin-left 0.05s ease-out;
+	-moz-transition: margin-left 0.05s ease-out;
+	-o-transition: margin-left 0.05s ease-out;
+	transition: margin-left 0.05s ease-out;
 }
 
 #main_menu li:hover {
-	margin-left: -53px;
-	text-shadow: 0 0 5px #E2DA0E;
+	margin-left: -40px;
+	text-shadow: 0 0 10px #E2DA0E;
 }
 
 .value {
 	position: absolute;
 	left: 325px;
 }
-
-/*
-#controls_menu {
-	position: absolute;
-	left: 40px;
-	top: 64px;
-	background: #000;
-	color: #fff;
-	width: 511px;
-	padding: 30px 30px 30px 0;
-	z-index: 1001;
-}
-*/
 
 #field, #controls_menu {
 	display: none;
