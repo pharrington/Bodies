@@ -907,7 +907,7 @@ var Game = {
 		$.refresh($.noop, 1000);
 		setTimeout(function () {
 			$this.gameStatus.hide();
-			UI.mainMenu();
+			UI.showOnly("main_menu");
 		}, 2000);
 	},
 
@@ -1352,13 +1352,3 @@ addEventListener("load", function () {
 	$.loaded(Game.loaded);
 	$.start();
 }, false);
-
-window.setReplay = function () {
-	var r = InputSource.Replay;
-	Game.setInputSource(r);
-	r.loadReplay(atob(localStorage.treplay));
-};
-
-window.save = function () {
-	localStorage.treplay = btoa(InputSink.LocalStorage.save());
-};
