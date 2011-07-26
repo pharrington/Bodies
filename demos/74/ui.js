@@ -6,7 +6,8 @@ var ConfigMenu = {
 		"Hard Drop": ["HardDrop"],
 		"Rotate Left": ["RotateCCW"],
 		"Rotate Right": ["RotateCW"],
-		"Hold Piece": ["Hold"]
+		"Hold Piece": ["Hold"],
+		"Pause": ["Pause"]
 	},
 
 	convertValue: function (v) {
