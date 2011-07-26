@@ -322,7 +322,8 @@ $.extend(ParticleSystem.prototype, {
 	},
 
 	createParticle: function () {
-		var particle = this.inactiveParticles.shift();
+		var particle = this.inactiveParticles.shift(),
+		    draw = navigator.userAgent.match(/Chrome/) ? "drawGlow" : "drawCircle";
 
 		if (!particle) {
 			particle = new Particle;
@@ -330,7 +331,7 @@ $.extend(ParticleSystem.prototype, {
 
 		this.activeParticles.push(particle);
 		particle.active = 0;
-		particle.draw = Particle.prototype.drawGlow;
+		particle.draw = Particle.prototype[draw];
 
 		return particle;
 	},
