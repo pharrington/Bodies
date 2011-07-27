@@ -29,6 +29,7 @@ var InputSource = {
 		startPiece: $.noop,
 		nextPiece: $.noop,
 		endPiece: $.noop,
+		gameOver: $.noop,
 
 		start: function (game) {
 			this.game = game;
@@ -87,6 +88,10 @@ InputSource.AI = $.inherit(InputSource.Base, {
 
 	endPiece: function () {
 		AI.endPiece();
+	},
+
+	gameOver: function () {
+		AI.gameOver();
 	},
 
 	start: function (game) {

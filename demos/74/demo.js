@@ -902,6 +902,7 @@ var Game = {
 		var $this = this;
 
 		$this.saveReplay();
+		this.inputSource.gameOver();
 		this.queueSource.gameOver();
 
 		$.refresh($.noop, 1000);
