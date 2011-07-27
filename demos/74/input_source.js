@@ -1,4 +1,3 @@
-var SPEED = 1;
 $.inherit = function (proto, attrs) {
 	var maker = function () {},
 	    o;
