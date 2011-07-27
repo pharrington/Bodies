@@ -30,7 +30,7 @@ var LevelSystem = {
 	}
 };
 
-LevelSystem.Master = $.extend(LevelSystem.Base, {
+LevelSystem.Master = $.inherit(LevelSystem.Base, {
 	groundedTimeout: {
 		1: 30,
 		400: 27,
@@ -67,4 +67,22 @@ LevelSystem.Master = $.extend(LevelSystem.Base, {
 		this.level++;
 		this.applyLevel();
 	},
+});
+
+LevelSystem.Static = $.inherit(LevelSystem.Base, {
+	spawnDelay: {
+		1: 0
+	},
+
+	groundedTimeout: {
+		1: 20
+	},
+
+	lineClearDelay: {
+		1: 0
+	},
+
+	velocity: {
+		1: 10 / 250
+	}
 });
