@@ -33,7 +33,6 @@ var HighScoresMenu = {
 				return;
 			}
 
-			
 			game.start();
 			UI.showOnly("field");
 			$.refresh(game.countdown.bind(game));
