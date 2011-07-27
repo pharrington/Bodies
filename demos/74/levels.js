@@ -9,6 +9,7 @@ var LevelSystem = {
 		start: function (game) {
 			this.level = 1;
 			this.game = game;
+			this.applyLevel();
 		},
 
 

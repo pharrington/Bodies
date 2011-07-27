@@ -3,7 +3,7 @@ var HighScores = {
 		localStorage["blocksonblast.replay" + Date.now()] = game.score.score + "_" + btoa(InputSink.LocalStorage.save());
 	},
 
-	listLocal: function () {
+	getLocal: function () {
 		var key,
 		    date, score,
 		    scores = [];
@@ -21,5 +21,11 @@ var HighScores = {
 		}
 
 		return scores;
+	},
+
+	byScore: function () {
+		return this.getLocal().sort(function (a, b) {
+			return b.score - a.score;
+		});
 	}
 };

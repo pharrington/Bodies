@@ -1,12 +1,4 @@
 var InputSink = {
-	SavedProperties: [
-		"groundedTimeout",
-		"lineClearDelay",
-		"spawnDelay",
-		"velocityIncrement",
-		"startVelocity"
-	],
-
 	Base: {
 		game: null,
 		inputs: null,
@@ -43,14 +35,10 @@ var InputSink = {
 InputSink.LocalStorage = $.inherit(InputSink.Base, {
 	generateHeader: function () {
 		var game = this.game,
-		    header = {},
-		    properties = InputSink.SavedProperties;
-
-		properties.forEach(function (p) {
-			header[p] = game[p];
-		});
+		    header = {};
 
 		header.queueSeed = game.queueSource.seed;
+		header.version = "1.0";
 
 		return JSON.stringify(header);
 	},

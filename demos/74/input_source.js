@@ -106,11 +106,7 @@ InputSource.Replay = $.inherit(InputSource.Base, {
 	},
 
 	loadHeader: function (header) {
-		var game = Game;
-
-		InputSink.SavedProperties.forEach(function (p) {
-			game[p] = header[p];
-		});
+		var game = this.game;
 
 		game.queueSource.seed = header.queueSeed;
 	},
@@ -127,6 +123,8 @@ InputSource.Replay = $.inherit(InputSource.Base, {
 		    stateList,
 		    i, len;
 
+		if (!header.version) { return null; }
+
 		this.stateIndex = 0;
 		stateList = this.stateList = [];
 
@@ -137,6 +135,8 @@ InputSource.Replay = $.inherit(InputSource.Base, {
 			state.unserialize(str, i);
 			stateList.push(state);
 		}
+
+		return this;
 	},
 
 	keyPress: function (key) {

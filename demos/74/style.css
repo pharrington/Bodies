@@ -26,10 +26,12 @@ ul {
 	font-size: 36px;
 }
 
-.menu h1 {
+.menu h1, .menu caption {
 	font-size: 64px;
 	margin-bottom: 20px;
 	text-shadow: #000 4px 4px;
+	font-weight: bold;
+	text-align: left;
 }
 
 .menu h1 span {
@@ -65,7 +67,7 @@ ul {
 	left: 325px;
 }
 
-#field, #controls_menu {
+#field, #controls_menu, #high_scores_menu {
 	display: none;
 }
 
@@ -78,7 +80,30 @@ ul {
 	text-align: right;
 }
 
+table {
+	width: 100%;
+}
+
+th {
+	font-size: 24px;
+}
+
+td {
+	font-size: 24px;
+	max-width: 30px;
+}
+
+th, td {
+	text-align: left;
+}
+
+.replay {
+	cursor: pointer;
+}
+
 .back_to_main {
 	color: #440BAD;
 	margin-top: 50px;
+	display: block;
+	cursor: pointer;
 }
