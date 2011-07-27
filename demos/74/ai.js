@@ -79,7 +79,7 @@ var AI = {
 		    oldHeight = 0,
 		    maxHeight = 0,
 		    holes = 0,
-		    dangerHeight = 16,
+		    dangerHeight = 15,
 		    field = this.base.field;
 
 		this.resetBumpiness();
