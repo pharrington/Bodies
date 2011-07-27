@@ -11,13 +11,13 @@ Function.prototype.partial = function () {
 	var f = this, args = argsArray(arguments);
 
 	return function () {
-		var i, len;
+		var newArgs = [].concat(args), i, len;
 
 		for (i = 0, len = arguments.length; i < len; i++) {
-			args.push(arguments[i]);
+			newArgs.push(arguments[i]);
 		}
 
-		return f.apply(this, args);
+		return f.apply(this, newArgs);
 	};
 };
 
