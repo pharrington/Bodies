@@ -79,6 +79,7 @@ var AI = {
 		    oldHeight = 0,
 		    maxHeight = 0,
 		    holes = 0,
+		    dangerHeight = 16,
 		    field = this.base.field;
 
 		this.resetBumpiness();
@@ -109,6 +110,10 @@ var AI = {
 
 			result += this.weighHoles(holes);
 			oldHeight = colHeight;
+		}
+
+		if (maxHeight >= dangerHeight) {
+			result /= 2;
 		}
 
 		result += this.weighMaxHeight(maxHeight);
@@ -327,5 +332,9 @@ var AI = {
 
 	endPiece: function () {
 		this.currentPath = null;
-	}
+	},
+
+	gameOver: function () {
+		this.base = null;
+	},
 };
