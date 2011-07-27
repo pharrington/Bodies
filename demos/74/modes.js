@@ -23,6 +23,16 @@ Modes.Master = {
 	}
 };
 
+Modes.DemoAI = {
+	newGame: function () {
+		var game = Modes.newGame("Static", "Master", "TGM");
+
+		game.setInputSource(InputSource.AI);
+
+		return game;
+	}
+};
+
 Modes.Versus = {
 	ws: null,
 
