@@ -216,15 +216,14 @@ var AI = {
 					gridPosition: {x: 0, y: 0},
 					shapeIndex: shape
 				});
-				piece.init();
+				state = this.states[i];
+
+				piece.init(state);
 				piece.gridPosition.x = x;
 				piece.setShape();
 
-				state = this.states[i];
 				field = state.field;
-
 				field.copy(this.base.field);
-
 				field.moveToBottom(piece);
 
 				dest = $.inherit(piece, {
