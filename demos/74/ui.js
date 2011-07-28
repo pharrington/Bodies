@@ -1,8 +1,8 @@
 var SecretMove = {
 	buffer: null,
 
-	codes: [["72,65,67,57,48,48,48", function () {
-		UI.events.standard[1] = function () {
+	codes: [["72,65,76,57,48,48,48", function () {
+		UI.events.master[1] = function () {
 			UI.startGame("DemoAI");
 		};
 	}]],
@@ -22,7 +22,7 @@ var SecretMove = {
 
 	keyDown: null,
 	_keyDown: function (e) {
-		this.buffer.unshift(e.keyCode);
+		this.buffer.push(e.keyCode);
 		this.codes.forEach(function (code) {
 			if (this.buffer.join().indexOf(code[0]) !== -1) {
 				code[1]();
@@ -220,20 +220,18 @@ var ConfigMenu = {
 };
 var UI = {
 	events: {
-		standard: ["click", function () {
+		master: ["click", function () {
 			UI.startGame("Master");
 		}],
 
 		controls: ["click", function () {
 			ConfigMenu.init();
 			UI.showOnly("controls_menu");
-			SecretMove.remove();
 		}],
 
 		high_scores: ["click", function () {
 			HighScoresMenu.init();
 			UI.showOnly("high_scores_menu");
-			SecretMove.remove();
 		}],
 	},
 
@@ -258,11 +256,13 @@ var UI = {
 
 			e.style.display = e.id === id ? "block" : "none";
 		});
+
+		SecretMove.remove();
 	},
 
 	mainMenu: function () {
 		UI.showOnly("main_menu");
-		UI.events.standard[1] = function () {
+		UI.events.master[1] = function () {
 			UI.startGame("Master");
 		};
 
@@ -286,7 +286,11 @@ var UI = {
 			if (!events.hasOwnProperty(id)) { continue; }
 
 			tuple = events[id];
-			document.getElementById(id).addEventListener(tuple[0], tuple[1], false);
+			(function (t) {
+				document.getElementById(id).addEventListener(t[0], function () {
+					t[1]();
+				}, false);
+			}(tuple));
 		}
 
 		document.documentElement.addEventListener("click", function (e) {
@@ -294,6 +298,8 @@ var UI = {
 				UI.mainMenu();
 			}
 		}, true);
+
+		SecretMove.init();
 	}
 };
 
