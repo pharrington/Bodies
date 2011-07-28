@@ -1,4 +1,6 @@
-var GameStatus = {
+var GameStatus = {};
+
+GameStatus.Score = {
 	game: null,
 	levelElement: null,
 	scoreElement: null,
@@ -34,4 +36,7 @@ var GameStatus = {
 	hide: function () {
 		document.getElementById("game_status").style.display = "none";
 	}
+};
+
+GameStatus.Timer = {
 };

@@ -9,7 +9,7 @@ var Modes = {
 		game.setInputSource(InputSource.Player);
 		game.effects = FX.Fireworks;
 		game.dropFX = FX.Streak;
-		game.gameStatus = GameStatus;
+		game.gameStatus = GameStatus.Score;
 
 		return game;
 	}
@@ -18,6 +18,16 @@ var Modes = {
 Modes.Master = {
 	newGame: function () {
 		var game = Modes.newGame("Master", "Master", "TGM");
+
+		return game;
+	}
+};
+
+Modes.TimeAttack = {
+	newGame: function () {
+		var game = Modes.newGame("Static", "TimeAttack", "TGM");
+
+		game.gameStatus = GameStatus.Timer;
 
 		return game;
 	}
