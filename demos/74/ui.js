@@ -1,3 +1,37 @@
+var SecretMove = {
+	buffer: null,
+
+	codes: [["72,65,67,57,48,48,48", function () {
+		UI.events.standard[1] = function () {
+			UI.startGame("DemoAI");
+		};
+	}]],
+
+	init: function () {
+		if (!this.keyDown) {
+			this.keyDown = this._keyDown.bind(this);
+		}
+
+		this.buffer = [];
+		document.documentElement.addEventListener("keydown", this.keyDown, false);
+	},
+
+	remove: function () {
+		document.documentElement.removeEventListener("keydown", this.keyDown, false);
+	},
+
+	keyDown: null,
+	_keyDown: function (e) {
+		this.buffer.unshift(e.keyCode);
+		this.codes.forEach(function (code) {
+			if (this.buffer.join().indexOf(code[0]) !== -1) {
+				code[1]();
+				this.buffer = [];
+			}
+		}, this);
+	}
+};
+
 var HighScoresMenu = {
 	init: function () {
 		var container = document.getElementById("high_scores_menu").querySelector("table"),
@@ -193,11 +227,13 @@ var UI = {
 		controls: ["click", function () {
 			ConfigMenu.init();
 			UI.showOnly("controls_menu");
+			SecretMove.remove();
 		}],
 
 		high_scores: ["click", function () {
 			HighScoresMenu.init();
 			UI.showOnly("high_scores_menu");
+			SecretMove.remove();
 		}],
 	},
 
@@ -224,6 +260,15 @@ var UI = {
 		});
 	},
 
+	mainMenu: function () {
+		UI.showOnly("main_menu");
+		UI.events.standard[1] = function () {
+			UI.startGame("Master");
+		};
+
+		SecretMove.init();
+	},
+
 	startGame: function (mode) {
 		var game = Modes[mode].newGame();
 
@@ -246,7 +291,7 @@ var UI = {
 
 		document.documentElement.addEventListener("click", function (e) {
 			if (e.target.className.match(/back_to_main/)) {
-				UI.showOnly("main_menu");
+				UI.mainMenu();
 			}
 		}, true);
 	}
