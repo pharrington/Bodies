@@ -113,7 +113,7 @@ var AI = {
 		}
 
 		if (maxHeight >= dangerHeight) {
-			result /= 2;
+			result -= Math.abs(result / 2) * (maxHeight - dangerHeight + 1);
 		}
 
 		result += this.weighMaxHeight(maxHeight);
