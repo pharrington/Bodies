@@ -908,7 +908,7 @@ var Game = {
 		$.refresh($.noop, 1000);
 		setTimeout(function () {
 			$this.gameStatus.hide();
-			UI.showOnly("main_menu");
+			UI.mainMenu();
 		}, 2000);
 	},
 
