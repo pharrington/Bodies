@@ -5,6 +5,7 @@ var LevelSystem = {
 		properties: ["groundedTimeout", "lineClearDelay", "spawnDelay", "velocity"],
 
 		endPiece: $.noop,
+		clearLines: $.noop,
 
 		start: function (game) {
 			this.level = 1;
@@ -14,16 +15,19 @@ var LevelSystem = {
 
 
 		applyLevel: function () {
-			var level = this.level,
+			var level,
 			    table,
 			    game = this.game;
 
 			this.properties.forEach(function (p) {
+				level = this.level;
 				table = this[p];
 
-				if (level in table) {
-					game[p] = table[level];
+				while (!(level in table)) {
+					level--;
 				}
+
+				game[p] = table[level];
 			}, this);
 		}
 
@@ -61,6 +65,11 @@ LevelSystem.Master = $.inherit(LevelSystem.Base, {
 		300: 150 / 250,
 		400: 1,
 		500: 20,
+	},
+
+	clearLines: function (numCleared) {
+		this.level += numCleared;
+		this.applyLevel();
 	},
 
 	endPiece: function () {
