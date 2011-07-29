@@ -52,6 +52,15 @@ $.timed = function (obj, elapsed, callback, complete) {
 	}
 };
 
+function pad00(str) {
+	str = "" + str;
+	while (str.length < 2) {
+		str = "0" + str;
+	}
+
+	return str;
+}
+
 function cycle(array, index) {
 	var len = array.length;
 
@@ -470,7 +479,7 @@ var Field = {
 		    offset = this.offset,
 		    context = this.context;
 
-		context.fillRect(0, 0, this.width, this.height);
+		this.clear();
 		context.save();
 
 		context.globalAlpha = this.mergeAlpha;
@@ -484,6 +493,10 @@ var Field = {
 		}
 
 		context.restore();
+	},
+
+	clear: function () {
+		this.context.fillRect(0, 0, this.width, this.height);
 	},
 
 	applyPiece: function (piece, callback) {
@@ -780,6 +793,7 @@ var Outline = {
 $.extend(Outline.Cell.prototype, {top: false, right: false, bottom: false, left: false});
 
 var Game = {
+	duration: 0,
 	elapsed: 0,
 	shapes: ["I", "T", "O", "Z", "S", "L", "J"],
 	currentPiece: null,
@@ -864,9 +878,52 @@ var Game = {
 
 		if (this.field.collision(this.currentPiece)) {
 			gameover = true;
-			$.refresh(this.gameOver.bind(this));
+			this.gameOver();
 		}
 		return gameover;
+	},
+
+	checkWon: function () {
+		var won = false;
+
+		if (this.score.won()) {
+			won = true;
+			this.won();
+		}
+
+		return won;
+	},
+
+	gameOver: function () {
+		this.endGame(function () {
+			this.field.clear();
+			this.field.draw();
+			$.refresh($.noop, 1000);
+			UI.mainMenu();
+		});
+	},
+
+	won: function () {
+		this.endGame(function () {
+			this.field.clear();
+			this.field.draw();
+			$.refresh($.noop, 1000);
+			UI.mainMenu();
+		});
+	},
+
+	endGame: function (callback, delay) {
+		if (delay === undefined) {
+			delay = 2000;
+		}
+
+		this.tick = this.draw;
+		this.clearTimers();
+		this.saveReplay();
+		this.inputSource.gameOver();
+		this.queueSource.gameOver();
+
+		setTimeout(callback.bind(this), delay);
 	},
 
 	ejectUp: function (piece) {
@@ -898,23 +955,9 @@ var Game = {
 		return gameOver;
 	},
 
-	gameOver: function () {
-		var $this = this;
-
-		$this.saveReplay();
-		this.inputSource.gameOver();
-		this.queueSource.gameOver();
-
-		$.refresh($.noop, 1000);
-		setTimeout(function () {
-			$this.gameStatus.hide();
-			UI.mainMenu();
-		}, 2000);
-	},
-
 	spawnNext: function () {
 		$.keyHold($.noop);
-		this.tick = $.noop;
+		this.tick = this.draw;
 
 		if (!this.nextPiece()) {
 			this.setSpawnTimer();
@@ -966,6 +1009,7 @@ var Game = {
 
 		return timer;
 	},
+
 	updateTimers: function () {
 		var timers = this.timers,
 		    timer,
@@ -982,10 +1026,13 @@ var Game = {
 		}
 	},
 
-	endPiece: function () {
-		var cleared;
+	clearTimers: function () {
+		this.timers = [];
+	},
 
-		this.levels.endPiece();
+	endPiece: function () {
+		var cleared, numCleared;
+
 		this.groundedTimer = null;
 		this.hasHeldPiece = false;
 
@@ -993,13 +1040,17 @@ var Game = {
 		this.field.merge(this.currentPiece);
 
 		cleared = this.field.clearRows();
+		numCleared = cleared.length;
 
 		this.inputSource.endPiece();
-		this.score.clearLines(cleared.length);
+		this.score.clearLines(numCleared);
 
-		if (!cleared.length) {
+		if (!numCleared) {
 			this.spawnNext();
 			this.outline.refresh();
+			this.levels.endPiece();
+		} else {
+			this.levels.clearLines(numCleared);
 		}
 
 	},
@@ -1060,7 +1111,7 @@ var Game = {
 		}
 	},
 
-	drawGame: function (piece) {
+	drawField: function (piece) {
 		this.field.draw();
 		this.outline.draw();
 
@@ -1207,14 +1258,15 @@ var Game = {
 	countdown: function (elapsed, now) {
 		var $this = this;
 
-		this.duration = 1000;
+		$.keyHold($.noop);
+		this.duration = 3000;
+		this.field.draw();
 
 		$.timed(this, elapsed, function (progress) {
 		}, function () {
 			$this.drawPiecePreview();
 			$.register(this);
 		});
-		this.field.draw();
 	},
 
 	softDrop: function () {
@@ -1297,12 +1349,18 @@ var Game = {
 			this.checkGrounded();
 		}
 
-		this.score.refresh();
+		this.checkWon();
+
+		this.draw(elapsed);
+		this.dropped = false;
+	},
+
+	draw: function (elapsed) {
+		this.score.refresh(elapsed);
 		this.dropFX.refresh(elapsed);
-		this.drawGame(currentPiece);
+		this.drawField(this.currentPiece);
 		this.gameStatus.draw();
 		this.effects.refresh(elapsed);
-		this.dropped = false;
 	},
 
 	saveReplay: function () {

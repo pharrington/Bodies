@@ -71,15 +71,6 @@ ul {
 	display: none;
 }
 
-#game_status {
-	position: absolute;
-	z-index: 10;
-	width: 190px;
-	display: none;
-	font-size: 36px;
-	text-align: right;
-}
-
 table {
 	width: 100%;
 }

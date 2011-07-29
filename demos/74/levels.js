@@ -27,8 +27,17 @@ var LevelSystem = {
 					level--;
 				}
 
-				game[p] = table[level];
+				this.set(p, table[level]);
 			}, this);
+		},
+
+		set: function (property, value) {
+			var game = this.game;
+
+			game[property] = value;
+			if (property === "keyHoldDelay" || property === "keyHoldInterval") {
+				$.keyHold(game.keyHold, game.keyHoldDelay, game.keyHoldInterval);
+			}
 		}
 
 	}
@@ -79,6 +88,8 @@ LevelSystem.Master = $.inherit(LevelSystem.Base, {
 });
 
 LevelSystem.Static = $.inherit(LevelSystem.Base, {
+	properties: LevelSystem.Base.properties.concat("keyHoldDelay"),
+
 	spawnDelay: {
 		1: 0
 	},
@@ -93,5 +104,9 @@ LevelSystem.Static = $.inherit(LevelSystem.Base, {
 
 	velocity: {
 		1: 10 / 250
+	},
+
+	keyHoldDelay: {
+		1: 120
 	}
 });

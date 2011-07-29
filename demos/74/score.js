@@ -8,6 +8,12 @@ var Score = {
 		hardDropValue: 0,
 		currentPiece: null,
 
+		hardDrop: $.noop,
+		softDrop: $.noop,
+		refresh: $.noop,
+		clearLines: $.noop,
+		won: $.noop,
+
 		start: function (game) {
 			this.score = 0;
 			this.combo = 0;
@@ -18,7 +24,7 @@ var Score = {
 	}
 };
 
-Score.Master = $.extend(Score.Base, {
+Score.Master = $.inherit(Score.Base, {
 	softDropValue: 1,
 	hardDropValue: 4,
 
@@ -76,5 +82,30 @@ Score.Master = $.extend(Score.Base, {
 	},
 
 	softDrop: function () {
+	}
+});
+
+Score.TimeAttack = $.inherit(Score.Base, {
+	linesRemaining: 0,
+	elapsed: 0,
+
+	start: function (game) {
+		Score.Base.start.call(this, game);
+		this.linesRemaining = 40;
+		this.elapsed = 0;
+	},
+
+	clearLines: function (lines) {
+		this.linesRemaining = Math.max(this.linesRemaining - lines, 0);
+	},
+
+	refresh: function (elapsed) {
+		if (this.linesRemaining !== 0) {
+			this.elapsed += elapsed;
+		}
+	},
+
+	won: function () {
+		return this.linesRemaining === 0;
 	}
 });

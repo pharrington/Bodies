@@ -224,6 +224,10 @@ var UI = {
 			UI.startGame("Master");
 		}],
 
+		time_attack: ["click", function () {
+			UI.startGame("TimeAttack");
+		}],
+
 		controls: ["click", function () {
 			ConfigMenu.init();
 			UI.showOnly("controls_menu");
