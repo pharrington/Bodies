@@ -2,14 +2,14 @@ var Modes = {
 	newGame: function (level, score, queue) {
 		var game = $.inherit(Game);
 
-		game.levels = LevelSystem[level];
-		game.score = Score[score];
-		game.setQueueSource(QueueSource[queue]);
+		game.levels = $.inherit(LevelSystem[level]);
+		game.score = $.inherit(Score[score]);
+		game.setQueueSource($.inherit(QueueSource[queue]));
 
 		game.setInputSource(InputSource.Player);
 		game.effects = FX.Fireworks;
 		game.dropFX = FX.Streak;
-		game.gameStatus = GameStatus.Score;
+		game.gameStatus = $.inherit(GameStatus.Score);
 
 		return game;
 	}
@@ -46,11 +46,49 @@ Modes.DemoAI = {
 Modes.Versus = {
 	ws: null,
 
+	States: {
+		Search: {
+			onmessage: function (msg) {
+				var data = msg.data;
+
+				if (data.connect) {
+					Modes.Versus.transition("Match", data);
+				}
+			}
+		},
+
+		Match: {
+			onmessage: function (msg) {
+				var data = msg.data;
+
+				if (data.tick) {
+					Modes.Versus.inputP2(data.input);
+				}
+			}
+		}
+	},
+
 	createSocket: function () {
 		var ws = new WebSocket(this.server);
 	},
 
-	States: {
-		
-	}
+	transition: function (state, data) {
+	},
+
+	inputP2: function (input) {
+		var p2 = this.players[1];
+
+		p2.input(input);
+		p2.play();
+	},
+
+	newGame: function () {
+		var p1 = Modes.Master.newGame(),
+		    p2 = Modes.Master.newGame();
+
+		p2.setInputSource(InputSource.Base);
+		p2.frame = p2.draw;
+
+		this.players = [p1, p2];
+	},
 };
