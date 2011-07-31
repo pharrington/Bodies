@@ -68,6 +68,10 @@ FX.Fireworks = {
 		}
 	},
 
+	setDimensions: function (w, h) {
+		this.particleSystem.createCanvas(w, h);
+	},
+
 	setOffset: function (o) {
 		this.particleSystem.offset = o;
 	},

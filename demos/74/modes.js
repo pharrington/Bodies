@@ -73,6 +73,9 @@ Modes.Versus = {
 	},
 
 	transition: function (state, data) {
+		var ws = this.ws;
+
+		ws.onmessage = state.onmessage;
 	},
 
 	inputP2: function (input) {
@@ -87,8 +90,10 @@ Modes.Versus = {
 		    p2 = Modes.Master.newGame();
 
 		p2.setInputSource(InputSource.Base);
-		p2.frame = p2.draw;
+		p2.doFrame = p2.draw;
 
 		this.players = [p1, p2];
+
+		this.transition("Search");
 	},
 };

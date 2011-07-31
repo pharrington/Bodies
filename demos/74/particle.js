@@ -273,10 +273,6 @@ function ParticleSystem(preset) {
 	this.inactiveParticles = [];
 	this.activeParticles = [];
 	this._preallocate(1200);
-	canctx = $.createCanvas(332, 662);
-	this.canvas = canctx[0];
-	this.context = canctx[1];
-
 	this.setPreset(preset);
 }
 
@@ -301,11 +297,24 @@ $.extend(ParticleSystem.prototype, {
 	clearOp: "clearRect",
 	inactiveParticles: null,
 	activeParticles: null,
+	width: null,
+	height: null,
 
 	_preallocate: function (count) {
 		while (count--) {
 			this.inactiveParticles.push(new Particle);
 		}
+	},
+
+	createCanvas: function (w, h) {
+		var canctx;
+
+		this.width = w;
+		this.height = h;
+
+		canctx = $.createCanvas(this.width, this.height);
+		this.canvas = canctx[0];
+		this.context = canctx[1];
 	},
 
 	setPreset: function (str) {
@@ -349,7 +358,7 @@ $.extend(ParticleSystem.prototype, {
 		buffer.shadowBlur = 0;
 		buffer.globalCompositeOperation = this.composite;
 		buffer.fillColor = this.fillColor;
-		buffer[this.clearOp](0, 0, 332, 662);
+		buffer[this.clearOp](0, 0, this.width, this.height);
 		buffer.restore();
 
 		while (i--) {

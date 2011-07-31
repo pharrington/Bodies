@@ -986,7 +986,7 @@ var Game = {
 		this.spawnTimer = null;
 		!this.dropped && this.drawPiecePreview();
 		$.register(this);
-		this.tick = this.play;
+		this.tick = this.doFrame;
 	},
 
 
@@ -1224,15 +1224,17 @@ var Game = {
 	},
 
 	start: function () {
-		var game = this;
+		var game = this,
+		    field;
 
 		this.timers = [];
 		this.inputBuffer = 0;
-		this.tick = this.play;
+		this.tick = this.doFrame;
 
 		this.velocity = this.startVelocity;
-		this.field = $.inherit(Field);
-		this.field.init(this);
+		field = this.field = $.inherit(Field);
+		field.init(this);
+		this.effects.setDimensions(field.width, field.height);
 
 		this.score.start(this);
 		this.levels.start(this);
@@ -1333,6 +1335,11 @@ var Game = {
 		this.tick(elapsed, now);
 	},
 
+	doFrame: function (elapsed) {
+		this.play();
+		this.draw(elapsed);
+	},
+
 	play: function (elapsed, now) {
 		var currentPiece = this.currentPiece,
 		    gameElapsed = this.refreshInterval + 1;
@@ -1350,8 +1357,6 @@ var Game = {
 		}
 
 		this.checkWon();
-
-		this.draw(elapsed);
 		this.dropped = false;
 	},
 
