@@ -44,6 +44,7 @@ Modes.DemoAI = {
 };
 
 Modes.Versus = {
+	server: "ws://127.0.0.1:8820",
 	ws: null,
 
 	States: {
@@ -62,7 +63,7 @@ Modes.Versus = {
 				var data = msg.data;
 
 				if (data.tick) {
-					Modes.Versus.inputP2(data.input);
+					Modes.Versus.input(data.input);
 				}
 			}
 		}
@@ -78,7 +79,11 @@ Modes.Versus = {
 		ws.onmessage = state.onmessage;
 	},
 
-	inputP2: function (input) {
+	send: function (input) {
+		this.ws.send(input);
+	},
+
+	input: function (input) {
 		var p2 = this.players[1];
 
 		p2.input(input);
