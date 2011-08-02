@@ -93,6 +93,7 @@ var Piece = {
 
 		this.gridPosition = {x: x, y: y};
 		this.game = game;
+		this.offset = game.field.offset;
 	},
 
 	reset: function () {
@@ -104,7 +105,6 @@ var Piece = {
 	initSprites: function () {
 		this.sprites = [];
 		this.shapes.forEach(this.createSprite, this);
-		this.offset = Field.offset;
 		this.setShape();
 	},
 
@@ -367,6 +367,11 @@ var Field = {
 			}
 			this.grid[i] = row;
 		}
+
+		if (game.offset) {
+			this.offset = game.offset;
+		}
+
 		this.initCanvas();
 	},
 
@@ -821,7 +826,7 @@ var Game = {
 	levels: null,
 	queueSource: null,
 	inputSource: null,
-	inputSink: InputSink.LocalStorage,
+	inputSinks: null,
 
 	dropFX: null,
 	effects: null,
@@ -942,7 +947,10 @@ var Game = {
 
 		shape = Shapes[this.queueSource.next()];
 		if (shape) {
-			this.currentPiece = $.inherit(shape);
+			this.currentPiece = $.inherit(shape, {
+				gridPosition: $.inherit(shape.gridPosition),
+				sprite: $.inherit(shape.sprite)
+			});
 			this.currentPiece.init(this);
 			this.currentPiece.velocity = this.velocity;
 			gameOver = this.checkGameOver();
@@ -1209,6 +1217,15 @@ var Game = {
 		this.drawFramedShape(x + offset, y + offset, piece);
 	},
 
+	addInputSink: function (sink) {
+		this.inputSinks = this.sinks || [];
+		this.inputSinks.push(sink);
+	},
+
+	eachSink: function (callback, thisp) {
+		this.inputSinks.forEach(callback, thisp);
+	},
+
 	setInputSource: function (is) {
 		this.inputSource = is;
 		is.game = this;
@@ -1244,7 +1261,7 @@ var Game = {
 		this.gameStatus.start(this);
 		this.gameStatus.draw();
 
-		this.inputSink.start(this);
+		this.eachSink(function (s) { s.start(this); }, this);
 		this.inputSource.start(this);
 		this.queueSource.start(this);
 
@@ -1347,7 +1364,7 @@ var Game = {
 		if (currentPiece) {
 			this.inputSource.refresh(gameElapsed, now);
 
-			this.inputSink.refresh(gameElapsed, this.inputBuffer);
+			this.eachSink(function (s) { s.refresh(gameElapsed, this.inputBuffer); }, this);
 			this.consumeInput();
 
 			this.dropFX.end(currentPiece);

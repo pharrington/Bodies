@@ -13,6 +13,7 @@ var Modes = {
 		game.score = $.inherit(Score[score]);
 		game.setQueueSource($.inherit(QueueSource[queue]));
 
+		game.addInputSink(InputSink.LocalStorage);
 		game.setInputSource(InputSource.Player);
 		game.effects = FX.Fireworks;
 		game.dropFX = FX.Streak;
@@ -86,6 +87,7 @@ Modes.Versus = {
 				UI.showOnly("field");
 
 				vs.players.forEach(function (p) {
+					p.queueSource.seed = data.seed;
 					p.start();
 				});
 				$.register(p1);
@@ -103,6 +105,7 @@ Modes.Versus = {
 
 		if (!ws || ws.readyState === WS_STATE.CLOSED || ws.readyState === WS_STATE.CLOSING) {
 			this.ws = new WebSocket(this.server);
+			this.players[0].setWS(this.ws);
 		}
 	},
 
@@ -122,11 +125,17 @@ Modes.Versus = {
 
 	newGame: function () {
 		var p1 = Modes.Master.newGame(),
-		    p2 = Modes.Master.newGame();
+		    p2 = Modes.Master.newGame(),
+		    net = $.inherit(InputSink.Network);
+
+		p1.addInputSink(net);
+		p1.setWS = function (ws) {
+			net.ws = ws;
+		};
 
 		p2.setInputSource(InputSource.Base);
 		p2.doFrame = p2.draw;
-		//p2.field.offset = {x: 450, y: 0};
+		p2.offset = {x: 450, y: 0};
 
 		this.players = [p1, p2];
 		this.players.forEach(function (p) {
@@ -139,7 +148,7 @@ Modes.Versus = {
 
 InputSink.Network = $.inherit(InputSink.Base, {
 	ws: null,
-	buffer: [],
+	buffer: null,
 	bufferSize: 4,
 
 	refresh: function (elapsed, moves) {

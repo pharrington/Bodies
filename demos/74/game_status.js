@@ -47,13 +47,14 @@ var GameStatus = {
 
 GameStatus.Score = $.inherit(GameStatus.Base, {
 	draw: function () {
-		var game = this.game;
+		var game = this.game,
+		    fo = game.field.offset;
 
 		this.clear();
 		this.drawValue("Level", game.levels.level, this.width, this.fontSize);
 		this.drawValue("Score", game.score.score, this.width, this.fontSize + 67);
 
-		$.context.drawImage(this.canvas, this.offset.x, this.offset.y);
+		$.context.drawImage(this.canvas, this.offset.x + fo.x, this.offset.y + fo.y);
 	}
 });
 
@@ -72,7 +73,8 @@ GameStatus.Timer = $.inherit(GameStatus.Base, {
 
 	draw: function () {
 		var game = this.game,
-		    ctx = this.context;
+		    ctx = this.context,
+		    fo = game.field.offset;
 		
 		this.clear();
 
@@ -86,6 +88,6 @@ GameStatus.Timer = $.inherit(GameStatus.Base, {
 		this.setFont(28);
 		ctx.fillText(this.elapsedToString(game.score.elapsed), this.width, 70 + this.fontSize);
 
-		$.context.drawImage(this.canvas, this.offset.x, this.offset.y);
+		$.context.drawImage(this.canvas, this.offset.x + fo.x, this.offset.y + fo.y);
 	}
 });
