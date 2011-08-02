@@ -31,9 +31,10 @@ module Server
 
       return if !(match && match.first && match.first != ws)
 
+      seed = (Time.now.to_f * 1000).to_i
       match = match.first
       match_socket ws, match
-      [ws, match].each { |socket| socket.send({:connect => 1}.to_json) }
+      [ws, match].each { |socket| socket.send({:connect => 1, :seed => seed}.to_json) }
     end
 
     def match_socket ws, match
