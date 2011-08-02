@@ -800,6 +800,7 @@ var Game = {
 	groundedTimer: null,
 	spawnTimer: null,
 	velocity: null,
+	ghostPiece: false,
 
 	groundedTimeout: 30,
 	lineClearDelay: 10,
@@ -807,6 +808,7 @@ var Game = {
 	startVelocity: 0.012,
 	timers: null,
 
+	countdownDelay: ~~((1000 / 17) * 3),
 	keyHoldDelay: 180, // DAS (Delayed Auto Shift)
 	keyHoldInterval: 10, // ARR (Auto Repeat Rate)
 	refreshInterval: 16,
@@ -956,7 +958,7 @@ var Game = {
 	},
 
 	spawnNext: function () {
-		$.keyHold($.noop);
+		this.inputSource.disable();
 		this.tick = this.draw;
 
 		if (!this.nextPiece()) {
@@ -985,8 +987,8 @@ var Game = {
 	endSpawnNext: function () {
 		this.spawnTimer = null;
 		!this.dropped && this.drawPiecePreview();
-		$.register(this);
 		this.tick = this.doFrame;
+		this.inputSource.enable();
 	},
 
 
@@ -1115,7 +1117,7 @@ var Game = {
 		this.field.draw();
 		this.outline.draw();
 
-		if (piece && !this.spawnTimer) {
+		if (this.ghostPiece && piece && !this.spawnTimer) {
 			this.drawGhost(piece);
 			piece.draw();
 		}
@@ -1210,7 +1212,7 @@ var Game = {
 	setInputSource: function (is) {
 		this.inputSource = is;
 		is.game = this;
-		this.keyHold = is.keyHold;
+		this.keyHold = is.keyHold.bind(this);
 		this.keyPress = is.keyPress;
 	},
 
@@ -1229,7 +1231,7 @@ var Game = {
 
 		this.timers = [];
 		this.inputBuffer = 0;
-		this.tick = this.doFrame;
+		this.tick = this.countdown;
 
 		this.velocity = this.startVelocity;
 		field = this.field = $.inherit(Field);
@@ -1255,20 +1257,18 @@ var Game = {
 		this.outline.init(this.field);
 
 		this.effects.setOffset(this.field.offset);
+
+		this.setTimeout(this.endCountdown.bind(this), this.countdownDelay);
 	},
 
 	countdown: function (elapsed, now) {
-		var $this = this;
+		this.draw(elapsed);
+	},
 
-		$.keyHold($.noop);
-		this.duration = 3000;
-		this.field.draw();
-
-		$.timed(this, elapsed, function (progress) {
-		}, function () {
-			$this.drawPiecePreview();
-			$.register(this);
-		});
+	endCountdown: function () {
+		this.ghostPiece = true;
+		this.drawPiecePreview();
+		this.tick = this.doFrame;
 	},
 
 	softDrop: function () {
@@ -1356,12 +1356,12 @@ var Game = {
 			this.checkGrounded();
 		}
 
+		this.score.refresh(elapsed);
 		this.checkWon();
 		this.dropped = false;
 	},
 
 	draw: function (elapsed) {
-		this.score.refresh(elapsed);
 		this.dropFX.refresh(elapsed);
 		this.drawField(this.currentPiece);
 		this.gameStatus.draw();
@@ -1411,7 +1411,7 @@ function initBlock(piece) {
 }
 
 addEventListener("load", function () {
-	$.init(600, 700);
+	$.init(800, 700);
 	loadImages();
 	$.loaded(Game.loaded);
 	$.start();

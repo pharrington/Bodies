@@ -1,11 +1,18 @@
 var SecretMove = {
 	buffer: null,
 
-	codes: [["72,65,76,57,48,48,48", function () {
-		UI.events.master[1] = function () {
-			UI.startGame("DemoAI");
-		};
-	}]],
+	codes: [
+		["72,65,76,57,48,48,48", function () {
+			UI.events.master[1] = function () {
+				UI.startGame("DemoAI");
+			};
+		}],
+		["86,69,82,83,85,83", function () {
+			UI.events.master[1] = function () {
+				Modes.Versus.newGame();
+			};
+		}]
+	],
 
 	init: function () {
 		if (!this.keyDown) {
@@ -276,10 +283,12 @@ var UI = {
 	startGame: function (mode) {
 		var game = Modes[mode].newGame();
 
+		if (!game) { return; }
+
 		game.start();
 
 		UI.showOnly("field");
-		$.refresh(game.countdown.bind(game));
+		$.register(game);
 	},
 
 	bindEvents: function () {

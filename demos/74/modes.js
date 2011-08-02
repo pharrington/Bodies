@@ -1,3 +1,10 @@
+var WS_STATE = {
+	CONNECTING: 0,
+	OPEN: 1,
+	CLOSING: 2,
+	CLOSED: 3
+};
+
 var Modes = {
 	newGame: function (level, score, queue) {
 		var game = $.inherit(Game);
@@ -46,41 +53,64 @@ Modes.DemoAI = {
 Modes.Versus = {
 	server: "ws://127.0.0.1:8820",
 	ws: null,
+	players: null,
 
 	States: {
 		Search: {
 			onmessage: function (msg) {
-				var data = msg.data;
+				var data = JSON.parse(msg.data);
 
 				if (data.connect) {
 					Modes.Versus.transition("Match", data);
 				}
+			},
+
+			transition: function (data) {
+				Modes.Versus.createSocket();
 			}
 		},
 
 		Match: {
 			onmessage: function (msg) {
-				var data = msg.data;
+				var data = JSON.parse(msg.data);
 
 				if (data.tick) {
 					Modes.Versus.input(data.input);
 				}
+			},
+
+			transition: function (data) {
+				var vs = Modes.Versus,
+				    p1 = vs.players[0];
+
+				UI.showOnly("field");
+
+				vs.players.forEach(function (p) {
+					p.start();
+				});
+				$.register(p1);
+				$.refresh(function (elapsed, now) {
+					vs.players.forEach(function (p) {
+						p.refresh(elapsed, now);
+					});
+				}, p1.refreshInterval);
 			}
 		}
 	},
 
 	createSocket: function () {
-		var ws = new WebSocket(this.server);
+		var ws = this.ws;
+
+		if (!ws || ws.readyState === WS_STATE.CLOSED || ws.readyState === WS_STATE.CLOSING) {
+			this.ws = new WebSocket(this.server);
+		}
 	},
 
 	transition: function (state, data) {
-		var ws = this.ws;
+		state = Modes.Versus.States[state];
+		state.transition(data);
 
-		ws.onmessage = state.onmessage;
-	},
-
-	send: function (input) {
-		this.ws.send(input);
+		this.ws.onmessage = state.onmessage;
 	},
 
 	input: function (input) {
@@ -96,9 +126,23 @@ Modes.Versus = {
 
 		p2.setInputSource(InputSource.Base);
 		p2.doFrame = p2.draw;
+		//p2.field.offset = {x: 450, y: 0};
 
 		this.players = [p1, p2];
+		this.players.forEach(function (p) {
+			p.pause = $.noop;
+		});
 
 		this.transition("Search");
-	},
+	}
 };
+
+InputSink.Network = $.inherit(InputSink.Base, {
+	ws: null,
+	buffer: [],
+	bufferSize: 4,
+
+	refresh: function (elapsed, moves) {
+		this.ws.send(moves);
+	}
+});

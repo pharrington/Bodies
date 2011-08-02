@@ -25,6 +25,8 @@ var InputSource = {
 		keyHold: $.noop,
 		keyPress: $.noop,
 		refresh: $.noop,
+		enable: $.noop,
+		disable: $.noop,
 		startPiece: $.noop,
 		nextPiece: $.noop,
 		endPiece: $.noop,
@@ -50,6 +52,16 @@ InputSource.Player = $.inherit(InputSource.Base, {
 		}
 
 		this.inputSource.acceptMoves(key, ["RotateCW", "RotateCCW", "Hold", "HardDrop"]);
+	},
+
+	enable: function () {
+		var game = this.game;
+
+		$.keyHold(game.keyHold, game.keyHoldDelay, game.keyHoldInterval);
+	},
+
+	disable: function () {
+		$.keyHold($.noop);
 	},
 
 	refresh: function (elapsed) {

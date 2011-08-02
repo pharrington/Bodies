@@ -54,11 +54,3 @@ InputSink.LocalStorage = $.inherit(InputSink.Base, {
 			}, "");
 	}
 });
-
-InputSink.Network = $.inherit(InputSink.Base, {
-	ws: null,
-
-	refresh: function (elapsed, moves) {
-		this.ws.send(moves);
-	}
-});
