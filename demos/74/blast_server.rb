@@ -45,7 +45,17 @@ module Server
     def message ws, msg
       match = @sockets[ws]
 
-      match && match.send({:tick => 1, :input => msg}.to_json)
+      if !match
+        return
+      end
+
+      response = if msg == 255.chr
+        {:endGame => 1}
+      else
+        {:tick => 1, :input => msg}
+      end
+
+      match.send response.to_json
     end
   end
 end

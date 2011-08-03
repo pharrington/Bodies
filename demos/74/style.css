@@ -67,7 +67,7 @@ ul {
 	left: 325px;
 }
 
-#field, #controls_menu, #high_scores_menu {
+#field, #controls_menu, #high_scores_menu, #multiplayer {
 	display: none;
 }
 

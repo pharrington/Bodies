@@ -259,7 +259,7 @@ var UI = {
 	},
 
 	showOnly: function (id) {
-		var elements = ["main_menu", "controls_menu", "high_scores_menu", "field"];
+		var elements = ["main_menu", "controls_menu", "high_scores_menu", "multiplayer", "field"];
 
 		elements.forEach(function (e) {
 			e = document.getElementById(e);
@@ -277,6 +277,7 @@ var UI = {
 			UI.startGame("Master");
 		};
 
+		Modes.Versus.closeSocket();
 		SecretMove.init();
 	},
 

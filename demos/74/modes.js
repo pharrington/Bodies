@@ -15,7 +15,7 @@ var Modes = {
 
 		game.addInputSink(InputSink.LocalStorage);
 		game.setInputSource(InputSource.Player);
-		game.effects = FX.Fireworks;
+		game.effects = $.inherit(FX.Fireworks);
 		game.dropFX = FX.Streak;
 		game.gameStatus = $.inherit(GameStatus.Score);
 
@@ -68,15 +68,19 @@ Modes.Versus = {
 
 			transition: function (data) {
 				Modes.Versus.createSocket();
+				UI.showOnly("multiplayer");
 			}
 		},
 
 		Match: {
 			onmessage: function (msg) {
-				var data = JSON.parse(msg.data);
+				var data = JSON.parse(msg.data),
+				    vs = Modes.Versus;
 
 				if (data.tick) {
-					Modes.Versus.input(data.input);
+					vs.input(data.input);
+				} else if (data.endGame) {
+					UI.showOnly("multiplayer");
 				}
 			},
 
@@ -109,6 +113,10 @@ Modes.Versus = {
 		}
 	},
 
+	closeSocket: function () {
+		this.ws && this.ws.close();
+	},
+
 	transition: function (state, data) {
 		state = Modes.Versus.States[state];
 		state.transition(data);
@@ -126,13 +134,15 @@ Modes.Versus = {
 	newGame: function () {
 		var p1 = Modes.Master.newGame(),
 		    p2 = Modes.Master.newGame(),
-		    net = $.inherit(InputSink.Network);
+		    net = $.inherit(InputSink.Network),
+		    vs = this;
 
 		p1.addInputSink(net);
 		p1.setWS = function (ws) {
 			net.ws = ws;
 		};
 
+		p2.ghostPiece = false;
 		p2.setInputSource(InputSource.Base);
 		p2.doFrame = p2.draw;
 		p2.offset = {x: 450, y: 0};
@@ -140,9 +150,20 @@ Modes.Versus = {
 		this.players = [p1, p2];
 		this.players.forEach(function (p) {
 			p.pause = $.noop;
+			p.winCallback = p.loseCallback = function () {
+				vs.ws.send(255);
+				vs.endCallback.call(this);
+			};
 		});
 
 		this.transition("Search");
+	},
+
+	endCallback: function () {
+		this.field.clear();
+		this.field.draw();
+		$.refresh($.noop, 1000);
+		UI.showOnly("multiplayer");
 	}
 };
 

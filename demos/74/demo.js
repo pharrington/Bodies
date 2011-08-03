@@ -443,9 +443,7 @@ var Field = {
 
 		game.setLineClearTimer();
 
-		effects.field = this;
-		effects.rows = rows;
-		effects.init();
+		effects.play(rows);
 	},
 
 	eraseRows: function (rows) {
@@ -805,7 +803,7 @@ var Game = {
 	groundedTimer: null,
 	spawnTimer: null,
 	velocity: null,
-	ghostPiece: false,
+	ghostPiece: true,
 
 	groundedTimeout: 30,
 	lineClearDelay: 10,
@@ -901,22 +899,26 @@ var Game = {
 		return won;
 	},
 
+	winCallback: function () {
+		this.field.clear();
+		this.field.draw();
+		$.refresh($.noop, 1000);
+		UI.mainMenu();
+	},
+
+	loseCallback: function () {
+		this.field.clear();
+		this.field.draw();
+		$.refresh($.noop, 1000);
+		UI.mainMenu();
+	},
+
 	gameOver: function () {
-		this.endGame(function () {
-			this.field.clear();
-			this.field.draw();
-			$.refresh($.noop, 1000);
-			UI.mainMenu();
-		});
+		this.endGame(this.loseCallback);
 	},
 
 	won: function () {
-		this.endGame(function () {
-			this.field.clear();
-			this.field.draw();
-			$.refresh($.noop, 1000);
-			UI.mainMenu();
-		});
+		this.endGame(this.winCallback);
 	},
 
 	endGame: function (callback, delay) {
@@ -1125,8 +1127,8 @@ var Game = {
 		this.field.draw();
 		this.outline.draw();
 
-		if (this.ghostPiece && piece && !this.spawnTimer) {
-			this.drawGhost(piece);
+		if (piece && !this.spawnTimer) {
+			this.ghostPiece && this.drawGhost(piece);
 			piece.draw();
 		}
 	},
@@ -1238,22 +1240,18 @@ var Game = {
 	},
 
 	loaded: function () {
-		FX.Fireworks.particleSystem = new ParticleSystem("blur");
 		Game.shapes.forEach(initBlock);
 	},
 
 	start: function () {
-		var game = this,
-		    field;
-
 		this.timers = [];
 		this.inputBuffer = 0;
 		this.tick = this.countdown;
 
 		this.velocity = this.startVelocity;
-		field = this.field = $.inherit(Field);
-		field.init(this);
-		this.effects.setDimensions(field.width, field.height);
+		this.field = $.inherit(Field);
+		this.field.init(this);
+		this.effects.init(this);
 
 		this.score.start(this);
 		this.levels.start(this);
@@ -1275,15 +1273,16 @@ var Game = {
 
 		this.effects.setOffset(this.field.offset);
 
-		this.setTimeout(this.endCountdown.bind(this), this.countdownDelay);
+		this.setTimeout(this.endCountdown.partial(this.ghostPiece).bind(this), this.countdownDelay);
 	},
 
 	countdown: function (elapsed, now) {
+		this.ghostPiece = false;
 		this.draw(elapsed);
 	},
 
-	endCountdown: function () {
-		this.ghostPiece = true;
+	endCountdown: function (ghostPiece) {
+		this.ghostPiece = ghostPiece;
 		this.drawPiecePreview();
 		this.tick = this.doFrame;
 	},

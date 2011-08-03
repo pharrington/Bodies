@@ -17,6 +17,12 @@ FX.Fireworks = {
 		green: ["#d0fcbc", "#5bf418", "#08cb03", "#63f453", "#94dd0b", "#fafa0c", "#ffffff", "#ffffff"]
 	},
 
+	init: function (game) {
+		this.particleSystem = new ParticleSystem("blur");
+		this.field = game.field;
+		this.setDimensions(this.field.width, this.field.height);
+	},
+
 	addParticle: function (x, y, color) {
 		var speed = Math.random() * this.speed,
 		    vel,
@@ -44,7 +50,7 @@ FX.Fireworks = {
 		}
 	},
 
-	init: function () {
+	play: function (rows) {
 		if (!this.duration) { return; }
 
 		var x, y,
@@ -54,8 +60,8 @@ FX.Fireworks = {
 		    row,
 		    i, j;
 
-		for (i = 0; i < this.rows.length; i++) {
-			row = this.rows[i];
+		for (i = 0; i < rows.length; i++) {
+			row = rows[i];
 
 			y = row.index * blockSize + spacing
 			for (x = 0; x < field.columns; x++) {
@@ -78,7 +84,7 @@ FX.Fireworks = {
 
 	refresh: function (dt) {
 		this.particleSystem.update(dt, $.context);
-	},
+	}
 };
 
 FX.Streak = {
