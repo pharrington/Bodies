@@ -2,7 +2,7 @@ var GameStatus = {
 	Base: {
 		game: null,
 		fontSize: 36,
-		fontFamily: "Orbitron",
+		fontFamily: "ProFontWindows",
 		width: 180,
 		height: 175,
 		offset: { x: 350, y: 420 },
