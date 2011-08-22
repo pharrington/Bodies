@@ -88,14 +88,14 @@ LevelSystem.Master = $.inherit(LevelSystem.Base, {
 });
 
 LevelSystem.Static = $.inherit(LevelSystem.Base, {
-	properties: LevelSystem.Base.properties.concat("keyHoldDelay"),
+	properties: LevelSystem.Base.properties.concat(["keyHoldDelay", "keyHoldInterval"]),
 
 	spawnDelay: {
 		1: 0
 	},
 
 	groundedTimeout: {
-		1: 20
+		1: 60
 	},
 
 	lineClearDelay: {
@@ -107,6 +107,10 @@ LevelSystem.Static = $.inherit(LevelSystem.Base, {
 	},
 
 	keyHoldDelay: {
-		1: 120
+		1: 250
+	},
+
+	keyHoldInterval: {
+		1: 1
 	}
 });
