@@ -1279,9 +1279,11 @@ var Game = {
 	countdown: function (elapsed, now) {
 		this.ghostPiece = false;
 		this.draw(elapsed);
+		Countdown.tick(3);
 	},
 
 	endCountdown: function (ghostPiece) {
+		Countdown.end();
 		this.ghostPiece = ghostPiece;
 		this.drawPiecePreview();
 		this.tick = this.doFrame;
@@ -1352,7 +1354,7 @@ var Game = {
 	},
 
 	doFrame: function (elapsed) {
-		this.play();
+		this.play(elapsed);
 		this.draw(elapsed);
 	},
 
