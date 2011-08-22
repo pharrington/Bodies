@@ -379,7 +379,7 @@ function runKeyHoldCallbacks(now) {
 
 		if (!key.interval) {
 			keyHold.callback(i);
-			key.interval = keyHold.delay;
+			key.interval = keyHold.delay || keyHold.interval;
 		} else if (now >= key.last + key.interval) {
 			keyHold.callback(i);
 			key.interval = keyHold.interval;
