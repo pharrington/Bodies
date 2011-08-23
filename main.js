@@ -330,8 +330,8 @@ Bodies = $ = {
 
 		keyHold = $.callbacks.keyHold = $.callbacks.keyHold || {};
 		keyHold.callback = callback;
-		keyHold.delay = delay;
-		keyHold.interval = interval;
+		if (delay !== undefined) { keyHold.delay = delay; }
+		if (interval !== undefined) { keyHold.interval = interval; }
 	},
 
 	register: function (o) {
