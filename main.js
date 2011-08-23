@@ -355,6 +355,10 @@ Bodies = $ = {
 				$[e].apply($, [o[e].bind(o)].concat(args));
 			}
 		}
+
+		if (typeof o.register === "function") {
+			o.register();
+		}
 	},
 
 	noop: function () {}
