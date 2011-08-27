@@ -149,7 +149,6 @@ var ConfigMenu = {
 	createControl: function (label, tuple, container) {
 		var property = tuple[0],
 		    li, labelElement, valueElement, valueText,
-		    insertBefore = container.querySelector(".back_to_main"),
 		    $this = this;
 
 		/* do nothing if we've already created the appropriate control */
@@ -169,11 +168,11 @@ var ConfigMenu = {
 
 		li.appendChild(labelElement);
 		li.appendChild(valueElement);
-		container.insertBefore(li, insertBefore);
+		container.appendChild(li);
 
 		li.addEventListener("click", function () {
 			if ($this.activeControl) {
-				$this.updateValue($this.activeControl);
+				$this.updateActive();
 				return;
 			}
 
@@ -181,8 +180,9 @@ var ConfigMenu = {
 
 			$this.activeControl = {
 				valueText: valueText,
-				value: tuple[1],
-				property: property
+				value: Game.Config[property],
+				property: property,
+				node: li
 			};
 
 			$this.bindEvents();
@@ -194,6 +194,25 @@ var ConfigMenu = {
 
 		c.value = e.keyCode;
 		this.updateValue(c);
+		this.trigger(c.node.nextSibling);
+	},
+
+	trigger: function (node) {
+		if (!node) { return; }
+
+		var e;
+
+		if (document.createEvent) {
+			e = document.createEvent("MouseEvents");
+			e.initEvent("click", true, true);
+			node.dispatchEvent(e);
+		} else {
+			node.click();
+		}
+	},
+
+	updateActive: function () {
+		this.activeControl && this.updateValue(this.activeControl);
 	},
 
 	updateValue: function (control) {
@@ -244,6 +263,18 @@ var UI = {
 			HighScoresMenu.init();
 			UI.showOnly("high_scores_menu");
 		}],
+
+		resume: ["click", function () {
+			PauseMenu.unpause();
+		}],
+
+		restart: ["click", function () {
+			PauseMenu.restart();
+		}],
+
+		quit: ["click", function () {
+			PauseMenu.quit();
+		}]
 	},
 
 	createNode: function (type, text) {
@@ -286,10 +317,10 @@ var UI = {
 
 		if (!game) { return; }
 
-		game.start();
 
 		UI.showOnly("field");
 		$.register(game);
+		game.start();
 	},
 
 	bindEvents: function () {
@@ -309,6 +340,7 @@ var UI = {
 
 		document.documentElement.addEventListener("click", function (e) {
 			if (e.target.className.match(/back_to_main/)) {
+				ConfigMenu.updateActive();
 				UI.mainMenu();
 			}
 		}, true);

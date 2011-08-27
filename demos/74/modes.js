@@ -90,16 +90,17 @@ Modes.Versus = {
 
 				UI.showOnly("field");
 
-				vs.players.forEach(function (p) {
-					p.queueSource.seed = data.seed;
-					p.start();
-				});
 				$.register(p1);
 				$.refresh(function (elapsed, now) {
 					vs.players.forEach(function (p) {
 						p.refresh(elapsed, now);
 					});
 				}, p1.refreshInterval);
+
+				vs.players.forEach(function (p) {
+					p.queueSource.seed = data.seed;
+					p.start();
+				});
 			}
 		}
 	},

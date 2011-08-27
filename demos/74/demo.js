@@ -926,6 +926,7 @@ var Game = {
 			delay = 2000;
 		}
 
+		$.keyPress($.noop);
 		this.tick = this.draw;
 		this.clearTimers();
 		this.saveReplay();
@@ -1273,6 +1274,7 @@ var Game = {
 
 		this.effects.setOffset(this.field.offset);
 
+		$.keyPress($.noop);
 		this.setTimeout(this.endCountdown.partial(this.ghostPiece).bind(this), this.countdownDelay);
 	},
 
@@ -1284,6 +1286,7 @@ var Game = {
 
 	endCountdown: function (ghostPiece) {
 		Countdown.end();
+		$.keyPress(this.keyPress.bind(this));
 		this.ghostPiece = ghostPiece;
 		this.drawPiecePreview();
 		this.tick = this.doFrame;
@@ -1403,11 +1406,54 @@ var Game = {
 var PauseMenu = {
 	game: null,
 
-	refresh: $.noop,
+	_node: null,
+	node: function () {
+		var node = this._node;
+
+		if (node) { return node; }
+
+		node = document.getElementById("pause");
+		this._node = node;
+
+		return node;
+	},
+
+	register: function () {
+		this.node().style.display = "block";
+	},
+
+	hide: function () {
+		this.node().style.display = "none";
+	},
+
+	unpause: function () {
+		this.hide();
+		$.register(this.game);
+	},
+
+	restart: function () {
+		var game = this.game;
+
+		this.unpause();
+		game.endGame(function () {
+			this.field.clear();
+			this.field.draw();
+		}, 0);
+		game.start();
+	},
+
+	quit: function () {
+		var game = this.game;
+
+		this.unpause();
+		game.endGame(game.loseCallback, 0);
+	},
+
 	keyHold: $.noop,
+	refresh: $.noop,
 	keyPress: function (key) {
 		if (key === Game.Config.Pause) {
-			$.register(this.game);
+			this.unpause();
 		}
 	}
 };

@@ -107,7 +107,7 @@ th, td {
 .countdown {
 	font-size: 400px;
 	position: absolute;
-	top: 0;
+	top: 50px;
 	left: 80px;
 	color: #fff;
 	font-family: ProFontWindows;
@@ -122,4 +122,37 @@ th, td {
 	-moz-transform: scale(.05);
 	-o-transform: scale(.05);
 	opacity: .1;
+}
+
+#pause {
+	position: absolute;
+	top: 0;
+	left: 0;
+	width:  800px;
+	height: 700px;
+	background: #222;
+	color: #eee;
+	display: none;
+}
+
+#pause .container {
+	width: 400px;
+	margin: 100px auto 0 auto;
+	border: 3px solid white;
+	padding: 20px;
+	border-radius: 10px;
+	box-shadow: 0 0 10px 5px #f0f;
+}
+
+#pause .menu li:hover {
+	text-shadow: 0 0 15px #f00;
+}
+
+#pause h1 {
+	margin-bottom: 30px;
+	font-size: 64px;
+}
+
+#pause ul {
+	font-size: 36px;
 }

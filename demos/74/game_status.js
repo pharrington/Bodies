@@ -80,13 +80,13 @@ GameStatus.Timer = $.inherit(GameStatus.Base, {
 
 		this.setFont(28);
 		ctx.fillStyle = "#000";
-		ctx.fillText("Lines Left", this.width, 28);
+		ctx.fillText("Lines Left", this.width, this.fontSize);
 
-		this.setFont();
+		this.setFont(40);
 		ctx.fillText(game.score.linesRemaining, this.width, 70);
 
-		this.setFont(28);
-		ctx.fillText(this.elapsedToString(game.score.elapsed), this.width, 70 + this.fontSize);
+		this.setFont(44);
+		ctx.fillText(this.elapsedToString(game.score.elapsed), this.width, 100 + this.fontSize);
 
 		$.context.drawImage(this.canvas, this.offset.x + fo.x, this.offset.y + fo.y);
 	}
