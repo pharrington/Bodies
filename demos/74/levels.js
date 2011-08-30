@@ -1,3 +1,5 @@
+(function () {
+
 var LevelSystem = {
 	Base: {
 		game: null,
@@ -101,6 +103,9 @@ LevelSystem.Static = $.inherit(LevelSystem.Base, {
 	},
 
 	velocity: {
-		1: 10 / 250
+		1: 3 / 250
 	}
 });
+
+window.LevelSystem = LevelSystem;
+})();
