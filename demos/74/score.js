@@ -86,26 +86,26 @@ Score.Master = $.inherit(Score.Base, {
 });
 
 Score.TimeAttack = $.inherit(Score.Base, {
-	linesRemaining: 0,
+	linesLeft: 0,
 	elapsed: 0,
 
 	start: function (game) {
 		Score.Base.start.call(this, game);
-		this.linesRemaining = 40;
+		this.linesLeft = 40;
 		this.elapsed = 0;
 	},
 
 	clearLines: function (lines) {
-		this.linesRemaining = Math.max(this.linesRemaining - lines, 0);
+		this.linesLeft = Math.max(this.linesLeft - lines, 0);
 	},
 
 	refresh: function (elapsed) {
-		if (this.linesRemaining !== 0) {
+		if (this.linesLeft !== 0) {
 			this.elapsed += elapsed;
 		}
 	},
 
 	won: function () {
-		return this.linesRemaining === 0;
+		return this.linesLeft === 0;
 	}
 });
