@@ -79,6 +79,7 @@ var Piece = {
 	shape: null,
 	blockSize: 33,
 	imageSize: 31,
+	scale: 1,
 	spacing: 2,
 	spacingColor: "#444",
 	shapeSize: null,
@@ -134,9 +135,10 @@ var Piece = {
 
 	createSprite: function (shape) {
 		var len = shape.length,
+		    scale = this.scale,
 		    spacing = Piece.spacing,
 		    fillSize = this.imageSize + spacing * 2,
-		    width = this.imageSize * len + spacing * (len + 1),
+		    width = (this.imageSize * len + spacing * (len + 1)) * scale,
 		    height = width,
 		    sprite,
 		    context,
@@ -148,6 +150,7 @@ var Piece = {
 		sprite = new $.Sprite(width, height);
 		context = sprite.oContext;
 		context.fillStyle = this.spacingColor;
+		context.scale(scale, scale);
 
 		for (i = 0; i < len; i++) {
 			y = i * this.blockSize;
@@ -165,21 +168,21 @@ var Piece = {
 	},
 
 	moveDown: function () {
-		this.gridPosition.y++;
+		this.gridPosition.y += this.scale;
 	},
 
 	moveUp: function () {
-		this.gridPosition.y--;
+		this.gridPosition.y -= this.scale;
 		this.update(0);
 	},
 
 	move: function (direction) {
 		switch (direction) {
 		case Piece.Direction.Left:
-			this.gridPosition.x--;
+			this.gridPosition.x -= this.scale;
 			break;
 		case Piece.Direction.Right:
-			this.gridPosition.x++;
+			this.gridPosition.x += this.scale;
 			break;
 		}
 	},
@@ -203,7 +206,7 @@ var Piece = {
 			this.delta -= blocks;
 
 			while (!field.collision(this) && blocks--) {
-				g.y++;
+				g.y += this.scale;
 			}
 
 			if (field.collision(this)) {
@@ -583,13 +586,6 @@ var Field = {
 		piece.moveUp();
 	}
 };
-
-function setPixel(data, idx, color) {
-	data[idx] = color.r;
-	data[idx + 1] = color.g;
-	data[idx + 2] = color.b;
-	data[idx + 3] = 255;
-}
 
 var Outline = {
 	outlineColor: "#eee",
@@ -1040,6 +1036,8 @@ var Game = {
 	},
 
 	clearTimers: function () {
+		this.spawnTimer = null;
+		this.groundedTimer = null;
 		this.timers = [];
 	},
 
@@ -1241,7 +1239,9 @@ var Game = {
 	},
 
 	loaded: function () {
-		Game.shapes.forEach(initBlock);
+		Game.shapes.map(function (s) {
+			return Shapes[s];
+		}).forEach(initBlock);
 	},
 
 	start: function () {
@@ -1460,13 +1460,11 @@ var PauseMenu = {
 
 function loadImages() {
 	["orange", "red", "yellow", "green", "cyan", "blue", "purple"].forEach(function (color) {
-		$.loadImage(color, color + ".gif");
+		$.loadImage(color, "blocks/bubbly/" + color + ".png");
 	});
 }
 
 function initBlock(piece) {
-	var piece = Shapes[piece];
-
 	piece.block = document.createElement("canvas");
 	piece.block.width = piece.block.height = Piece.blockSize;
 	piece.context = piece.block.getContext("2d");
