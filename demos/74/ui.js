@@ -11,6 +11,11 @@ var SecretMove = {
 			UI.events.master[1] = function () {
 				Modes.Versus.newGame();
 			};
+		}],
+		["83,72,73,78,66,76,79,67,75,72,69,65,68", function () {
+			UI.events.master[1] = function () {
+				UI.startGame("Death");
+			};
 		}]
 	],
 
@@ -36,55 +41,6 @@ var SecretMove = {
 				this.buffer = [];
 			}
 		}, this);
-	}
-};
-
-var HighScoresMenu = {
-	init: function () {
-		var container = document.getElementById("high_scores_menu").querySelector("table"),
-		    list = HighScores.byScore().map(this.scoreToNode.partial(container)).forEach(function (node) {
-			if (!node) { return; }
-			container.appendChild(node);
-		});
-	},
-
-	scoreToNode: function (container, score) {
-		var date = score.date,
-		    dateStr = date.getDate() + "-" + date.getMonth() + "-" + date.getFullYear(),
-		    node = document.createElement("tr"),
-		    dateNode = UI.createNode("td", dateStr),
-		    scoreNode = UI.createNode("td", score.score),
-		    replayNode = UI.createNode("td", "Play Replay");
-
-		if (container.querySelector("._" + dateStr)) { return null };
-		replayNode.className = "replay";
-
-		replayNode.addEventListener("click", function () {
-			var game = Modes.Master.newGame(),
-			    replayStr,
-			    idx,
-			    r = InputSource.Replay;
-
-			idx = localStorage[score.key].indexOf("_") + 1;
-			replayStr = localStorage[score.key].substr(idx);
-			game.setInputSource(r);
-			if (!r.loadReplay(atob(replayStr))) {
-				replayNode.firstChild.nodeValue = "Incompatible Replay";
-				replayNode.className = "no_replay";
-				return;
-			}
-
-			game.start();
-			UI.showOnly("field");
-			$.refresh(game.countdown.bind(game));
-		}, false);
-
-		node.className = "_" + dateStr;
-		node.appendChild(dateNode);
-		node.appendChild(scoreNode);
-		node.appendChild(replayNode);
-
-		return node;
 	}
 };
 
@@ -260,7 +216,7 @@ var UI = {
 		}],
 
 		high_scores: ["click", function () {
-			HighScoresMenu.init();
+			HighScores.Menu.init();
 			UI.showOnly("high_scores_menu");
 		}],
 
@@ -366,7 +322,7 @@ function letterize(node) {
 }
 
 document.addEventListener("DOMContentLoaded", function () {
-	var selectors = ["#main_menu h1", "#controls_menu h1", "#high_scores_menu caption"],
+	var selectors = ["#main_menu h1", "#controls_menu h1", "#high_scores_menu h1"],
 	    colors = ["#db0b1e", "#e2950e", "#e2da0e", "#0bdb15", "#0b48db", "#590ee2"],
 	    i, len;
 

@@ -107,5 +107,23 @@ LevelSystem.Static = $.inherit(LevelSystem.Base, {
 	}
 });
 
+LevelSystem.Death = $.inherit(LevelSystem.Base, {
+	groundedTimeout: {
+		1: 35
+	},
+
+	spawnDelay: {
+		1: 6
+	},
+
+	lineClearDelay: {
+		1: 10
+	},
+
+	velocity: {
+		1: 20
+	}
+});
+
 window.LevelSystem = LevelSystem;
 })();

@@ -51,6 +51,16 @@ Modes.DemoAI = {
 	}
 };
 
+Modes.Death = {
+	newGame: function () {
+		var game = Modes.newGame("Death", "TimeAttack", "TGM");
+
+		game.gameStatus = GameStatus.Timer;
+
+		return game;
+	}
+};
+
 Modes.Versus = {
 	server: "ws://127.0.0.1:8820",
 	ws: null,

@@ -1,3 +1,9 @@
+(function () {
+
+function argsArray(args) {
+	return Array.prototype.slice.call(args);
+}
+
 var GameStatus = {
 	Base: {
 		game: null,
@@ -59,6 +65,15 @@ GameStatus.Score = $.inherit(GameStatus.Base, {
 });
 
 GameStatus.Timer = $.inherit(GameStatus.Base, {
+	linesOffset: {x: 0, y: 90},
+	elapsedOffset: {x: 0, y: 100},
+
+	start: function () {
+		GameStatus.Base.start.apply(this, argsArray(arguments));
+		this.context.textAlign = "left";
+		//this.offset.x -= 5;
+	},
+
 	elapsedToString: function (e) {
 		var ms, s, m;
 
@@ -80,14 +95,25 @@ GameStatus.Timer = $.inherit(GameStatus.Base, {
 
 		this.setFont(28);
 		ctx.fillStyle = "#000";
-		ctx.fillText("Lines Left", this.width, this.fontSize);
+		ctx.fillText("Lines Left", 0, this.fontSize);
 
-		this.setFont(40);
-		ctx.fillText(game.score.linesRemaining, this.width, 70);
+		this.setFont(80);
+		ctx.fillStyle = "rgba(0, 0, 0, 0.5)";
+		ctx.fillText(game.score.linesLeft, this.linesOffset.x+3, this.linesOffset.y+3);
+
+		ctx.fillStyle = "#000";
+		ctx.fillText(game.score.linesLeft, this.linesOffset.x, this.linesOffset.y);
+
+		this.setFont(28);
+		ctx.fillStyle = "#000";
+		ctx.fillText("Time", 0, this.elapsedOffset.y + this.fontSize);
 
 		this.setFont(44);
-		ctx.fillText(this.elapsedToString(game.score.elapsed), this.width, 100 + this.fontSize);
+		ctx.fillText(this.elapsedToString(game.score.elapsed), 0, this.elapsedOffset.y + this.fontSize * 2);
 
 		$.context.drawImage(this.canvas, this.offset.x + fo.x, this.offset.y + fo.y);
 	}
 });
+
+window.GameStatus = GameStatus;
+})();

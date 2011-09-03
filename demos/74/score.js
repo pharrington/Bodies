@@ -7,6 +7,7 @@ var Score = {
 		softDropValue: 0,
 		hardDropValue: 0,
 		currentPiece: null,
+		callbacks: null,
 
 		hardDrop: $.noop,
 		softDrop: $.noop,
@@ -20,6 +21,7 @@ var Score = {
 			this.game = game;
 			this.hardDropY = this.softDropY = 0;
 			this.currentPiece = null;
+			this.callbacks = [];
 		}
 	}
 };
@@ -100,7 +102,7 @@ Score.TimeAttack = $.inherit(Score.Base, {
 	},
 
 	refresh: function (elapsed) {
-		if (this.linesLeft !== 0) {
+		if (!this.won()) {
 			this.elapsed += elapsed;
 		}
 	},

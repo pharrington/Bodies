@@ -76,7 +76,7 @@ ul {
 }
 
 table {
-	width: 100%;
+	border-spacing: 80px 0;
 }
 
 th {
@@ -85,11 +85,11 @@ th {
 
 td {
 	font-size: 24px;
-	max-width: 30px;
+	min-width: 150px;
 }
 
 th, td {
-	text-align: left;
+	text-align: right;
 }
 
 .replay {
@@ -155,4 +155,18 @@ th, td {
 
 #pause ul {
 	font-size: 36px;
+}
+
+#high_scores_menu table {
+	font-family: ProFontWindows;
+}
+
+#scores_pagination {
+	padding-top: 20px;
+	text-align: center;
+}
+
+#scores_pagination .nav {
+	margin-right: 10px;
+	cursor: pointer;
 }
