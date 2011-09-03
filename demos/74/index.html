@@ -18,6 +18,7 @@
 <script  type="text/javascript" src="high_scores.js"></script>
 <script  type="text/javascript" src="modes.js"></script>
 <script  type="text/javascript" src="ui.js"></script>
+<script  type="text/javascript" src="config.js"></script>
 <script  type="text/javascript" src="ai.js"></script>
 <script  type="text/javascript" src="countdown.js"></script>
 <script  type="text/javascript" src="demo.js"></script>
@@ -42,13 +43,21 @@
 </div>
 
 <div id=high_scores_menu class=menu>
+	<h1>High Scores</h1>
 	<table>
-		<caption>High Scores</caption>
-		<tr>
-			<th>Date</th>
-			<th>Score</th>
-			<th>Replay</th>
-		</tr>
+		<thead>
+			<tr>
+				<th>Date</th>
+				<th>Score</th>
+			</tr>
+		</thead>
+		<tbody>
+		</tbody>
+		<tfoot>
+			<tr>
+				<td id=scores_pagination colspan=3></td>
+			</tr>
+		</tfoot>
 	</table>
 	<a class="back_to_main">Back to Main Menu</a>
 </div>
