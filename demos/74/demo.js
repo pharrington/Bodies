@@ -828,13 +828,13 @@ var Game = {
 	gameStatus: null,
 
 	Config: {
-		Left: 65,
-		Right: 68,
-		SoftDrop: 83,
-		HardDrop: 87,
-		Hold: 32,
-		RotateCW: 74,
-		RotateCCW: 72,
+		Left: 37,
+		Right: 39,
+		SoftDrop: 40,
+		HardDrop: 32,
+		Hold: 67,
+		RotateCW: 88,
+		RotateCCW: 90,
 		Pause: 27
 	},
 
