@@ -61,171 +61,6 @@ function pad00(str) {
 	return str;
 }
 
-function cycle(array, index) {
-	var len = array.length;
-
-	index %= len;
-	if (index < 0) { index += len }
-
-	return array[index];
-}
-
-var Piece = {
-	Direction: { Left: -1, Right: 1},
-	Rotation: { CCW: -2, CW: 2},
-	shapeIndex: 0,
-	spriteIndex: 0,
-	sprites: null,
-	shape: null,
-	blockSize: 33,
-	imageSize: 31,
-	scale: 1,
-	spacing: 2,
-	spacingColor: "#444",
-	shapeSize: null,
-	offset: null,
-	gridPosition: null,
-	game: null,
-	delta: 0,
-
-	init: function (game) {
-		var x = this.shapes[0].length === 2 ? 4 : 3,
-		    y = this.shapes[0].length === 3 ? -1 : 0;
-
-		this.gridPosition = {x: x, y: y};
-		this.game = game;
-		this.offset = game.field.offset;
-	},
-
-	reset: function () {
-		this.init(this.game);
-		this.shapeIndex = 0;
-		this.setShape();
-	},
-
-	initSprites: function () {
-		this.sprites = [];
-		this.shapes.forEach(this.createSprite, this);
-		this.setShape();
-	},
-
-	rotate: function (rotation) {
-		switch (rotation) {
-		case Piece.Rotation.CCW:
-			this.shapeIndex--;
-			break;
-		case Piece.Rotation.CW:
-			this.shapeIndex++;
-			break;
-		}
-
-		this.shapeIndex %= this.shapes.length;
-		this.setShape();
-	},
-
-	rotateCW: function () { this.rotate(Piece.Rotation.CW); },
-	rotateCCW: function () { this.rotate(Piece.Rotation.CCW); },
-
-	setShape: function () {
-		var shapeIndex = this.shapeIndex;
-
-		this.shape = cycle(this.shapes, shapeIndex);
-		this.sprite = cycle(this.sprites, shapeIndex);
-	},
-
-	createSprite: function (shape) {
-		var len = shape.length,
-		    scale = this.scale,
-		    spacing = Piece.spacing,
-		    fillSize = this.imageSize + spacing * 2,
-		    width = (this.imageSize * len + spacing * (len + 1)) * scale,
-		    height = width,
-		    sprite,
-		    context,
-		    y, x,
-		    i, j;
-
-		this.shapeSize = len;
-
-		sprite = new $.Sprite(width, height);
-		context = sprite.oContext;
-		context.fillStyle = this.spacingColor;
-		context.scale(scale, scale);
-
-		for (i = 0; i < len; i++) {
-			y = i * this.blockSize;
-			for (j = 0; j < len; j++) {
-				x = j * this.blockSize;
-				if (shape[i][j]) {
-					context.fillRect(x, y, fillSize, fillSize);
-					context.drawImage(this.block, x + spacing, y + spacing);	
-				}
-			}
-		}
-
-		sprite.copyPixels();
-		this.sprites.push(sprite);
-	},
-
-	moveDown: function () {
-		this.gridPosition.y += this.scale;
-	},
-
-	moveUp: function () {
-		this.gridPosition.y -= this.scale;
-		this.update(0);
-	},
-
-	move: function (direction) {
-		switch (direction) {
-		case Piece.Direction.Left:
-			this.gridPosition.x -= this.scale;
-			break;
-		case Piece.Direction.Right:
-			this.gridPosition.x += this.scale;
-			break;
-		}
-	},
-
-	moveLeft: function () { this.move(Piece.Direction.Left); },
-	moveRight: function () { this.move(Piece.Direction.Right); },
-
-	update: function (dt) {
-		var g = this.gridPosition,
-		    offset = this.offset,
-		    size = this.blockSize,
-		    blocks,
-		    game = this.game,
-		    field = game.field,
-		    x, y;
-
-		if (dt) {
-			this.delta += this.velocity;
-			blocks = ~~this.delta;
-
-			this.delta -= blocks;
-
-			while (!field.collision(this) && blocks--) {
-				g.y += this.scale;
-			}
-
-			if (field.collision(this)) {
-				g.y--;
-			}
-		}
-
-		y = (g.y - field.rowOffset) * size;
-		x = g.x * size;
-
-		this.velocity = game.velocity;
-		this.sprite.moveTo(x + offset.x, y + offset.y);
-	},
-
-	draw: function () {
-		this.sprite.draw();
-	}
-};
-
 var Shapes = {
 	PieceList: ["I", "T", "O", "Z", "S", "L", "J"],
 	I: $.inherit(Piece, {
@@ -344,17 +179,18 @@ var Field = {
 	rowOffset: 1,
 	rows: 21,
 	columns: 10,
+	frameWidth: 10,
 	canvas: null,
 	context: null,
-	fillColor: new Color(10, 10, 10),
+	fillColor: new Color(0, 0, 0),
 	mergeAlpha: 0.7,
 	blockSize: null,
 	spacing: null,
-	width: null,
-	height: null,
-	offset: {x: 0, y: 0},
+	offset: {x: 10, y: 10},
 	game: null,
 	grid: null,
+	width: null,
+	height: null,
 
 	init: function (game) {
 		var i, j,
@@ -375,7 +211,10 @@ var Field = {
 			this.offset = game.offset;
 		}
 
+		this.background = new Background($.resource("background"), this.offset);
+		this.background.drawOffset($.context, 0, 0, 0, 0, $.width, $.height);
 		this.initCanvas();
+		this.drawFrame();
 	},
 
 	copy: function (other) {
@@ -395,11 +234,11 @@ var Field = {
 		    size = this.blockSize = Piece.blockSize,
 		    spacing = this.spacing = Piece.spacing;
 
-		canvas.width = this.width = this.columns * size + spacing;
-		canvas.height = this.height = (this.rows - this.rowOffset) * size + spacing;
+		canvas.width = this.width = this.columns * Piece.blockSize + Piece.spacing;
+		canvas.height = this.height = (this.rows - this.rowOffset) * Piece.blockSize + Piece.spacing;
 		this.context = canvas.getContext("2d");
 		this.context.fillStyle = this.fillColor.toString();
-		this.context.fillRect(0, 0, this.width, this.height);
+		this.background.draw(this.context, 0, 0, this.width, this.height);
 		this.canvas = canvas;
 	},
 
@@ -463,15 +302,52 @@ var Field = {
 		    spacing = Piece.spacing,
 		    columns = this.columns;
 
-		this.context.fillRect(0, y + spacing, size * columns + spacing, size);
+		this.background.draw(this.context, 0, y + spacing, size * columns + spacing, size);
 	},
 	
+	drawFrame: function () {
+		var x, y,
+		    width, height,
+		    thickness = this.frameWidth,
+		    from = new Color(0, 0, 0),
+		    to = new Color(255, 255, 255),
+		    ctx = $.context,
+		    color,
+		    i,
+		    blend;
+
+		blend = function (from, to, percent) {
+			var r = from.r + (to.r - from.r) * percent,
+			    g = from.g + (to.g - from.g) * percent,
+			    b = from.b + (to.b - from.b) * percent;
+
+			return new Color(~~r, ~~g, ~~b);
+		};
+
+		x = this.offset.x - thickness / 2;
+		y = this.offset.y - thickness / 2;
+		width = this.width + thickness;
+		height = this.height + thickness;
+
+
+		ctx.save();
+		ctx.lineJoin = "round";
+
+		for (i = thickness; i >= 1; i--) {
+			ctx.lineWidth = i;
+			color = blend(from, to, Math.pow((thickness - i + 1) / thickness, 0.25)).toString();
+			ctx.strokeStyle = color;
+			ctx.strokeRect(x, y, width, height);
+		}
+		ctx.restore();
+	},
+
 	drawBlock: function (block, x, y) {
 		var size = Piece.blockSize,
 		    spacing = Piece.spacing;
 
 		y -= this.rowOffset;
-		this.context.fillRect(x * size, y * size, size + spacing, size + spacing);
+		this.background.draw(this.context, x * size, y * size, size + spacing, size + spacing);
 		this.context.drawImage(block, x * size + spacing, y * size + spacing);
 	},
 
@@ -502,7 +378,7 @@ var Field = {
 	},
 
 	clear: function () {
-		this.context.fillRect(0, 0, this.width, this.height);
+		this.background.draw(this.context, 0, 0, this.width, this.height);
 	},
 
 	applyPiece: function (piece, callback) {
@@ -808,7 +684,7 @@ var Game = {
 	timers: null,
 
 	countdownDelay: ~~((1000 / 17) * 3),
-	keyHoldDelay: 180, // DAS (Delayed Auto Shift)
+	keyHoldDelay: 170, // DAS (Delayed Auto Shift)
 	keyHoldInterval: 10, // ARR (Auto Repeat Rate)
 	refreshInterval: 16,
 	dropped: false,
@@ -944,7 +820,7 @@ var Game = {
 		var gameOver,
 		    shape;
 
-		shape = Shapes[this.queueSource.next()];
+		shape = this.rotationSystem.shapes[this.queueSource.next()];
 		if (shape) {
 			this.currentPiece = $.inherit(shape, {
 				gridPosition: $.inherit(shape.gridPosition),
@@ -1123,12 +999,23 @@ var Game = {
 	},
 
 	drawField: function (piece) {
-		this.field.draw();
+		var ctx = $.context,
+		    field = this.field,
+		    offset = field.offset;
+
+		field.draw();
 		this.outline.draw();
 
 		if (piece && !this.spawnTimer) {
+			ctx.save();
+			ctx.rect(offset.x, offset.y, field.width, field.height);
+			ctx.clip();
+
 			this.ghostPiece && this.drawGhost(piece);
 			piece.draw();
+
+			ctx.beginPath();
+			ctx.restore();
 		}
 	},
 
@@ -1149,24 +1036,26 @@ var Game = {
 
 	drawFrame: function (x, y, w, h, label) {
 		var ctx = $.context,
-		    offset = this.field.offset;
+		    offset = this.field.offset,
+		    background = this.field.background;
+
 
 		x += offset.x;
 		y += offset.y;
 
-		ctx.strokeStyle = "#000";
+		ctx.strokeStyle = "#eee";
 		ctx.lineWidth = 3;
-		ctx.clearRect(x, y, w, h);
+		background.drawOffset(ctx, x, y, x, y, w, h);
 		ctx.strokeRect(x, y, w, h);
 
 		if (label) {
 			var width, fontSize = 28;
 
 			ctx.save();
-			ctx.fillStyle = "#000000";
+			ctx.fillStyle = "#eee";
 			ctx.font = fontSize + "px Orbitron";
 			width = ctx.measureText(label).width + 10;
-			ctx.clearRect(x + 5, y-3, width, fontSize);
+			background.drawOffset(ctx, x+5, y-3, x + 5, y - 3, width, fontSize);
 			ctx.fillText(label, x + 9, y+12);
 			ctx.restore();
 		}
@@ -1190,12 +1079,14 @@ var Game = {
 	drawPiecePreview: function () {
 		var blockSize = Piece.blockSize,
 		    size = ~~(blockSize * 5.5),
-		    x = ~~(blockSize * 10.5),
+		    x = ~~(blockSize * 11.5),
 		    y = 10,
 		    piece,
 		    offset;
 
-		piece = $.inherit(Shapes[this.queueSource.queue[0]]);
+		piece = $.inherit(this.rotationSystem.shapes[this.queueSource.queue[0]]);
+		piece.game = this;
+
 		offset = (5 - piece.shape.length) / 2 * blockSize;
 
 		this.drawFrame(x, y, size, size, "Next");
@@ -1205,7 +1096,7 @@ var Game = {
 	drawHoldPiece: function () {
 		var blockSize = Piece.blockSize,
 		    size = ~~(blockSize * 5.5),
-		    x = ~~(blockSize * 10.5),
+		    x = ~~(blockSize * 11.5),
 		    y = 215,
 		    offset,
 		    piece = this.heldPiece;
@@ -1239,12 +1130,18 @@ var Game = {
 	},
 
 	loaded: function () {
-		Game.shapes.map(function (s) {
-			return Shapes[s];
-		}).forEach(initBlock);
+		var rs;
+
+		for (rs in RotationSystems ) {
+			if (!RotationSystems.hasOwnProperty(rs)) { continue; }
+			RotationSystems[rs].eachShape(initBlock);
+		};
 	},
 
 	start: function () {
+		this.rotationSystem = RotationSystems.SRS;
+		this.tryRotation = this.rotationSystem.tryRotation;
+
 		this.timers = [];
 		this.inputBuffer = 0;
 		this.tick = this.countdown;
@@ -1462,6 +1359,7 @@ function loadImages() {
 	["orange", "red", "yellow", "green", "cyan", "blue", "purple"].forEach(function (color) {
 		$.loadImage(color, "blocks/bubbly/" + color + ".png");
 	});
+	$.loadImage("background", "backgrounds/space.jpg");
 }
 
 function initBlock(piece) {

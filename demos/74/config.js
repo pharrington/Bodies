@@ -88,9 +88,11 @@ var ConfigMenu = {
 				return;
 			}
 
+			li.className += " " + "active";
 			valueText.nodeValue = "...";
 
 			$this.activeControl = {
+				node: li,
 				valueText: valueText,
 				value: Game.Config[property],
 				property: property,
@@ -131,6 +133,7 @@ var ConfigMenu = {
 		setKey(control.property, control.value);
 		control.valueText.nodeValue = this.convertValue(control.value);
 
+		control.node.className = control.node.className.replace(/ active ?/, "");
 		this.activeControl = null;
 		document.documentElement.removeEventListener("keydown", this.keyDown, false);
 
@@ -148,7 +151,6 @@ var ConfigMenu = {
 		    control,
 		    container = document.querySelector("#controls_menu ul");
 
-		load();
 		this.initOptions();
 		this.keyDown = this.keyDown.bind(this);
 
@@ -159,27 +161,6 @@ var ConfigMenu = {
 		}
 	}
 };
-
-function objectEach(obj, callback) {
-	var p;
-
-	for (p in obj) {
-		if (!obj.hasOwnProperty(p)) { continue; }
-
-		callback.call(obj, p, obj[p]);
-	}
-}
-
-function objectMap(obj, mapper) {
-	var result = {};
-
-	objectEach(obj, function (p, v) {
-		var mapped = mapper(p, obj[p]);
-		result[mapped[0]] = mapped[1];
-	});
-
-	return result;
-}
 
 function setKey(property, value) {
 	Game.Config[property] = value;
@@ -196,6 +177,18 @@ function load() {
 function save() {
 	localStorage["blocksonblast.keyconfig"] = JSON.stringify(Game.Config);
 }
+
+function objectEach(obj, callback) {
+	var p;
+
+	for (p in obj) {
+		if (!obj.hasOwnProperty(p)) { continue; }
+
+		callback.call(obj, p, obj[p]);
+	}
+}
+
+window.addEventListener("load", load, false);
 
 exports.ConfigMenu = ConfigMenu;
 })(window);

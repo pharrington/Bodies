@@ -102,6 +102,38 @@ var UI = {
 		SecretMove.remove();
 	},
 
+	fadeTo: function (id, callback) {
+		var callbackDelay = 500,
+		    duration = 1000,
+		    steps = 40,
+		    dt = ~~(duration / steps),
+		    time = 0,
+		    origOpacity = Fade.css.opacity,
+		    fader;
+
+		fader = function () {
+			time += dt;
+			Fade.css.opacity += 1 / steps;
+			Fade.show();
+
+			if (time >= duration) {
+				window.setTimeout(function () {
+					UI.showOnly(id);
+					callback();
+					Fade.css.opacity = origOpacity;
+					Fade.hide();
+				}, callbackDelay);
+			} else {
+				window.setTimeout(fader, dt);
+			}
+		};
+
+		Fade.css.opacity = 0;
+		Fade.show();
+
+		window.setTimeout(fader, dt);
+	},
+
 	mainMenu: function () {
 		UI.showOnly("main_menu");
 		UI.events.master[1] = function () {
@@ -118,9 +150,10 @@ var UI = {
 		if (!game) { return; }
 
 
-		UI.showOnly("field");
-		$.register(game);
-		game.start();
+		UI.fadeTo("field", function () {
+			$.register(game);
+			game.start();
+		});
 	},
 
 	bindEvents: function () {
@@ -175,7 +208,7 @@ document.addEventListener("DOMContentLoaded", function () {
 		var letters = letterize(document.querySelector(s));
 
 		for (i = 0, len = letters.length; i < len; i++) {
-			letters[i].style.color = cycle(colors, i);
+			letters[i].style.color = Util.cycle(colors, i);
 		}
 	});
 

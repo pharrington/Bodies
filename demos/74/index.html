@@ -6,9 +6,12 @@
 <link rel=stylesheet href=style.css>
 <script  type="text/javascript" src="alea-0.9/mash.js"></script>
 <script  type="text/javascript" src="alea-0.9/alea.js"></script>
+<script  type="text/javascript" src="fade.js"></script>
 <script  type="text/javascript" src="bodies.js"></script>
+<script  type="text/javascript" src="util.js"></script>
 <script  type="text/javascript" src="particle.js"></script>
 <script  type="text/javascript" src="effects.js"></script>
+<script  type="text/javascript" src="background.js"></script>
 <script  type="text/javascript" src="input_source.js"></script>
 <script  type="text/javascript" src="queue_source.js"></script>
 <script  type="text/javascript" src="state_sink.js"></script>
@@ -21,6 +24,8 @@
 <script  type="text/javascript" src="config.js"></script>
 <script  type="text/javascript" src="ai.js"></script>
 <script  type="text/javascript" src="countdown.js"></script>
+<script  type="text/javascript" src="piece.js"></script>
+<script  type="text/javascript" src="srs.js"></script>
 <script  type="text/javascript" src="demo.js"></script>
 </head>
 <body>
@@ -35,14 +40,14 @@
 	</ul>
 </div>
 
-<div id=controls_menu class=menu>
+<div id=controls_menu class="menu submenu">
 	<h1>Edit Controls</h1>
 	<ul>
 	</ul>
 	<a class="back_to_main">Back to Main Menu</a>
 </div>
 
-<div id=high_scores_menu class=menu>
+<div id=high_scores_menu class="menu submenu">
 	<h1>High Scores</h1>
 	<table>
 		<thead>
@@ -71,7 +76,7 @@
 <div id=pause>
 	<div class=container>
 		<h1>Pause</h1>
-		<ul class=menu>
+		<ul>
 			<li id=resume>Resume</li>
 			<li id=restart>Restart</li>
 			<li id=quit>Quit</li>

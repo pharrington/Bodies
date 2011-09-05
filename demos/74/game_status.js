@@ -7,6 +7,7 @@ function argsArray(args) {
 var GameStatus = {
 	Base: {
 		game: null,
+		background: null,
 		fontSize: 36,
 		fontFamily: "ProFontWindows",
 		width: 180,
@@ -16,7 +17,8 @@ var GameStatus = {
 		draw: $.noop,
 
 		start: function (game) {
-			var canctx;
+			var canctx,
+			    background;
 
 			canctx = $.createCanvas(this.width, this.height);
 			this.canvas = canctx[0];
@@ -24,13 +26,14 @@ var GameStatus = {
 			this.context.textAlign = "right";
 			this.setFont();
 			this.game = game;
+
+			background = $.inherit(game.field.background);
+			background.offset = {x: background.offset.x + this.offset.x, y: background.offset.y + this.offset.y};
+			this.background = background;
 		},
 
 		clear: function () {
-			var ctx = this.context;
-
-			ctx.fillStyle = "#fff";
-			ctx.fillRect(0, 0, this.width, this.height);
+			this.background.draw(this.context, 0, 0, this.width, this.height);
 		},
 
 		setFont: function (size, family) {
@@ -44,7 +47,7 @@ var GameStatus = {
 			var game = this.game,
 			    ctx = this.context;
 
-			ctx.fillStyle = "#000";
+			ctx.fillStyle = "#eee";
 			ctx.fillText(label, x, y);
 			ctx.fillText(value, x, y + this.fontSize + 2);
 		}
@@ -67,6 +70,7 @@ GameStatus.Score = $.inherit(GameStatus.Base, {
 GameStatus.Timer = $.inherit(GameStatus.Base, {
 	linesOffset: {x: 0, y: 90},
 	elapsedOffset: {x: 0, y: 100},
+	textColor: "#fff",
 
 	start: function () {
 		GameStatus.Base.start.apply(this, argsArray(arguments));
@@ -94,18 +98,18 @@ GameStatus.Timer = $.inherit(GameStatus.Base, {
 		this.clear();
 
 		this.setFont(28);
-		ctx.fillStyle = "#000";
+		ctx.fillStyle = this.textColor;
 		ctx.fillText("Lines Left", 0, this.fontSize);
 
 		this.setFont(80);
-		ctx.fillStyle = "rgba(0, 0, 0, 0.5)";
+		ctx.fillStyle = "rgba(255, 255, 255, 0.5)";
 		ctx.fillText(game.score.linesLeft, this.linesOffset.x+3, this.linesOffset.y+3);
 
-		ctx.fillStyle = "#000";
+		ctx.fillStyle = this.textColor;
 		ctx.fillText(game.score.linesLeft, this.linesOffset.x, this.linesOffset.y);
 
 		this.setFont(28);
-		ctx.fillStyle = "#000";
+		ctx.fillStyle = this.textColor;
 		ctx.fillText("Time", 0, this.elapsedOffset.y + this.fontSize);
 
 		this.setFont(44);

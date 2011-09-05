@@ -20,6 +20,7 @@ body {
 	overflow: hidden;
 	font-family: "Orbitron", sans-serif;
 	cursor: default;
+	background: #000;
 }
 
 ul {
@@ -27,12 +28,15 @@ ul {
 }
 
 .menu {
-	font-size: 36px;
+	font-size: 37px;
+	background: url(menuback.png) no-repeat;
+	min-height: 700px;
+	padding: 125px 0 0 220px;
 }
 
 .menu h1, .menu caption {
 	font-size: 64px;
-	margin-bottom: 20px;
+	margin-bottom: 75px;
 	text-shadow: #000 4px 4px;
 	font-weight: bold;
 	text-align: left;
@@ -43,27 +47,45 @@ ul {
 }
 
 .menu ul {
-	margin-left: 53px;
+	margin-left: 140px;
 }
 
-.menu li {
+.menu li, .back_to_main {
 	padding-bottom: 7px;
+	color: #fff;
+	text-shadow:
+		-1px -1px 3px #000,
+		1px -1px 3px #000,
+		1px 1px 3px #000,
+		3px 3px 1px #000,
+		-1px 1px 3px #000;
+}
+
+.menu ul {
+	margin-left: 135px;
+}
+
+.submenu h1 {
+	margin-bottom: 25px;
+}
+
+.submenu ul {
+	margin-left: 50px;
+}
+
+.back_to_main {
+	margin-top: 50px;
+	display: block;
+	cursor: pointer;
 }
 
 .menu li:hover {
 	cursor: pointer;
+	color: #e38c35;
 }
 
-#main_menu li {
-	-webkit-transition: margin-left 0.05s ease-out;
-	-moz-transition: margin-left 0.05s ease-out;
-	-o-transition: margin-left 0.05s ease-out;
-	transition: margin-left 0.05s ease-out;
-}
-
-#main_menu li:hover {
-	margin-left: -40px;
-	text-shadow: 0 0 10px #E2DA0E;
+.submenu li.active {
+	color: #f00;
 }
 
 .value {
@@ -76,7 +98,11 @@ ul {
 }
 
 table {
-	border-spacing: 80px 0;
+	margin-left: -85px;
+	border-spacing: 70px 3px;
+	background: #fff;
+	border-radius: 15px;
+	box-shadow: 0 0 10px 1px #000;
 }
 
 th {
@@ -95,14 +121,6 @@ th, td {
 .replay {
 	cursor: pointer;
 }
-
-.back_to_main {
-	color: #440BAD;
-	margin-top: 50px;
-	display: block;
-	cursor: pointer;
-}
-
 
 .countdown {
 	font-size: 400px;
@@ -130,7 +148,7 @@ th, td {
 	left: 0;
 	width:  800px;
 	height: 700px;
-	background: #222;
+	background: #000;
 	color: #eee;
 	display: none;
 }
@@ -144,7 +162,7 @@ th, td {
 	box-shadow: 0 0 10px 5px #f0f;
 }
 
-#pause .menu li:hover {
+#pause li:hover {
 	text-shadow: 0 0 15px #f00;
 }
 
@@ -155,6 +173,7 @@ th, td {
 
 #pause ul {
 	font-size: 36px;
+	cursor: pointer;
 }
 
 #high_scores_menu table {

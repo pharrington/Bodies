@@ -1,3 +1,5 @@
+(function (exports) {
+
 function clamp(min, max, value) {
 	return Math.max(Math.min(max, value), min);
 }
@@ -76,6 +78,7 @@ Paginator.prototype = {
 
 	setPage: function (page) {
 		this.page = clamp(1, this.pages(), page);
+		this.update();
 	},
 
 	slice: function () {
@@ -103,8 +106,6 @@ Paginator.prototype = {
 			} else {
 				this.setPage(parseInt(page, 10));
 			}
-
-			this.update();
 		}.bind(this));
 	},
 
@@ -215,3 +216,5 @@ HighScores.Menu = {
 	}
 };
 
+exports.HighScores = HighScores;
+})(window);
