@@ -4,19 +4,16 @@ function shuffle(ary, rng) {
 	var i = ary.length,
 	    r,
 	    item,
-	    temp,
-	    shuffled = [].slice.call(ary);
+	    temp;
 
 	while (--i) {
 		r = ~~(rng() * i);
 
-		item = shuffled[i];
-		temp = shuffled[r];
-		shuffled[r] = item;
-		shuffled[i] = temp;
+		item = ary[i];
+		temp = ary[r];
+		ary[r] = item;
+		ary[i] = temp;
 	}
-
-	return shuffled;
 }
 
 var QueueSource = {
@@ -93,11 +90,13 @@ QueueSource.RandomGenerator = $.inherit(QueueSource.Base, {
 	bagIndex: 0,
 
 	createBag: function () {
-		this.bag = shuffle(Game.shapes, this.rng);
+		this.bag = [].slice.call(Game.shapes);
 	},
 
 	start: function (game) {
 		this.bagIndex = 0;
+		this.createBag();
+		
 		QueueSource.Base.start.call(this, game);
 	},
 
@@ -105,7 +104,7 @@ QueueSource.RandomGenerator = $.inherit(QueueSource.Base, {
 		var shape;
 
 		if (this.bagIndex === 0) {
-			this.createBag();
+			shuffle(this.bag, this.rng);
 		}
 
 		shape = this.bag[this.bagIndex];
