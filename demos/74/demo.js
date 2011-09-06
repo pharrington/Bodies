@@ -61,120 +61,6 @@ function pad00(str) {
 	return str;
 }
 
-var Shapes = {
-	PieceList: ["I", "T", "O", "Z", "S", "L", "J"],
-	I: $.inherit(Piece, {
-		image: "orange",
-		shapes: [
-				[[0, 0, 0, 0],
-				 [1, 1, 1, 1],
-				 [0, 0, 0, 0],
-				 [0, 0, 0, 0]],
-				[[0, 0, 1, 0],
-				 [0, 0, 1, 0],
-				 [0, 0, 1, 0],
-				 [0, 0, 1, 0]]
-			]
-	}),
-
-	T: $.inherit(Piece, {
-		image: "blue",
-		shapes: [
-				[[0, 0, 0],
-				 [1, 1, 1],
-				 [0, 1, 0]],
-				[[0, 1, 0],
-				 [1, 1, 0],
-				 [0, 1, 0]],
-				[[0, 0, 0],
-				 [0, 1, 0],
-				 [1, 1, 1]],
-				[[0, 1, 0],
-				 [0, 1, 1],
-				 [0, 1, 0]]
-			]
-	}),
-
-	O: $.inherit(Piece, {
-		image: "yellow",
-		shapes: [
-				[[1, 1],
-				 [1, 1]]
-			]
-	}),
-
-	Z: $.inherit(Piece, {
-		image: "red",
-		shapes: [
-				[[0, 0, 0],
-				 [1, 1, 0],
-				 [0, 1, 1]],
-				[[0, 0, 1],
-				 [0, 1, 1],
-				 [0, 1, 0]]
-			]
-	}),
-
-	S: $.inherit(Piece, {
-		image: "cyan",
-		shapes: [
-				[[0, 0, 0],
-				 [0, 1, 1],
-				 [1, 1, 0]],
-				[[1, 0, 0],
-				 [1, 1, 0],
-				 [0, 1, 0]]
-		]
-	}),
-
-	L: $.inherit(Piece, {
-		image: "green",
-		shapes: [
-				[[0, 0, 0],
-				 [1, 1, 1],
-				 [1, 0, 0]],
-				[[1, 1, 0],
-				 [0, 1, 0],
-				 [0, 1, 0]],
-				[[0, 0, 0],
-				 [0, 0, 1],
-				 [1, 1, 1]],
-				[[0, 1, 0],
-				 [0, 1, 0],
-				 [0, 1, 1]]
-			]
-	}),
-
-	J: $.inherit(Piece, {
-		image: "purple",
-		shapes: [
-				[[0, 0, 0],
-				 [1, 1, 1],
-				 [0, 0, 1]],
-				[[0, 1, 0],
-				 [0, 1, 0],
-				 [1, 1, 0]],
-				[[0, 0, 0],
-				 [1, 0, 0],
-				 [1, 1, 1]],
-				[[0, 1, 1],
-				 [0, 1, 0],
-				 [0, 1, 0]]
-			]
-	})
-};
-
-(function setShapeCodes() {
-	var i, len,
-	    shape,
-	    list = Shapes.PieceList;
-
-	for (i = 0, len = list.length; i < len; i++) {
-		shape = Shapes[list[i]];
-		if (shape) { shape.code = i; }
-	}
-})();
-
 var Field = {
 	rowOffset: 1,
 	rows: 21,
@@ -675,7 +561,7 @@ var Game = {
 	groundedTimer: null,
 	spawnTimer: null,
 	velocity: null,
-	ghostPiece: true,
+	enableGhostPiece: true,
 
 	groundedTimeout: 30,
 	lineClearDelay: 10,
@@ -697,6 +583,8 @@ var Game = {
 	queueSource: null,
 	inputSource: null,
 	inputSinks: null,
+	rotationSystem: null,
+	mode: null,
 
 	dropFX: null,
 	effects: null,
@@ -716,6 +604,8 @@ var Game = {
 
 	tick: $.noop,
 	mouseDown: $.noop,
+
+	tryRotation: $.noop,
 
 	checkGrounded: function () {
 		var field = this.field,
@@ -755,6 +645,7 @@ var Game = {
 
 		if (this.field.collision(this.currentPiece)) {
 			gameover = true;
+			this.currentPiece.draw();
 			this.gameOver();
 		}
 		return gameover;
@@ -872,6 +763,7 @@ var Game = {
 		!this.dropped && this.drawPiecePreview();
 		this.tick = this.doFrame;
 		this.inputSource.enable();
+		this.levels.endSpawnNext();
 	},
 
 
@@ -974,30 +866,6 @@ var Game = {
 		}
 	},
 
-	tryRotation: function (rotation) {
-		var field = this.field,
-		    piece = this.currentPiece;
-
-		if (!piece) { return; }
-
-		piece.rotate(rotation);
-
-		/* try to eject the piece if a rotation collides with the field */
-		if (field.collision(piece)) {
-			piece.moveLeft();
-
-			if (field.collision(piece)) {
-				piece.moveRight();
-				piece.moveRight();
-
-				if (field.collision(piece)) {
-					piece.moveLeft();
-					rotation === Piece.Rotation.CW ? piece.rotateCCW() : piece.rotateCW();
-				}
-			}
-		}
-	},
-
 	drawField: function (piece) {
 		var ctx = $.context,
 		    field = this.field,
@@ -1011,7 +879,7 @@ var Game = {
 			ctx.rect(offset.x, offset.y, field.width, field.height);
 			ctx.clip();
 
-			this.ghostPiece && this.drawGhost(piece);
+			this.enableGhostPiece && this.drawGhost(piece);
 			piece.draw();
 
 			ctx.beginPath();
@@ -1129,19 +997,24 @@ var Game = {
 		this.queueSource = qs;
 	},
 
+	setRotationSystem: function (rs) {
+		this.rotationSystem = rs;
+		this.tryRotation = rs.tryRotation;
+	},
+
 	loaded: function () {
 		var rs;
 
 		for (rs in RotationSystems ) {
 			if (!RotationSystems.hasOwnProperty(rs)) { continue; }
-			RotationSystems[rs].eachShape(initBlock);
+
+			Game.shapes.forEach(function (shape) {
+				initBlock(RotationSystems[rs].shapes[shape]);
+			});
 		};
 	},
 
 	start: function () {
-		this.rotationSystem = RotationSystems.SRS;
-		this.tryRotation = this.rotationSystem.tryRotation;
-
 		this.timers = [];
 		this.inputBuffer = 0;
 		this.tick = this.countdown;
@@ -1172,11 +1045,11 @@ var Game = {
 		this.effects.setOffset(this.field.offset);
 
 		$.keyPress($.noop);
-		this.setTimeout(this.endCountdown.partial(this.ghostPiece).bind(this), this.countdownDelay);
+		this.setTimeout(this.endCountdown.partial(this.enableGhostPiece).bind(this), this.countdownDelay);
 	},
 
 	countdown: function (elapsed, now) {
-		this.ghostPiece = false;
+		this.enableGhostPiece = false;
 		this.draw(elapsed);
 		Countdown.tick(3);
 	},
@@ -1184,7 +1057,7 @@ var Game = {
 	endCountdown: function (ghostPiece) {
 		Countdown.end();
 		$.keyPress(this.keyPress.bind(this));
-		this.ghostPiece = ghostPiece;
+		this.enableGhostPiece = ghostPiece;
 		this.drawPiecePreview();
 		this.tick = this.doFrame;
 	},

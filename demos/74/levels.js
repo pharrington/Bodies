@@ -3,14 +3,15 @@
 var LevelSystem = {
 	Base: {
 		game: null,
-		level: 1,
+		startLevel: 1,
 		properties: ["groundedTimeout", "lineClearDelay", "spawnDelay", "velocity"],
 
 		endPiece: $.noop,
+		endSpawnNext: $.noop,
 		clearLines: $.noop,
 
 		start: function (game) {
-			this.level = 1;
+			this.level = this.startLevel;
 			this.game = game;
 			this.applyLevel();
 		},
@@ -46,13 +47,15 @@ var LevelSystem = {
 };
 
 LevelSystem.Master = $.inherit(LevelSystem.Base, {
+	startLevel: 0,
+
 	groundedTimeout: {
-		1: 30,
+		0: 30,
 		901: 17
 	},
 
 	lineClearDelay: {
-		1: 40,
+		0: 40,
 		500: 25,
 		601: 16,
 		701: 12,
@@ -60,13 +63,13 @@ LevelSystem.Master = $.inherit(LevelSystem.Base, {
 	},
 
 	spawnDelay: {
-		1: 25,
+		0: 25,
 		701: 16,
 		801: 12
 	},
 
 	velocity: {
-		1:  4 / 256,
+		0:  4 / 256,
 		30: 6 / 256,
 		35: 8 / 256,
 		40: 10 / 256,
@@ -103,10 +106,20 @@ LevelSystem.Master = $.inherit(LevelSystem.Base, {
 		this.applyLevel();
 	},
 
-	endPiece: function () {
-		this.level++;
+	endSpawnNext: function () {
+		if ((this.level + 1) % 100) {
+			this.level++;
+		}
 		this.applyLevel();
 	},
+
+	applyLevel: function () {
+		if (this.level >= 100) {
+			this.game.enableGhostPiece = false;
+		}
+
+		LevelSystem.Base.applyLevel.call(this);
+	}
 });
 
 LevelSystem.Static = $.inherit(LevelSystem.Base, {

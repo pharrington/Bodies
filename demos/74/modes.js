@@ -6,13 +6,15 @@ var WS_STATE = {
 };
 
 var Modes = {
-	newGame: function (level, score, queue) {
+	newGame: function (name, level, score, rotation, queue) {
 		var game = $.inherit(Game);
 
+		game.mode = name;
 		game.levels = $.inherit(LevelSystem[level]);
 		game.score = $.inherit(Score[score]);
 		game.setQueueSource($.inherit(QueueSource[queue]));
 
+		game.setRotationSystem(RotationSystems[rotation]);
 		game.addInputSink(InputSink.LocalStorage);
 		game.setInputSource(InputSource.Player);
 		game.effects = $.inherit(FX.Fireworks);
@@ -25,15 +27,22 @@ var Modes = {
 
 Modes.Master = {
 	newGame: function () {
-		var game = Modes.newGame("Master", "Master", "TGM");
+		var game = Modes.newGame("Master", "Master", "Master", "TGM", "TGM");
 
+		game.holdPiece = $.noop;
 		return game;
+	}
+};
+
+Modes.Infinity = {
+	newGame: function () {
+		var game = Modes.newGame("Infinity", "Infinity", "Infinity", "SRS", "RandomGenerator");
 	}
 };
 
 Modes.TimeAttack = {
 	newGame: function () {
-		var game = Modes.newGame("Static", "TimeAttack", "TGM");
+		var game = Modes.newGame("TimeAttack", "Static", "TimeAttack", "SRS", "RandomGenerator");
 
 		game.gameStatus = GameStatus.Timer;
 
@@ -43,7 +52,7 @@ Modes.TimeAttack = {
 
 Modes.DemoAI = {
 	newGame: function () {
-		var game = Modes.newGame("Static", "Master", "TGM");
+		var game = Modes.newGame("DemoAI", "Static", "Master", "TGM");
 
 		game.setInputSource(InputSource.AI);
 
@@ -53,9 +62,10 @@ Modes.DemoAI = {
 
 Modes.Death = {
 	newGame: function () {
-		var game = Modes.newGame("Death", "TimeAttack", "TGM");
+		var game = Modes.newGame("Death", "Death", "TimeAttack", "TGM");
 
 		game.gameStatus = GameStatus.Timer;
+		game.holdPiece = $.noop;
 
 		return game;
 	}
