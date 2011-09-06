@@ -75,7 +75,7 @@ LevelSystem.Master = $.inherit(LevelSystem.Base, {
 		200: 100 / 250,
 		300: 150 / 250,
 		400: 1,
-		500: 20,
+		500: 20
 	},
 
 	clearLines: function (numCleared) {
