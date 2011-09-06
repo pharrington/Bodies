@@ -48,33 +48,53 @@ var LevelSystem = {
 LevelSystem.Master = $.inherit(LevelSystem.Base, {
 	groundedTimeout: {
 		1: 30,
-		400: 27,
-		500: 35
+		901: 17
 	},
 
 	lineClearDelay: {
-		1: 10
+		1: 40,
+		500: 25,
+		601: 16,
+		701: 12,
+		801: 6
 	},
 
 	spawnDelay: {
-		1: 6
+		1: 25,
+		701: 16,
+		801: 12
 	},
 
 	velocity: {
-		1:  3 / 250,
-		10: 6 / 250,
-		20: 10 / 250,
-		30: 15 / 250,
-		40: 20 / 250,
-		50: 25 / 250,
-		60: 30 / 250,
-		80: 40 / 250,
-		100: 50 / 250,
-		120: 65 / 250,
-		150: 80 / 250,
-		200: 100 / 250,
-		300: 150 / 250,
-		400: 1,
+		1:  4 / 256,
+		30: 6 / 256,
+		35: 8 / 256,
+		40: 10 / 256,
+		50: 12 / 256,
+		60: 16 / 256,
+		70: 32 / 256,
+		80: 48 / 256,
+		90: 64 / 256,
+		100: 80 / 256,
+		120: 96 / 256,
+		140: 112 / 256,
+		160: 128 / 256,
+		170: 144 / 256,
+		200: 4 / 256,
+		220: 32 / 256,
+		230: 64 / 256,
+		233: 96 / 256,
+		236: 128 / 256,
+		239: 160 / 256,
+		243: 192 / 256,
+		247: 224 / 256,
+		251: 1,
+		300: 2,
+		330: 3,
+		360: 4,
+		400: 5,
+		420: 4,
+		450: 3
 		500: 20
 	},
 
@@ -90,7 +110,7 @@ LevelSystem.Master = $.inherit(LevelSystem.Base, {
 });
 
 LevelSystem.Static = $.inherit(LevelSystem.Base, {
-	properties: LevelSystem.Base.properties.concat("keyHoldDelay", "keyHoldInterval"),
+	//properties: LevelSystem.Base.properties.concat("keyHoldDelay", "keyHoldInterval"),
 	spawnDelay: {
 		1: 0
 	},
