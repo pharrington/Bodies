@@ -1,3 +1,24 @@
+(function (exports) {
+
+function shuffle(ary, rng) {
+	var i = ary.length,
+	    r,
+	    item,
+	    temp,
+	    shuffled = [].slice.call(ary);
+
+	while (--i) {
+		r = ~~(rng() * i);
+
+		item = shuffled[i];
+		temp = shuffled[r];
+		shuffled[r] = item;
+		shuffled[i] = temp;
+	}
+
+	return shuffled;
+}
+
 var QueueSource = {
 	Base: {
 		queueSize: 1,
@@ -65,6 +86,35 @@ QueueSource.TGM = $.inherit(QueueSource.Base, {
 	}
 });
 
+QueueSource.RandomGenerator = $.inherit(QueueSource.Base, {
+	bagSize: 7,
+	queueSize: 5,
+	bag: null,
+	bagIndex: 0,
+
+	createBag: function () {
+		this.bag = shuffle(Game.shapes, this.rng);
+	},
+
+	start: function (game) {
+		this.bagIndex = 0;
+		QueueSource.Base.start.call(this, game);
+	},
+
+	generatePiece: function () {
+		var shape;
+
+		if (this.bagIndex === 0) {
+			this.createBag();
+		}
+
+		shape = this.bag[this.bagIndex];
+		this.bagIndex = (this.bagIndex + 1) % this.bagSize;
+
+		return shape;
+	}
+});
+
 QueueSource.Naive = $.inherit(QueueSource.Base, {
 	generatePiece: function () {
 		return Game.shapes[~~(this.rng() * 7)];
@@ -103,3 +153,7 @@ QueueSource.Replay = $.inherit(QueueSource.Base, {
 		this.game = game;
 	}
 });
+
+exports.QueueSource = QueueSource;
+
+})(window);
