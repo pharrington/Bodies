@@ -6,11 +6,17 @@ function clamp(min, max, value) {
 
 var HighScores = {
 	cached: null,
-	prefix: "blocksonblast.",
+	prefix: "blocksonblastv2.",
 
 	save: function (game) {
+		var entry = {
+			score: game.score.score,
+			mode: game.mode,
+			replay: btoa(InputSink.LocalStorage.save())
+		};
+
+		localStorage[this.prefix + "replay" + Date.now()] = JSON.stringify(entry);
 		this.cached = null;
-		localStorage[this.prefix + "replay" + Date.now()] = game.score.score + "_" + btoa(InputSink.LocalStorage.save());
 	},
 
 	getLocal: function () {
@@ -30,7 +36,7 @@ var HighScores = {
 				date = new Date(parseInt(date, 10));
 			}
 
-			score = parseInt(localStorage[key].split("_")[0], 10);
+			score = parseInt(JSON.parse(localStorage[key]).score, 10);
 			scores.push({key: key, score: score, date: date});
 		}
 
@@ -165,15 +171,17 @@ HighScores.Menu = {
 	replay: function (e) {
 		var game = Modes.Master.newGame(),
 		    replayStr,
-		    idx,
+		    entry,
 		    target = e.target,
 		    key = HighScores.prefix + target.parentNode.className,
 		    replay = InputSource.Replay;
 
 		if (target.className === "no_replay") { return; }
 
-		idx = localStorage[key].indexOf("_") + 1;
-		replayStr = localStorage[key].substr(idx);
+		entry = JSON.parse(localStorage[key]);
+		replayStr = entry.replay;
+
+		game = Modes[entry.mode].newGame();
 		game.setInputSource(replay);
 
 		if (!replay.loadReplay(atob(replayStr))) {

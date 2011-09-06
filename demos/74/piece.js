@@ -20,7 +20,7 @@ var Piece = {
 
 	init: function (game) {
 		var x = this.shapes[0].length === 2 ? 4 : 3,
-		    y = this.shapes[0].length === 3 ? -1 : 0;
+		    y = this.shapes[0].length === 3 ? 0 : 0;
 
 		this.gridPosition = {x: x, y: y};
 		this.game = game;

@@ -227,21 +227,9 @@ function tryRotation(rotation) {
 	}
 })();
 
-var SRS = {
+exports.RotationSystems.SRS = {
 	shapes: Shapes,
-	tryRotation: tryRotation,
-	eachShape: function (callback) {
-		callback(Shapes.I);
-		callback(Shapes.O);
-		callback(Shapes.J);
-		callback(Shapes.L);
-		callback(Shapes.S);
-		callback(Shapes.Z);
-		callback(Shapes.T);
-	}
+	tryRotation: tryRotation
 };
 
-exports.RotationSystems = {
-	SRS: SRS
-};
 })(window);

@@ -163,6 +163,11 @@ InputSource.Replay = $.inherit(InputSource.Base, {
 	},
 
 	refresh: function (elapsed) {
-		this.game.input(this.stateList[this.stateIndex++].input);
+		var state = this.stateList[this.stateIndex];
+
+		if (state) {
+			this.game.input(state.input);
+			this.stateIndex++;
+		}
 	}
 });
