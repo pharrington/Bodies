@@ -419,7 +419,7 @@ function attachEvents() {
 		    keyPress = $.callbacks.keyPress;
 
 		if (!pressed) {
-			keys[e.keyCode] = {last: new Date().getTime()};
+			keys[e.keyCode] = {last: new Date().getTime() + $.callbacks.keyHold.interval};
 			keyPress && keyPress(e.keyCode);
 		}
 
