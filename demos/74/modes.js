@@ -29,6 +29,7 @@ Modes.Master = {
 	newGame: function () {
 		var game = Modes.newGame("Master", "Master", "Master", "TGM", "TGM");
 
+		game.softLock = true;
 		game.holdPiece = $.noop;
 		return game;
 	}
@@ -45,6 +46,7 @@ Modes.TimeAttack = {
 		var game = Modes.newGame("TimeAttack", "Static", "TimeAttack", "SRS", "RandomGenerator");
 
 		game.gameStatus = GameStatus.Timer;
+		game.hardLock = true;
 
 		return game;
 	}
@@ -54,6 +56,7 @@ Modes.DemoAI = {
 	newGame: function () {
 		var game = Modes.newGame("DemoAI", "Static", "Master", "TGM");
 
+		game.hardLock = true;
 		game.setInputSource(InputSource.AI);
 
 		return game;
@@ -66,6 +69,7 @@ Modes.Death = {
 
 		game.gameStatus = GameStatus.Timer;
 		game.holdPiece = $.noop;
+		game.softLock = true;
 
 		return game;
 	}

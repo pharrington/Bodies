@@ -186,9 +186,10 @@ var Field = {
 		var size = Piece.blockSize,
 		    y = (index - this.rowOffset) * size,
 		    spacing = Piece.spacing,
-		    columns = this.columns;
+		    columns = this.columns,
+		    offset = y + spacing;
 
-		this.background.draw(this.context, 0, y + spacing, size * columns + spacing, size);
+		this.background.drawOffset(this.context, 0, offset, 0, offset, size * columns + spacing, size);
 	},
 	
 	drawFrame: function () {
@@ -573,7 +574,7 @@ var Game = {
 	keyHoldDelay: 170, // DAS (Delayed Auto Shift)
 	keyHoldInterval: 10, // ARR (Auto Repeat Rate)
 	refreshInterval: 16,
-	dropped: false,
+	locked: false,
 
 	inputBuffer: 0,
 
@@ -585,6 +586,8 @@ var Game = {
 	inputSinks: null,
 	rotationSystem: null,
 	mode: null,
+	softLock: false,
+	hardLock: false,
 
 	dropFX: null,
 	effects: null,
@@ -610,7 +613,7 @@ var Game = {
 	checkGrounded: function () {
 		var field = this.field,
 		    piece = this.currentPiece,
-		    dropped = this.dropped;
+		    dropped = this.locked;
 
 		piece.moveDown();
 		if (field.collision(piece)) {
@@ -760,7 +763,7 @@ var Game = {
 
 	endSpawnNext: function () {
 		this.spawnTimer = null;
-		!this.dropped && this.drawPiecePreview();
+		!this.locked && this.drawPiecePreview();
 		this.tick = this.doFrame;
 		this.inputSource.enable();
 		this.levels.endSpawnNext();
@@ -1067,6 +1070,8 @@ var Game = {
 
 		if (!piece) { return; }
 
+		if (this.softLock) { this.locked = true; }
+
 		piece.velocity += 1.2;
 		this.score.softDrop(piece);
 	},
@@ -1077,7 +1082,7 @@ var Game = {
 		if (!piece) { return; }
 
 		piece.velocity = 20;
-		this.dropped = true;
+		if (this.hardLock) { this.locked = true; }
 
 		this.dropFX.start(piece);
 		this.score.hardDrop(piece);
@@ -1149,7 +1154,7 @@ var Game = {
 
 		this.score.refresh(elapsed);
 		this.checkWon();
-		this.dropped = false;
+		this.locked = false;
 	},
 
 	draw: function (elapsed) {
