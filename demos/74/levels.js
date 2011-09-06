@@ -94,7 +94,7 @@ LevelSystem.Master = $.inherit(LevelSystem.Base, {
 		360: 4,
 		400: 5,
 		420: 4,
-		450: 3
+		450: 3,
 		500: 20
 	},
 
