@@ -735,7 +735,6 @@ var Game = {
 	},
 
 	spawnNext: function () {
-		this.inputSource.disable();
 		this.tick = this.draw;
 
 		if (!this.nextPiece()) {
@@ -748,13 +747,14 @@ var Game = {
 	},
 
 	setLineClearTimer: function () {
+		this.tick = this.draw;
 		this.currentPiece = null;
 		this.clearSpawnTimer();
 		this.spawnTimer = this.setTimeout(this.endLineClear.bind(this), this.lineClearDelay);
 	},
 
 	endLineClear: function () {
-		this.spawnNext();
+		this.nextPiece();
 		this.outline.rebuild(this.field.grid);
 		this.outline.refresh();
 		this.field.redraw();
@@ -765,7 +765,6 @@ var Game = {
 		this.spawnTimer = null;
 		!this.locked && this.drawPiecePreview();
 		this.tick = this.doFrame;
-		this.inputSource.enable();
 		this.levels.endSpawnNext();
 	},
 
@@ -965,6 +964,8 @@ var Game = {
 	},
 
 	drawHoldPiece: function () {
+		if (this.holdPiece === $.noop) { return; }
+
 		var blockSize = Piece.blockSize,
 		    size = ~~(blockSize * 5.5),
 		    x = ~~(blockSize * 11.5),
@@ -1103,6 +1104,7 @@ var Game = {
 			this.tryRotation(Piece.Rotation.CCW);
 		}
 
+		if (!this.spawnTimer) {
 		if (buffer & Inputs.Left) {
 			this.tryMove(Piece.Direction.Left);
 		}
@@ -1116,11 +1118,12 @@ var Game = {
 		}
 
 		if (buffer & Inputs.HardDrop) {
-			this.spawnTimer || this.hardDrop();
+			this.hardDrop();
 		}
 
 		if (buffer & Inputs.SoftDrop) {
 			this.softDrop();
+		}
 		}
 
 		this.inputBuffer = 0;
