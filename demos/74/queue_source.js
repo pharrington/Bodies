@@ -64,20 +64,34 @@ var QueueSource = {
 };
 
 QueueSource.TGM = $.inherit(QueueSource.Base, {	
-	queueSize: 4,
+	history: null,
+
+	start: function (game) {
+		this.history = ["Z", "S", "Z", "S"];
+		QueueSource.Base.start.call(this, game);
+	},
 
 	generatePiece: function () {
 		var shape,
 		    random = QueueSource.Naive.generatePiece,
-		    queue = this.queue;
-		    inQueue = true,
+		    history = this.history;
+		    inHistory = true,
 		    i = 0;
 
-		while (inQueue && i < 4) {
-			shape = random.call(this);
-			if (queue.indexOf(shape) === -1) { inQueue = false; }
-			i++;
+		if (this.queue.length === 0) {
+			do {
+				shape = random.call(this);
+			} while (shape === "O" || shape === "Z" || shape === "S")
+		} else {
+			while (inHistory && i < 6) {
+				shape = random.call(this);
+				if (history.indexOf(shape) === -1) { inHistory = false; }
+				i++;
+			}
 		}
+
+		history.shift();
+		history.push(shape);
 
 		return shape;
 	}
