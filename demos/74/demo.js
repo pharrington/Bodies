@@ -824,7 +824,6 @@ var Game = {
 		numCleared = cleared.length;
 
 		this.inputSource.endPiece();
-		this.score.clearLines(numCleared);
 
 		if (!numCleared) {
 			this.spawnNext();
@@ -834,6 +833,7 @@ var Game = {
 			this.levels.clearLines(numCleared);
 		}
 
+		this.score.clearLines(numCleared);
 	},
 
 	holdPiece: function () {
