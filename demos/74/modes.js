@@ -6,10 +6,9 @@ var WS_STATE = {
 };
 
 var Modes = {
-	newGame: function (name, level, score, rotation, queue) {
+	newGame: function (level, score, rotation, queue) {
 		var game = $.inherit(Game);
 
-		game.mode = name;
 		game.levels = $.inherit(LevelSystem[level]);
 		game.score = $.inherit(Score[score]);
 		game.setQueueSource($.inherit(QueueSource[queue]));
@@ -26,9 +25,12 @@ var Modes = {
 };
 
 Modes.Master = {
+	name: "Master",
 	newGame: function () {
-		var game = Modes.newGame("Master", "Master", "Master", "TGM", "TGM");
+		var game = Modes.newGame("Master", "Master", "TGM", "TGM");
 
+		game.mode = this;
+		game.gameStatus = GameStatus.Rank;
 		game.softLock = true;
 		game.holdPiece = $.noop;
 		return game;
@@ -36,26 +38,37 @@ Modes.Master = {
 };
 
 Modes.Infinity = {
+	name: "Infinity",
 	newGame: function () {
-		var game = Modes.newGame("Infinity", "Infinity", "Infinity", "SRS", "RandomGenerator");
+		var game = Modes.newGame("Infinity", "Infinity", "SRS", "RandomGenerator");
+		game.mode = this;
+		game.hardLock = true;
+		game.killOnLockAboveField = true;
+
+		return game;
 	}
 };
 
 Modes.TimeAttack = {
+	name: "TimeAttack",
 	newGame: function () {
-		var game = Modes.newGame("TimeAttack", "Static", "TimeAttack", "SRS", "RandomGenerator");
+		var game = Modes.newGame("Static", "TimeAttack", "SRS", "RandomGenerator");
 
+		game.mode = this;
 		game.gameStatus = GameStatus.Timer;
 		game.hardLock = true;
+		game.killOnLockAboveField = true;
 
 		return game;
 	}
 };
 
 Modes.DemoAI = {
+	name: "AI",
 	newGame: function () {
-		var game = Modes.newGame("DemoAI", "Static", "Master", "TGM");
+		var game = Modes.newGame("Static", "Master", "TGM");
 
+		game.mode = this;
 		game.hardLock = true;
 		game.setInputSource(InputSource.AI);
 
@@ -64,9 +77,11 @@ Modes.DemoAI = {
 };
 
 Modes.Death = {
+	name: "Death",
 	newGame: function () {
-		var game = Modes.newGame("Death", "Death", "TimeAttack", "TGM");
+		var game = Modes.newGame("Death", "TimeAttack", "TGM");
 
+		game.mode = this;
 		game.gameStatus = GameStatus.Timer;
 		game.holdPiece = $.noop;
 		game.softLock = true;
@@ -122,7 +137,7 @@ Modes.Versus = {
 				}, p1.refreshInterval);
 
 				vs.players.forEach(function (p) {
-					p.queueSource.seed = data.seed;
+					p.queueSource.setSeed(data.seed);
 					p.start();
 				});
 			}

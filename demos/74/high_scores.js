@@ -1,64 +1,43 @@
 (function (exports) {
 
+var gradeMap = [
+	"9", "8", "7", "6", "5",
+	"4", "4+",
+	"3", "3+",
+	"2-", "2", "2+",
+	"1-", "1", "1+",
+	"S1-", "S1", "S1+",
+	"S2",
+	"S3",
+	"S4-", "S4", "S4+",
+	"S5", "S5+",
+	"S6", "S6+",
+	"S7", "S7+",
+	"S8", "S8+",
+	"S9"
+];
+
 function clamp(min, max, value) {
 	return Math.max(Math.min(max, value), min);
 }
 
-var HighScores = {
-	cached: null,
-	prefix: "blocksonblastv2.",
+function filterMode(mode, score) {
+	return score.mode === mode;
+}
 
-	save: function (game) {
-		var entry = {
-			score: game.score.score,
-			mode: game.mode,
-			replay: btoa(InputSink.LocalStorage.save())
-		};
+function sortBy(attribute, a, b) {
+	return b[attribute] - a[attribute];
+}
 
-		localStorage[this.prefix + "replay" + Date.now()] = JSON.stringify(entry);
-		this.cached = null;
-	},
-
-	getLocal: function () {
-		var key,
-		    date, score,
-		    scores = [];
-
-		if (this.cached) { return this.cached; }
-
-		for (var i = 0, len = localStorage.length; i < len; i++) {
-			key = localStorage.key(i);
-
-			if (key.indexOf(this.prefix + "replay") !== 0) { continue; }
-
-			date = key.match(/\d+$/)[0];
-			if (date) {
-				date = new Date(parseInt(date, 10));
-			}
-
-			score = parseInt(JSON.parse(localStorage[key]).score, 10);
-			scores.push({key: key, score: score, date: date});
-		}
-
-		return this.cached = scores;
-	},
-
-	byScore: function () {
-		return this.getLocal().sort(function (a, b) {
-			return b.score - a.score;
-		});
-	}
-};
-
-function Paginator(list) {
-	this.list = list;
+function Paginator(source) {
+	this.source = source;
 	this.createEvents();
 	this.createUI();
 	this.setPage(1);
 }
 
 Paginator.prototype = {
-	list: null,
+	source: function () { return []; },
 	page: null,
 	perPage: 10,
 
@@ -71,7 +50,7 @@ Paginator.prototype = {
 	update: $.noop,
 
 	pages: function () {
-		return Math.ceil(this.list.length / this.perPage);
+		return Math.ceil(this.source().length / this.perPage);
 	},
 
 	next: function () {
@@ -90,7 +69,7 @@ Paginator.prototype = {
 	slice: function () {
 		var offset = this.perPage * (this.page - 1);
 
-		return this.list.slice(offset, offset + this.perPage);
+		return this.source().slice(offset, offset + this.perPage);
 	},
 
 	_container: null,
@@ -119,7 +98,7 @@ Paginator.prototype = {
 		var ui = this.render(this.prevTemplate, {nav: this.navClass}),
 		    i;
 
-		for (i = 1; i <= 10; i++) {
+		for (i = 1; i <= Math.min(10, this.pages()); i++) {
 			ui += this.render(this.pageTemplate, {page: i, nav: this.navClass});
 		}
 
@@ -146,13 +125,102 @@ Paginator.prototype = {
 	}
 };
 
+var HighScores = {
+	cached: null,
+	prefix: "blocksonblastv2.",
+
+	save: function (game) {
+		var mode = game.mode,
+		    entry = {
+			mode: mode.name,
+			replay: btoa(InputSink.LocalStorage.save())
+		    };
+
+		game.score.save.forEach(function (property) {
+			entry[property] = game.score[property];
+		});
+
+		localStorage[this.prefix + "replay" + Date.now()] = JSON.stringify(entry);
+		this.cached = null;
+	},
+
+	getLocal: function () {
+		var key,
+		    scores = [];
+
+		if (this.cached) { return this.cached; }
+
+		for (var i = 0, len = localStorage.length; i < len; i++) {
+			key = localStorage.key(i);
+
+			if (key.indexOf(this.prefix + "replay") !== 0) { continue; }
+
+			scores.push(new HighScores.Score(key));
+		}
+
+		return this.cached = scores;
+	}
+};
+
+HighScores.Score = function (key) {
+	var date,
+	    property,
+	    decoded;
+
+	date = key.match(/\d+$/)[0];
+	if (date) {
+		date = new Date(parseInt(date, 10));
+	}
+
+	decoded = JSON.parse(localStorage[key]);
+	for (property in decoded) {
+		if (!decoded.hasOwnProperty(property)) { continue; }
+		this[property] = decoded[property];
+	}
+
+	this.key = key;
+	this.date = date;
+	this.displayScore = this.displays[this.mode];
+};
+
+HighScores.Score.prototype = {
+	displayScore: $.noop,
+	displays: {
+		Master: function () {
+			return gradeMap[this.grade];
+		},
+
+		Infinity: function () {
+			return this.score;
+		},
+
+		TimeAttack: function () {
+			var ms, s, m,
+			    e = this.elapsed;
+
+			m = ~~(e / 60000);
+			e -= m * 60000;
+
+			s = ~~(e / 1000);
+			e -= s * 1000;
+
+			return pad00(m) + ":" + pad00(s);
+		}
+	}
+};
+
 HighScores.Menu = {
 	scores: null,
 	container: null,
+	mode: "Master",
 
 	init: function () {
 		if (!this.scores) {
-			this.scores = new Paginator(HighScores.byScore());
+			this.scores = new Paginator(function () {
+				return HighScores.getLocal()
+					.filter(filterMode.partial(this.mode))
+					.sort(sortBy.partial("grade"));
+			}.bind(this));
 			this.scores.update = this.update.bind(this);
 		}
 
@@ -210,7 +278,7 @@ HighScores.Menu = {
 		dateStr = pad00(date.getMonth()) + "-" + pad00(date.getDate()) + "-" + date.getFullYear(),
 		node = document.createElement("tr"),
 		dateNode = UI.createNode("td", dateStr),
-		scoreNode = UI.createNode("td", score.score),
+		scoreNode = UI.createNode("td", score.displayScore()),
 		replayNode = UI.createNode("td", "Play Replay"),
 
 		replayNode.className = "replay";

@@ -3,6 +3,7 @@
 var Shapes = {
 	PieceList: ["I", "T", "O", "Z", "S", "L", "J"],
 	I: $.inherit(Piece, {
+		initialPosition: {x: 3, y: 0},
 		image: "orange",
 		shapes: [
 				[[0, 0, 0, 0],
@@ -17,6 +18,7 @@ var Shapes = {
 	}),
 
 	T: $.inherit(Piece, {
+		initialPosition: {x: 3, y: 0},
 		image: "blue",
 		shapes: [
 				[[0, 0, 0],
@@ -35,6 +37,7 @@ var Shapes = {
 	}),
 
 	O: $.inherit(Piece, {
+		initialPosition: {x: 4, y: 1},
 		image: "yellow",
 		shapes: [
 				[[1, 1],
@@ -43,6 +46,7 @@ var Shapes = {
 	}),
 
 	Z: $.inherit(Piece, {
+		initialPosition: {x: 3, y: 0},
 		image: "red",
 		shapes: [
 				[[0, 0, 0],
@@ -55,6 +59,7 @@ var Shapes = {
 	}),
 
 	S: $.inherit(Piece, {
+		initialPosition: {x: 3, y: 0},
 		image: "cyan",
 		shapes: [
 				[[0, 0, 0],
@@ -67,6 +72,7 @@ var Shapes = {
 	}),
 
 	L: $.inherit(Piece, {
+		initialPosition: {x: 3, y: 0},
 		image: "green",
 		shapes: [
 				[[0, 0, 0],
@@ -85,6 +91,7 @@ var Shapes = {
 	}),
 
 	J: $.inherit(Piece, {
+		initialPosition: {x: 3, y: 0},
 		image: "purple",
 		shapes: [
 				[[0, 0, 0],

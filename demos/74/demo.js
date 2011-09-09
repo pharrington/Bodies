@@ -175,11 +175,9 @@ var Field = {
 	},
 
 	eraseRows: function (rows) {
-		var $this = this;
-
 		rows.forEach(function (row) {
-			$this.eraseRow(row.index);
-		});
+			this.eraseRow(row.index);
+		}, this);
 	},
 
 	eraseRow: function (index) {
@@ -187,9 +185,9 @@ var Field = {
 		    y = (index - this.rowOffset) * size,
 		    spacing = Piece.spacing,
 		    columns = this.columns,
-		    offset = y + spacing;
+		    offset = this.offset;
 
-		this.background.drawOffset(this.context, 0, offset, 0, offset, size * columns + spacing, size);
+		this.background.drawOffset(this.context, offset.x, offset.y + y, 0, y, size * columns + spacing, size + spacing);
 	},
 	
 	drawFrame: function () {
@@ -563,12 +561,14 @@ var Game = {
 	spawnTimer: null,
 	velocity: null,
 	enableGhostPiece: true,
+	killOnLockAboveField: false,
 
 	groundedTimeout: 30,
 	lineClearDelay: 10,
 	spawnDelay: 6,
 	startVelocity: 0.012,
 	timers: null,
+	active: false,
 
 	countdownDelay: ~~((1000 / 17) * 3),
 	keyHoldDelay: 170, // DAS (Delayed Auto Shift)
@@ -648,7 +648,8 @@ var Game = {
 
 		if (this.field.collision(this.currentPiece)) {
 			gameover = true;
-			this.currentPiece.draw();
+			this.drawPiecePreview();
+			this.currentPiece.update(0);
 			this.gameOver();
 		}
 		return gameover;
@@ -680,24 +681,25 @@ var Game = {
 	},
 
 	gameOver: function () {
-		this.endGame(this.loseCallback);
+		this.endGame(this.loseCallback, true);
 	},
 
 	won: function () {
-		this.endGame(this.winCallback);
+		this.endGame(this.winCallback, true);
 	},
 
-	endGame: function (callback, delay) {
+	endGame: function (callback, saveReplay, delay) {
 		if (delay === undefined) {
 			delay = 2000;
 		}
 
 		$.keyPress($.noop);
+		this.active = false;
 		this.tick = this.draw;
 		this.clearTimers();
-		this.saveReplay();
 		this.inputSource.gameOver();
 		this.queueSource.gameOver();
+		saveReplay && this.saveReplay();
 
 		setTimeout(callback.bind(this), delay);
 	},
@@ -825,6 +827,11 @@ var Game = {
 
 		this.inputSource.endPiece();
 
+		if (this.killOnLockAboveField && this.currentPiece.gridPosition.y === this.currentPiece.initialPosition.y) {
+			this.gameOver();
+			return;
+		}
+
 		if (!numCleared) {
 			this.spawnNext();
 			this.outline.refresh();
@@ -881,7 +888,7 @@ var Game = {
 			ctx.rect(offset.x, offset.y, field.width, field.height);
 			ctx.clip();
 
-			this.enableGhostPiece && this.drawGhost(piece);
+			this.enableGhostPiece && this.active && this.drawGhost(piece);
 			piece.draw();
 
 			ctx.beginPath();
@@ -1019,6 +1026,7 @@ var Game = {
 	},
 
 	start: function () {
+		this.active = false;
 		this.timers = [];
 		this.inputBuffer = 0;
 		this.tick = this.countdown;
@@ -1049,21 +1057,21 @@ var Game = {
 		this.effects.setOffset(this.field.offset);
 
 		$.keyPress($.noop);
-		this.setTimeout(this.endCountdown.partial(this.enableGhostPiece).bind(this), this.countdownDelay);
+		this.setTimeout(this.endCountdown.bind(this), this.countdownDelay);
 	},
 
 	countdown: function (elapsed, now) {
-		this.enableGhostPiece = false;
 		this.draw(elapsed);
 		Countdown.tick(3);
 	},
 
-	endCountdown: function (ghostPiece) {
+	endCountdown: function () {
 		Countdown.end();
 		$.keyPress(this.keyPress.bind(this));
-		this.enableGhostPiece = ghostPiece;
+
 		this.drawPiecePreview();
 		this.tick = this.doFrame;
+		this.active = true;
 	},
 
 	softDrop: function () {
@@ -1096,6 +1104,8 @@ var Game = {
 	consumeInput: function () {
 		var buffer = this.inputBuffer;
 
+		if (!this.spawnTimer) {
+
 		if (buffer & Inputs.RotateCW) {
 			this.tryRotation(Piece.Rotation.CW);
 		}
@@ -1104,7 +1114,6 @@ var Game = {
 			this.tryRotation(Piece.Rotation.CCW);
 		}
 
-		if (!this.spawnTimer) {
 		if (buffer & Inputs.Left) {
 			this.tryMove(Piece.Direction.Left);
 		}
@@ -1155,12 +1164,15 @@ var Game = {
 			this.checkGrounded();
 		}
 
-		this.score.refresh(elapsed);
 		this.checkWon();
 		this.locked = false;
 	},
 
 	draw: function (elapsed) {
+		if (this.active) {
+			this.score.refresh(elapsed);
+		}
+
 		this.dropFX.refresh(elapsed);
 		this.drawField(this.currentPiece);
 		this.gameStatus.draw();
@@ -1216,7 +1228,7 @@ var PauseMenu = {
 		game.endGame(function () {
 			this.field.clear();
 			this.field.draw();
-		}, 0);
+		}, false, 0);
 		game.start();
 	},
 
@@ -1224,7 +1236,7 @@ var PauseMenu = {
 		var game = this.game;
 
 		this.unpause();
-		game.endGame(game.loseCallback, 0);
+		game.endGame(game.loseCallback, false, 0);
 	},
 
 	keyHold: $.noop,

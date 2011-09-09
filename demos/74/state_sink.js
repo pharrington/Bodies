@@ -37,8 +37,7 @@ InputSink.LocalStorage = $.inherit(InputSink.Base, {
 		var game = this.game,
 		    header = {};
 
-		header.queueSeed = game.queueSource.seed;
-		header.version = "1.0";
+		header.queueSeed = game.queueSource.lastSeed;
 
 		return JSON.stringify(header);
 	},

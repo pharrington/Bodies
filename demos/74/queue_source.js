@@ -23,12 +23,17 @@ var QueueSource = {
 		game: null,
 		rng: null,
 		seed: null,
+		lastSeed: null,
 
 		generatePiece: $.noop,
 
+		setSeed: function (seed) {
+			this.seed = this.lastSeed = seed;
+		},
+
 		initRNG: function () {
 			if (!this.seed) {
-				this.seed = Date.now();
+				this.setSeed(Date.now());
 			}
 
 			this.rng = Alea(this.seed);

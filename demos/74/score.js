@@ -11,6 +11,7 @@ var Score = {
 		softDropY: 0,
 		softDropValue: 0,
 		hardDropValue: 0,
+		save: [],
 		currentPiece: null,
 		callbacks: null,
 
@@ -35,12 +36,17 @@ var Score = {
 
 			this.elapsed += elapsed;
 			this.callbacks.forEach(run.curry(elapsed), this);
+		},
+
+		toString: function () {
+			return "" + this.score;
 		}
 
 	}
 };
 
 Score.Master = $.inherit(Score.Base, {
+	save: ["elapsed", "grade"],
 	grades: [
 		// internal grade 0
 		{decay: 125, clearPoints: [10, 20, 40, 50]},
@@ -189,6 +195,10 @@ Score.Master = $.inherit(Score.Base, {
 		}
 	},
 
+	toString: function () {
+		return this.displayMap[this.grade];
+	},
+
 	callbacks: [
 		function () {
 			if (this.combo || this.game.spawnTimer) { return; }
@@ -203,19 +213,7 @@ Score.Master = $.inherit(Score.Base, {
 });
 
 Score.Infinite = $.inherit(Score.Base, {
-	refresh: function () {
-		var piece = this.currentPiece,
-		    y;
-
-		if (!piece) { return; }
-
-		y = piece.gridPosition.y;
-
-		this.score += (y - this.hardDropY) * this.hardDropValue * this.levelMultiplier();
-
-		this.hardDropY = this.softDropY = 0;
-		this.currentPiece = null;
-	},
+	save: ["elapsed", "score"],
 
 	hardDrop: function (piece) {
 		this.currentPiece = piece;
@@ -223,10 +221,27 @@ Score.Infinite = $.inherit(Score.Base, {
 	},
 
 	softDrop: function () {
-	}
+	},
+
+	callbacks: [
+		function () {
+			var piece = this.currentPiece,
+			    y;
+
+			if (!piece) { return; }
+
+			y = piece.gridPosition.y;
+
+			this.score += (y - this.hardDropY) * this.hardDropValue * this.levelMultiplier();
+
+			this.hardDropY = this.softDropY = 0;
+			this.currentPiece = null;
+		}
+	]
 });
 
 Score.TimeAttack = $.inherit(Score.Base, {
+	save: ["elapsed"],
 	linesLeft: 0,
 
 	start: function (game) {

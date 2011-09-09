@@ -102,12 +102,12 @@ LevelSystem.Master = $.inherit(LevelSystem.Base, {
 	},
 
 	clearLines: function (numCleared) {
-		this.level += numCleared;
+		this.level = Math.min(this.level + numCleared, 999);
 		this.applyLevel();
 	},
 
 	endSpawnNext: function () {
-		if ((this.level + 1) % 100) {
+		if (((this.level + 1) % 100) && (this.level !== 998)) {
 			this.level++;
 		}
 		this.applyLevel();

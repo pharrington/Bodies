@@ -14,15 +14,13 @@ var Piece = {
 	spacingColor: "#444",
 	shapeSize: null,
 	offset: null,
+	initialPosition: null,
 	gridPosition: null,
 	game: null,
 	delta: 0,
 
 	init: function (game) {
-		var x = this.shapes[0].length === 2 ? 4 : 3,
-		    y = this.shapes[0].length === 3 ? 0 : 0;
-
-		this.gridPosition = {x: x, y: y};
+		this.gridPosition = $.inherit(this.initialPosition);
 		this.game = game;
 		this.offset = game.field.offset;
 	},

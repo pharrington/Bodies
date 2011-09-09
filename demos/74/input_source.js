@@ -125,7 +125,7 @@ InputSource.Replay = $.inherit(InputSource.Base, {
 	loadHeader: function (header) {
 		var game = this.game;
 
-		game.queueSource.seed = header.queueSeed;
+		game.queueSource.setSeed(header.queueSeed);
 	},
 
 	headerSize: function (str) {
@@ -139,8 +139,6 @@ InputSource.Replay = $.inherit(InputSource.Base, {
 		    state,
 		    stateList,
 		    i, len;
-
-		if (!header.version) { return null; }
 
 		this.stateIndex = 0;
 		stateList = this.stateList = [];

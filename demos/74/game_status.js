@@ -4,27 +4,75 @@ function argsArray(args) {
 	return Array.prototype.slice.call(args);
 }
 
+function elapsedToString(e) {
+		var ms, s, m;
+
+		m = ~~(e / 60000);
+		e -= m * 60000;
+
+		s = ~~(e / 1000);
+		e -= s * 1000;
+
+		return pad00(m) + ":" + pad00(s) + ":" + pad00(~~(e / 10));
+}
+
+var RankText = {
+	text: "",
+	size: 120,
+	face: "ProFontWindows",
+	start: new Color(255, 255, 0),
+	end: new Color(255, 255, 255),
+	gradient: null,
+	backGradient: null,
+	offset: 5,
+	x: 0,
+	y: 0,
+
+	createGradient: function (ctx) {
+		var gradient, backGradient;
+	       
+		gradient = ctx.createLinearGradient(0, this.y - this.size, 0, this.y);
+
+		gradient.addColorStop(0, this.start.toString());
+		gradient.addColorStop(1, this.end.toString());
+
+		backGradient = ctx.createLinearGradient(0, this.y - this.size + this.offset, 0, this.y + this.offset);
+		backGradient.addColorStop(1, "rgb(255, 255, 255)");
+		backGradient.addColorStop(0, "rgb(30, 30, 30)");
+
+		this.gradient = gradient;
+		this.backGradient = backGradient;
+	},
+
+	draw: function (ctx) {
+		ctx.shadowColor = "#fff";
+		ctx.shadowBlur = 8;
+		ctx.fillStyle = this.backGradient;
+		ctx.fillText(this.text, this.x + this.offset, this.y + this.offset);
+
+		ctx.shadowBlur = 15;
+		ctx.fillStyle = this.gradient;
+		ctx.fillText(this.text, this.x, this.y);
+
+		ctx.shadowBlur = 0;
+	}
+};
 var GameStatus = {
 	Base: {
 		game: null,
 		background: null,
-		fontSize: 36,
+		labelSize: 28,
+		valueSize: 44,
 		fontFamily: "ProFontWindows",
 		width: 180,
-		height: 175,
+		height: 150,
 		offset: { x: 350, y: 420 },
 
 		draw: $.noop,
 
 		start: function (game) {
-			var canctx,
-			    background;
+			var background;
 
-			canctx = $.createCanvas(this.width, this.height);
-			this.canvas = canctx[0];
-			this.context = canctx[1];
-			this.context.textAlign = "right";
-			this.setFont();
 			this.game = game;
 
 			background = $.inherit(game.field.background);
@@ -33,23 +81,34 @@ var GameStatus = {
 		},
 
 		clear: function () {
-			this.background.draw(this.context, 0, 0, this.width, this.height);
+			var background = this.background;
+
+			background.draw($.context, background.offset.x, background.offset.y, this.width, this.height);
 		},
 
 		setFont: function (size, family) {
+			var ctx = $.context;
+
 			size = size || this.fontSize;
 			family = family || this.fontFamily;
 
-			this.context.font = size + "px " + family;
+			ctx.font = size + "px " + family;
 		},
 
 		drawValue: function (label, value, x, y) {
 			var game = this.game,
-			    ctx = this.context;
+			    fo = game.field.offset,
+			    offset = this.offset,
+			    ox = offset.x + fo.x,
+			    oy = offset.y + fo.y,
+			    ctx = $.context;
 
+			this.setFont(this.labelSize);
 			ctx.fillStyle = "#eee";
-			ctx.fillText(label, x, y);
-			ctx.fillText(value, x, y + this.fontSize + 2);
+			ctx.fillText(label, ox + x, oy + y);
+
+			this.setFont(this.valueSize);
+			ctx.fillText(value, ox + x, oy + y + this.labelSize + 2);
 		}
 	}
 };
@@ -62,60 +121,93 @@ GameStatus.Score = $.inherit(GameStatus.Base, {
 		this.clear();
 		this.drawValue("Level", game.levels.level, this.width, this.fontSize);
 		this.drawValue("Score", game.score.score, this.width, this.fontSize + 67);
-
-		$.context.drawImage(this.canvas, this.offset.x + fo.x, this.offset.y + fo.y);
 	}
 });
 
-GameStatus.Timer = $.inherit(GameStatus.Base, {
-	linesOffset: {x: 0, y: 90},
+GameStatus.Rank = $.inherit(GameStatus.Base, {
+	displayMap: [
+		"9", "8", "7", "6", "5",
+		"4", "4",
+		"3", "3",
+		"2", "2", "2",
+		"1", "1", "1",
+		"S1", "S1", "S1",
+		"S2",
+		"S3",
+		"S4", "S4", "S4",
+		"S5", "S5",
+		"S6", "S6",
+		"S7", "S7",
+		"S8", "S8",
+		"S9"
+	],
+
+	width: 180,
+	height: 300,
+	offset: { x: 360, y: 220 },
 	elapsedOffset: {x: 0, y: 100},
 	textColor: "#fff",
 
+	rank: "",
+
 	start: function () {
+		var fo;
+
 		GameStatus.Base.start.apply(this, argsArray(arguments));
-		this.context.textAlign = "left";
-		//this.offset.x -= 5;
-	},
 
-	elapsedToString: function (e) {
-		var ms, s, m;
+		fo = this.game.field.offset;
 
-		m = ~~(e / 60000);
-		e -= m * 60000;
-
-		s = ~~(e / 1000);
-		e -= s * 1000;
-
-		return pad00(m) + ":" + pad00(s) + ":" + pad00(~~(e / 10));
+		RankText.x = this.offset.x + fo.x + 15;
+		RankText.y = this.offset.y + 150;
+		RankText.createGradient($.context);
+		RankText.text = this.rank;
 	},
 
 	draw: function () {
 		var game = this.game,
-		    ctx = this.context,
-		    fo = game.field.offset;
+		    newRank = this.displayMap[game.score.grade],
+		    fo = game.field.offset,
+		    ctx = $.context;
+
+		this.clear();
+
+		$.context.save();
+
+		ctx.textAlign = "left";
+		ctx.fillStyle = this.textColor;
+
+		this.drawValue("Level", game.levels.level, 0, 200);
+		this.drawValue("Time", elapsedToString(game.score.elapsed), 0, 270);
+
+		this.setFont(this.labelSize);
+		ctx.fillText("Rank", fo.x + this.offset.x + 10, fo.y + this.offset.y + this.labelSize + 10);
+
+		this.rank = newRank;
+		this.setFont(150);
+		RankText.text = this.rank;
+		RankText.draw($.context);
+
+		$.context.restore();
+	}
+});
+
+GameStatus.Timer = $.inherit(GameStatus.Base, {
+	textColor: "#fff",
+
+	draw: function () {
+		var game = this.game,
+		    ctx = $.context;
 		
 		this.clear();
 
-		this.setFont(28);
-		ctx.fillStyle = this.textColor;
-		ctx.fillText("Lines Left", 0, this.fontSize);
+		ctx.save();
 
-		this.setFont(80);
-		ctx.fillStyle = "rgba(255, 255, 255, 0.5)";
-		ctx.fillText(game.score.linesLeft, this.linesOffset.x+3, this.linesOffset.y+3);
+		ctx.textAlign = "left";
 
-		ctx.fillStyle = this.textColor;
-		ctx.fillText(game.score.linesLeft, this.linesOffset.x, this.linesOffset.y);
+		this.drawValue("Lines Left", game.score.linesLeft, 0, 50);
+		this.drawValue("Time", elapsedToString(game.score.elapsed), 0, 120);
 
-		this.setFont(28);
-		ctx.fillStyle = this.textColor;
-		ctx.fillText("Time", 0, this.elapsedOffset.y + this.fontSize);
-
-		this.setFont(44);
-		ctx.fillText(this.elapsedToString(game.score.elapsed), 0, this.elapsedOffset.y + this.fontSize * 2);
-
-		$.context.drawImage(this.canvas, this.offset.x + fo.x, this.offset.y + fo.y);
+		ctx.restore();
 	}
 });
 
