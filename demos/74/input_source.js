@@ -31,6 +31,7 @@ var InputSource = {
 		startPiece: $.noop,
 		nextPiece: $.noop,
 		endPiece: $.noop,
+		endSpawnNext: $.noop,
 		gameOver: $.noop,
 
 		start: function (game) {
@@ -63,6 +64,18 @@ InputSource.Player = $.inherit(InputSource.Base, {
 
 	disable: function () {
 		$.keyHold($.noop);
+	},
+
+	// IRS
+	endSpawnNext: function () {
+		var game = this.game,
+		    config = game.Config;
+
+		if ($.keys[config.RotateCW]) {
+			game.input(Inputs.RotateCW);
+		} else if ($.keys[config.RotateCCW]) {
+			game.input(Inputs.RotateCCW);
+		}
 	},
 
 	refresh: function (elapsed) {

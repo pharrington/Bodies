@@ -754,7 +754,6 @@ var Game = {
 
 	setLineClearTimer: function () {
 		this.tick = this.draw;
-		this.currentPiece = null;
 		this.clearSpawnTimer();
 		this.spawnTimer = this.setTimeout(this.endLineClear.bind(this), this.lineClearDelay);
 	},
@@ -772,6 +771,7 @@ var Game = {
 		!this.locked && this.drawPiecePreview();
 		this.tick = this.doFrame;
 		this.levels.endSpawnNext();
+		this.inputSource.endSpawnNext();
 	},
 
 
@@ -1185,6 +1185,7 @@ var Game = {
 		this.drawField(this.currentPiece);
 		this.gameStatus.draw();
 		this.effects.refresh(elapsed);
+		this.inputBuffer = 0;
 	},
 
 	saveReplay: function () {

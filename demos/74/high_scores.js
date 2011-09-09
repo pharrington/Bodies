@@ -214,13 +214,24 @@ HighScores.Menu = {
 	container: null,
 	mode: "Master",
 
+	scoreList: {
+		Master: function () {
+			return HighScores.getLocal()
+				.filter(filterMode.partial("Master"))
+				.sort(sortBy.partial("grade"));
+		},
+
+		TimeAttack: function () {
+			return HighScores.getLocal()
+				.filter(filterMode.partial("TimeAttack"))
+				.sort(sortBy.partial("elapsed"))
+				.reverse();
+		}
+	},
+
 	init: function () {
 		if (!this.scores) {
-			this.scores = new Paginator(function () {
-				return HighScores.getLocal()
-					.filter(filterMode.partial(this.mode))
-					.sort(sortBy.partial("grade"));
-			}.bind(this));
+			this.scores = new Paginator(this.scoreList[this.mode]);
 			this.scores.update = this.update.bind(this);
 		}
 
