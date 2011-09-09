@@ -111,6 +111,22 @@ LevelSystem.Master = $.inherit(LevelSystem.Base, {
 			this.level++;
 		}
 		this.applyLevel();
+
+		// TODO requirements for invisible mode
+		if (this.level === 999) {
+			var game = this.game;
+
+			game.active = false;
+			game.tick = game.draw;
+			$.keyPress($.noop);
+			game.setTimeout(function () {
+				this.field.clearGrid();
+				$.keyPress(this.keyPress.bind(this));
+				this.tick = this.doFrame;
+				this.invisible = true;
+			}.bind(game), 240);
+
+		}
 	},
 
 	applyLevel: function () {

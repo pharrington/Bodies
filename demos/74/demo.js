@@ -79,10 +79,22 @@ var Field = {
 	height: null,
 
 	init: function (game) {
-		var i, j,
-		    row;
+		this.clearGrid();
 
 		this.game = game;
+		if (game.offset) {
+			this.offset = game.offset;
+		}
+
+		this.background = new Background($.resource("background"), this.offset);
+		this.background.drawOffset($.context, 0, 0, 0, 0, $.width, $.height);
+		this.initCanvas();
+		this.drawFrame();
+	},
+
+	clearGrid: function () {
+		var row, i, j;
+
 		this.grid = [];
 
 		for (i = 0; i < this.rows; i++) {
@@ -92,15 +104,6 @@ var Field = {
 			}
 			this.grid[i] = row;
 		}
-
-		if (game.offset) {
-			this.offset = game.offset;
-		}
-
-		this.background = new Background($.resource("background"), this.offset);
-		this.background.drawOffset($.context, 0, 0, 0, 0, $.width, $.height);
-		this.initCanvas();
-		this.drawFrame();
 	},
 
 	copy: function (other) {
@@ -562,6 +565,7 @@ var Game = {
 	velocity: null,
 	enableGhostPiece: true,
 	killOnLockAboveField: false,
+	invisible: false,
 
 	groundedTimeout: 30,
 	lineClearDelay: 10,
@@ -880,8 +884,12 @@ var Game = {
 		    field = this.field,
 		    offset = field.offset;
 
-		field.draw();
-		this.outline.draw();
+		if (this.invisible) {
+			field.background.drawOffset($.context, offset.x, offset.y, offset.y, offset.y, field.width, field.height);
+		} else {
+			field.draw();
+			this.outline.draw();
+		}
 
 		if (piece && !this.spawnTimer) {
 			ctx.save();
