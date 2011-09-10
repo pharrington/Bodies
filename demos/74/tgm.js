@@ -110,9 +110,28 @@ var Shapes = {
 	})
 };
 
+var exceptions = {
+	J: {
+		0: [[1, 2], [1, 0]],
+		2: [[1, 0], [1, 1]]
+	},
+	L: {
+		0: [[1, 2], [1, 0]],
+		2: [[1, 0], [1, 1]]
+	},
+	T: {
+		0: [[1, 0]],
+		2: [[1, 0]]
+	}
+};
+
 function tryRotation(rotation) {
 	var field = this.field,
 	    piece = this.currentPiece,
+	    allowKick = true,
+	    x, y,
+	    shape,
+	    blocked,
 	    from;
 
 	if (!piece) { return; }
@@ -122,15 +141,46 @@ function tryRotation(rotation) {
 
 	/* try to eject the piece if a rotation collides with the field
 	 * move right, than move left
-	 * I doesn't kick
 	 */ 
 	if (field.collision(piece)) {
+		// exceptions
 		if (piece.code === Shapes.PieceList.indexOf("I")) {
+			allowKick = false;
+		}
+
+		shape = Shapes.PieceList[piece.code];
+
+		if (exceptions.hasOwnProperty(shape)) {
+			blocked = exceptions[shape][from];
+			x = piece.gridPosition.x;
+			y = piece.gridPosition.y;
+
+			blocked && blocked.forEach(function (test) {
+				// we've found an exception to the exception
+				if (allowKick === Piece.Rotation.CW || allowKick === Piece.Rotation.CCW) { return; }
+
+				if (field.grid[y + test[1]][x + test[0]]) {
+					allowKick = false;
+				}
+
+				if (!allowKick && from === 0 && test[1] === 2) {
+					if (shape === "J" && field.grid[y][x]) {
+						allowKick = Piece.Rotation.CCW;
+					} else if (shape === "L" && field.grid[y + 2][x]) {
+						allowKick = Piece.Rotation.CW;
+					}
+				}
+			});
+		}
+
+		if (allowKick === false ||
+		    (allowKick !== true && allowKick !== rotation)) {
 			piece.shapeIndex = from;
 			piece.setShape();
 			return;
 		}
 
+		// attempt kick
 		piece.moveRight();
 
 		if (field.collision(piece)) {
