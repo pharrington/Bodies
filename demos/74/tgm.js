@@ -112,23 +112,35 @@ var Shapes = {
 
 function tryRotation(rotation) {
 	var field = this.field,
-	    piece = this.currentPiece;
+	    piece = this.currentPiece,
+	    from;
 
 	if (!piece) { return; }
 
+	from = piece.shapeIndex;
 	piece.rotate(rotation);
 
-	/* try to eject the piece if a rotation collides with the field */
+	/* try to eject the piece if a rotation collides with the field
+	 * move right, than move left
+	 * I doesn't kick
+	 */ 
 	if (field.collision(piece)) {
-		piece.moveLeft();
+		if (piece.code === Shapes.PieceList.indexOf("I")) {
+			piece.shapeIndex = from;
+			piece.setShape();
+			return;
+		}
+
+		piece.moveRight();
 
 		if (field.collision(piece)) {
-			piece.moveRight();
-			piece.moveRight();
+			piece.moveLeft();
+			piece.moveLeft();
 
 			if (field.collision(piece)) {
-				piece.moveLeft();
-				rotation === Piece.Rotation.CW ? piece.rotateCCW() : piece.rotateCW();
+				piece.moveRight();
+				piece.shapeIndex = from;
+				piece.setShape();
 			}
 		}
 	}
