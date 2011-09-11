@@ -99,7 +99,7 @@ var GameStatus = {
 			var game = this.game,
 			    fo = game.field.offset,
 			    offset = this.offset,
-			    ox = offset.x + fo.x,
+			    ox = offset.x + fo.x + 5,
 			    oy = offset.y + fo.y + this.labelSize,
 			    ctx = $.context;
 
