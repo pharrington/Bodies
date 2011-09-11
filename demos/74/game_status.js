@@ -65,7 +65,7 @@ var GameStatus = {
 		valueSize: 44,
 		fontFamily: "ProFontWindows",
 		width: 180,
-		height: 150,
+		height: 154,
 		offset: { x: 350, y: 420 },
 
 		draw: $.noop,
