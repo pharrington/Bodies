@@ -7,6 +7,7 @@ var ConfigMenu = {
 		"Soft Drop": ["SoftDrop"],
 		"Hard Drop": ["HardDrop"],
 		"Rotate Left": ["RotateCCW"],
+		"Rotate Left Alt": ["RotateCCWAlt"],
 		"Rotate Right": ["RotateCW"],
 		"Hold Piece": ["Hold"],
 		"Pause": ["Pause"]

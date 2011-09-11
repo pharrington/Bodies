@@ -97,6 +97,11 @@ ul {
 	display: none;
 }
 
+#controls_menu li {
+	font-size: 30px;
+	padding-bottom: 9px;
+}
+
 table {
 	margin-left: -85px;
 	border-spacing: 70px 3px;

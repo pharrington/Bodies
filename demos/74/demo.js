@@ -607,6 +607,7 @@ var Game = {
 		Hold: 67,
 		RotateCW: 88,
 		RotateCCW: 90,
+		RotateCCWAlt: 17,
 		Pause: 27
 	},
 

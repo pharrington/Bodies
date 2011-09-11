@@ -20,6 +20,8 @@ var Inputs = {
 	Hold: 0x40
 };
 
+Inputs.RotateCCWAlt = Inputs.RotateCCW;
+
 var InputSource = {
 	Base: {
 		game: null,
@@ -60,7 +62,7 @@ InputSource.Player = $.inherit(InputSource.Base, {
 			return;
 		}
 
-		this.inputSource.acceptMoves(key, ["RotateCW", "RotateCCW", "Hold", "HardDrop"]);
+		this.inputSource.acceptMoves(key, ["RotateCW", "RotateCCW", "RotateCCWAlt", "Hold", "HardDrop"]);
 	},
 
 	// IRS
@@ -70,7 +72,7 @@ InputSource.Player = $.inherit(InputSource.Base, {
 
 		if ($.keys[config.RotateCW]) {
 			game.input(Inputs.RotateCW);
-		} else if ($.keys[config.RotateCCW]) {
+		} else if ($.keys[config.RotateCCW] || $.keys[config.RotateCCWAlt]) {
 			game.input(Inputs.RotateCCW);
 		}
 	},
