@@ -718,10 +718,8 @@ var Game = {
 	},
 
 	nextPiece: function () {
-		var gameOver,
-		    shape;
+		var shape = this.rotationSystem.shapes[this.queueSource.next()];
 
-		shape = this.rotationSystem.shapes[this.queueSource.next()];
 		if (shape) {
 			this.currentPiece = $.inherit(shape, {
 				gridPosition: $.inherit(shape.gridPosition),
@@ -731,24 +729,14 @@ var Game = {
 			this.currentPiece.velocity = this.velocity;
 			this.lastY = this.currentPiece.gridPosition.y;
 
-			gameOver = this.checkGameOver();
-		} else {
-			gameOver = true;
 		}
 
-		if (!gameOver) {
-			this.inputSource.nextPiece();
-		}
-
-		return gameOver;
+		this.inputSource.nextPiece();
 	},
 
 	spawnNext: function () {
 		this.tick = this.draw;
-
-		if (!this.nextPiece()) {
-			this.setSpawnTimer();
-		}
+		this.setSpawnTimer();
 	},
 
 	setSpawnTimer: function () {
@@ -775,6 +763,7 @@ var Game = {
 		this.tick = this.doFrame;
 		this.levels.endSpawnNext();
 		this.inputSource.endSpawnNext();
+		this.checkGameOver();
 	},
 
 
