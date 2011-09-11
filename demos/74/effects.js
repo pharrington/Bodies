@@ -50,7 +50,7 @@ FX.Fireworks = {
 		}
 	},
 
-	play: function (rows) {
+	start: function (rows) {
 		if (!this.duration) { return; }
 
 		var x, y,
@@ -104,6 +104,8 @@ FX.Dummy = {
 	rows: null,
 	field: null,
 
+	setOffset: $.noop,
 	init: $.noop,
+	start: $.noop,
 	refresh: $.noop
 };
