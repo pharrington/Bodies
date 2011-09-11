@@ -1,6 +1,7 @@
 var SecretMove = {
 	buffer: null,
 
+	// these are a secret between you and me.
 	codes: [
 		["72,65,76,57,48,48,48", function () {
 			UI.events.master[1] = function () {
