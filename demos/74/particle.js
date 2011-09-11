@@ -99,7 +99,7 @@ $.extend(Particle.prototype, {
 		ctx.globalAlpha = 1 - (percent * percent);
 
 		ctx.beginPath();
-		ctx.arc(~~p.x, ~~p.y, this.radius, Math.PI * 2, 0);
+		ctx.arc(~~p.x, ~~p.y, this.radius, Math.PI * 2, 0, false);
 		ctx.fill();
 	},
 
