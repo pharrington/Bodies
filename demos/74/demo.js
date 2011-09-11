@@ -174,7 +174,7 @@ var Field = {
 
 		game.setLineClearTimer();
 
-		effects.play(rows);
+		effects.start(rows);
 	},
 
 	eraseRows: function (rows) {
@@ -566,6 +566,7 @@ var Game = {
 	enableGhostPiece: true,
 	killOnLockAboveField: false,
 	invisible: false,
+	lastY: -10,
 
 	groundedTimeout: 30,
 	lineClearDelay: 10,
@@ -728,6 +729,8 @@ var Game = {
 			});
 			this.currentPiece.init(this);
 			this.currentPiece.velocity = this.velocity;
+			this.lastY = this.currentPiece.gridPosition.y;
+
 			gameOver = this.checkGameOver();
 		} else {
 			gameOver = true;
@@ -1085,18 +1088,14 @@ var Game = {
 	softDrop: function () {
 		var piece = this.currentPiece;
 
-		if (!piece) { return; }
-
 		if (this.softLock) { this.locked = true; }
 
-		piece.velocity += 1.2;
+		piece.velocity += 1;
 		this.score.softDrop(piece);
 	},
 
 	hardDrop: function () {
 		var piece = this.currentPiece;
-
-		if (!piece) { return; }
 
 		piece.velocity = 20;
 		if (this.hardLock) { this.locked = true; }
@@ -1109,10 +1108,16 @@ var Game = {
 		this.inputBuffer = this.inputBuffer | input;
 	},
 
+	clearInput: function (input) {
+		this.inputBuffer = this.inputBuffer & ~input;
+	},
+
 	consumeInput: function () {
 		var buffer = this.inputBuffer;
 
-		if (!this.spawnTimer) {
+		if (this.spawnTimer) {
+			return;
+		}
 
 		if (buffer & Inputs.RotateCW) {
 			this.tryRotation(Piece.Rotation.CW);
@@ -1120,14 +1125,6 @@ var Game = {
 
 		if (buffer & Inputs.RotateCCW) {
 			this.tryRotation(Piece.Rotation.CCW);
-		}
-
-		if (buffer & Inputs.Left) {
-			this.tryMove(Piece.Direction.Left);
-		}
-
-		if (buffer & Inputs.Right) {
-			this.tryMove(Piece.Direction.Right);
 		}
 
 		if (buffer & Inputs.Hold) {
@@ -1138,12 +1135,18 @@ var Game = {
 			this.hardDrop();
 		}
 
+		if (buffer & Inputs.Left) {
+			this.tryMove(Piece.Direction.Left);
+		}
+		
+		if (buffer & Inputs.Right) {
+			this.tryMove(Piece.Direction.Right);
+		}
+		
 		if (buffer & Inputs.SoftDrop) {
 			this.softDrop();
 		}
-		}
 
-		this.inputBuffer = 0;
 	},
 
 	refresh: function (elapsed, now) {
@@ -1160,20 +1163,28 @@ var Game = {
 		var currentPiece = this.currentPiece,
 		    gameElapsed = this.refreshInterval + 1;
 
-		if (currentPiece) {
-			this.inputSource.refresh(gameElapsed, now);
+		this.inputSource.refresh(gameElapsed, now);
+		this.eachSink(function (s) { s.refresh(gameElapsed, this.inputBuffer); }, this);
+		this.consumeInput();
+		this.updateMove();
 
-			this.eachSink(function (s) { s.refresh(gameElapsed, this.inputBuffer); }, this);
-			this.consumeInput();
+		this.dropFX.end(currentPiece);
+		currentPiece.update(gameElapsed);
 
-			this.dropFX.end(currentPiece);
-			currentPiece.update(gameElapsed);
-
-			this.checkGrounded();
-		}
+		this.checkGrounded();
 
 		this.checkWon();
 		this.locked = false;
+	},
+
+	updateMove: function () {
+		var y = this.currentPiece.gridPosition.y;
+
+		if (this.lastY < y) {
+			this.clearGroundedTimer();
+		}
+
+		this.lastY = y;
 	},
 
 	draw: function (elapsed) {

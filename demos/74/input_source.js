@@ -43,8 +43,18 @@ var InputSource = {
 InputSource.Player = $.inherit(InputSource.Base, {
 	keyHold: function (key) {
 		if (this.spawnTimer) { return; }
+		var config = this.Config,
+		    inputs,
+		    left = $.keys[config.Left],
+		    right = $.keys[config.Right];
 
-		this.inputSource.acceptMoves(key, ["Left", "Right"]);
+		if (!left || right.at > left.at) {
+			inputs = ["Right"];
+		} else if (!right || left.at > right.at) {
+			inputs = ["Left"];
+		}
+
+		this.inputSource.acceptMoves(key, inputs);
 	},
 
 	keyPress: function (key) {
@@ -54,16 +64,6 @@ InputSource.Player = $.inherit(InputSource.Base, {
 		}
 
 		this.inputSource.acceptMoves(key, ["RotateCW", "RotateCCW", "Hold", "HardDrop"]);
-	},
-
-	enable: function () {
-		var game = this.game;
-
-		$.keyHold(game.keyHold, game.keyHoldDelay, game.keyHoldInterval);
-	},
-
-	disable: function () {
-		$.keyHold($.noop);
 	},
 
 	// IRS
@@ -79,8 +79,11 @@ InputSource.Player = $.inherit(InputSource.Base, {
 	},
 
 	refresh: function (elapsed) {
-		if ($.keys[this.game.Config.SoftDrop]) {
-			this.game.input(Inputs.SoftDrop);
+		var game = this.game,
+		    config = game.Config;
+
+		if ($.keys[config.SoftDrop] && !($.keys[config.Right] || $.keys[config.Left])) {
+			game.input(Inputs.SoftDrop);
 		}
 	},
 
