@@ -13,7 +13,7 @@ var Score = {
 		hardDropValue: 0,
 		save: [],
 		currentPiece: null,
-		callbacks: null,
+		callbacks: [],
 
 		hardDrop: $.noop,
 		softDrop: $.noop,
@@ -28,14 +28,15 @@ var Score = {
 			this.game = game;
 			this.hardDropY = this.softDropY = 0;
 			this.currentPiece = null;
-			this.callbacks = [];
 		},
 
 		refresh: function (elapsed) {
 			if (this.won()) { return; }
 
 			this.elapsed += elapsed;
-			this.callbacks.forEach(run.curry(elapsed), this);
+			this.callbacks.forEach(function (c) {
+				c.call(this, elapsed);
+			}, this);
 		},
 
 		toString: function () {
@@ -161,11 +162,17 @@ Score.Master = $.inherit(Score.Base, {
 	points: 0,
 	grade: 0,
 	uncomboedFrames: 0,
+	tetrises: 0,
+	lastSectionEndTime: 0,
+	benchmark: 63000,
+	finishTime: 0,
+	doMRoll: true,
 
 	start: function (game) {
 		this.points = 0;
 		this.grade = 0;
 		this.uncomboedFrames = 0;
+		this.lastSectionEndTime = 0;
 		Score.Base.start.call(this, game);
 	},
 
@@ -179,6 +186,10 @@ Score.Master = $.inherit(Score.Base, {
 			return;
 		} else if (lines >= 2) {
 			this.combo++;
+		}
+
+		if (lines === 4) {
+			this.tetrises++;
 		}
 
 		this.uncomboedFrames = 0;
@@ -199,6 +210,13 @@ Score.Master = $.inherit(Score.Base, {
 		return this.displayMap[this.grade];
 	},
 
+	won: function () {
+	},
+
+	toMRoll: function () {
+		this.finishTime = this.elapsed;
+	},
+
 	callbacks: [
 		function () {
 			if (this.combo || this.game.spawnTimer) { return; }
@@ -208,8 +226,101 @@ Score.Master = $.inherit(Score.Base, {
 				this.points = Math.max(this.points - 1, 0);
 				this.uncomboedFrames = 0;
 			}
+		},
+
+		//M-Roll conditions
+		function (elapsed) {
+			if (!this.doMRoll) { return; }
+
+			var level = this.game.levels.level,
+			    minTetrises,
+			    minGrade = 0,
+			    sectionTime;
+
+			if (level === 0 || (level % 100) && (level !== 999)) { return; }
+
+			sectionTime = this.elapsed - this.lastSectionEndTime;
+			this.lastSectionEndTime = this.elapsed;
+
+			if (level <= 500) {
+				minTetrises = 2;
+			} else if (level === 600) {
+				this.benchmark = ((this.elapsed - sectionTime) / 5 >> 0);
+				minTetrises = 1;
+			} else if (level > 600) {
+				this.benchmark += sectionTime;
+				minTetrises = 1;
+			}
+
+			if (level === 999) {
+				minTetrises = 0;
+				minGrade = 31;
+			}
+
+			if  (sectionTime > this.benchmark + 2000 ||
+				this.tetrises < minTetrises ||
+				this.grade < minGrade ||
+				(this.level === 999 && this.elapsed > 525000)) {
+				this.doMRoll = false;
+			}
+
+			this.tetrises = 0;
+		},
+
+		// do M-Roll
+		function () {
+			if (this.game.levels.level === 999 && this.doMRoll) {
+				var game = this.game,
+				    score = this;
+
+				game.active = false;
+				game.tick = game.draw;
+				$.keyPress($.noop);
+				game.setTimeout(function () {
+					var mroll = $.inherit(Score.TGM2MRoll);
+
+					mroll.elapsed = score.elapsed;
+
+					this.field.clearGrid();
+					$.keyPress(this.keyPress.bind(this));
+					this.tick = this.doFrame;
+					this.invisible = true;
+					this.active = true;
+					this.score = mroll;
+				}.bind(game), 240);
+
+			}
 		}
 	]
+});
+
+Score.TGM2MRoll = $.inherit(Score.Base, {
+	grade: 32,
+	survived: 0,
+	save: ["grade", "elapsed"],
+
+	refresh: function (elapsed) {
+		if (this.won()) { return; }
+
+		this.survived += elapsed;
+	},
+
+	winCallback: function () {
+		Game.winCallback.call(this);
+	},
+
+	loseCallback: function () {
+		Game.loseCallback.call(this);
+	},
+
+	won: function () {
+		if (this.survived >= 60000) {
+			this.grade = 33;
+			return true;
+		}
+
+		return false;
+	}
 });
 
 Score.Infinite = $.inherit(Score.Base, {

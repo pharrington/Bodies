@@ -14,7 +14,10 @@ var gradeMap = [
 	"S6", "S6+",
 	"S7", "S7+",
 	"S8", "S8+",
-	"S9"
+	"S9",
+	"M",
+	"GM",
+	"GM+"
 ];
 
 function clamp(min, max, value) {

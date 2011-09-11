@@ -47,7 +47,14 @@ var LevelSystem = {
 };
 
 LevelSystem.Master = $.inherit(LevelSystem.Base, {
+	properties: LevelSystem.Base.properties.concat("keyHoldDelay"),
 	startLevel: 0,
+
+	keyHoldDelay: {
+		0: 14 * 16,
+		500: 8 * 16,
+		900: 6 * 16
+	},
 
 	groundedTimeout: {
 		0: 30,
@@ -111,22 +118,6 @@ LevelSystem.Master = $.inherit(LevelSystem.Base, {
 			this.level++;
 		}
 		this.applyLevel();
-
-		// TODO requirements for invisible mode
-		if (this.level === 999) {
-			var game = this.game;
-
-			game.active = false;
-			game.tick = game.draw;
-			$.keyPress($.noop);
-			game.setTimeout(function () {
-				this.field.clearGrid();
-				$.keyPress(this.keyPress.bind(this));
-				this.tick = this.doFrame;
-				this.invisible = true;
-			}.bind(game), 240);
-
-		}
 	},
 
 	applyLevel: function () {
