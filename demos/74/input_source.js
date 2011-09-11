@@ -59,10 +59,10 @@ InputSource.Player = $.inherit(InputSource.Base, {
 	keyPress: function (key) {
 		if (key === this.Config.Pause) {
 			this.pause();
-			return;
+			return false;
 		}
 
-		this.inputSource.acceptMoves(key, ["RotateCW", "RotateCCW", "RotateCCWAlt", "Hold", "HardDrop"]);
+		return !this.inputSource.acceptMoves(key, ["RotateCW", "RotateCCW", "RotateCCWAlt", "Hold", "HardDrop"]);
 	},
 
 	// IRS
@@ -88,13 +88,17 @@ InputSource.Player = $.inherit(InputSource.Base, {
 
 	acceptMoves: function (key, moves) {
 		var game = this.game,
-		    config = game.Config;
+		    config = game.Config,
+		    handledMove = false;
 
 		moves.forEach(function (move) {
 			if (key === config[move]) {
 				game.input(Inputs[move]);
+				handledMove = true;
 			}
 		});
+
+		return handledMove;
 	}
 });
 
