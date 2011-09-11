@@ -421,10 +421,16 @@ function attachEvents() {
 	addEventListener("keydown", function (e) {
 		var keys = $.keys,
 		    pressed = keys[e.keyCode],
-		    keyPress = $.callbacks.keyPress;
+		    keyPress = $.callbacks.keyPress,
+		    keyInterval = 0,
+		    now = Date.now();
 
+		if ($.callbacks.keyHold) {
+			keyInterval = $.callbacks.keyHold.interval;
+		}
+	
 		if (!pressed) {
-			keys[e.keyCode] = {last: new Date().getTime() + $.callbacks.keyHold.interval};
+			keys[e.keyCode] = {at: now, last: now + keyInterval};
 			keyPress && keyPress(e.keyCode);
 		}
 
