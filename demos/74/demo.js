@@ -1255,6 +1255,7 @@ var PauseMenu = {
 	keyPress: function (key) {
 		if (key === Game.Config.Pause) {
 			this.unpause();
+			return false;
 		}
 	}
 };
