@@ -40,7 +40,7 @@ Modes.Master = {
 Modes.Infinity = {
 	name: "Infinity",
 	newGame: function () {
-		var game = Modes.newGame("Infinity", "Infinity", "SRS", "RandomGenerator");
+		var game = Modes.newGame("Points", "Infinity", "SRS", "RandomGenerator");
 		game.mode = this;
 		game.hardLock = true;
 		game.killOnLockAboveField = true;
@@ -66,7 +66,7 @@ Modes.TimeAttack = {
 Modes.DemoAI = {
 	name: "AI",
 	newGame: function () {
-		var game = Modes.newGame("Static", "Master", "TGM", "TGM");
+		var game = Modes.newGame("Static", "Points", "TGM", "TGM");
 
 		game.mode = this;
 		game.hardLock = true;

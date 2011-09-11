@@ -323,7 +323,7 @@ Score.TGM2MRoll = $.inherit(Score.Base, {
 	}
 });
 
-Score.Infinite = $.inherit(Score.Base, {
+Score.Points = $.inherit(Score.Base, {
 	save: ["elapsed", "score"],
 
 	hardDrop: function (piece) {
@@ -336,6 +336,7 @@ Score.Infinite = $.inherit(Score.Base, {
 
 	callbacks: [
 		function () {
+			/*
 			var piece = this.currentPiece,
 			    y;
 
@@ -343,10 +344,11 @@ Score.Infinite = $.inherit(Score.Base, {
 
 			y = piece.gridPosition.y;
 
-			this.score += (y - this.hardDropY) * this.hardDropValue * this.levelMultiplier();
+			this.score += (y - this.hardDropY) * this.hardDropValue * this.game.levels.level;
 
 			this.hardDropY = this.softDropY = 0;
 			this.currentPiece = null;
+			*/
 		}
 	]
 });

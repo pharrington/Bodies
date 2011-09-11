@@ -100,7 +100,7 @@ var GameStatus = {
 			    fo = game.field.offset,
 			    offset = this.offset,
 			    ox = offset.x + fo.x,
-			    oy = offset.y + fo.y,
+			    oy = offset.y + fo.y + this.labelSize,
 			    ctx = $.context;
 
 			this.setFont(this.labelSize);
@@ -119,8 +119,8 @@ GameStatus.Score = $.inherit(GameStatus.Base, {
 		    fo = game.field.offset;
 
 		this.clear();
-		this.drawValue("Level", game.levels.level, this.width, this.fontSize);
-		this.drawValue("Score", game.score.score, this.width, this.fontSize + 67);
+		this.drawValue("Level", game.levels.level, 5, 0);
+		this.drawValue("Score", game.score.score, 5, 70);
 	}
 });
 
@@ -178,8 +178,8 @@ GameStatus.Rank = $.inherit(GameStatus.Base, {
 		ctx.textAlign = "left";
 		ctx.fillStyle = this.textColor;
 
-		this.drawValue("Level", game.levels.level, 0, 200);
-		this.drawValue("Time", elapsedToString(game.score.elapsed), 0, 270);
+		this.drawValue("Level", game.levels.level, 0, 170);
+		this.drawValue("Time", elapsedToString(game.score.elapsed), 0, 240);
 
 		this.setFont(this.labelSize);
 		ctx.fillText("Rank", fo.x + this.offset.x + 10, fo.y + this.offset.y + this.labelSize + 10);
@@ -206,8 +206,8 @@ GameStatus.Timer = $.inherit(GameStatus.Base, {
 
 		ctx.textAlign = "left";
 
-		this.drawValue("Lines Left", game.score.linesLeft, 0, 50);
-		this.drawValue("Time", elapsedToString(game.score.elapsed), 0, 120);
+		this.drawValue("Lines Left", game.score.linesLeft, 0, 0);
+		this.drawValue("Time", elapsedToString(game.score.elapsed), 0, 70);
 
 		ctx.restore();
 	}
