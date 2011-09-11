@@ -736,6 +736,7 @@ var Game = {
 
 	spawnNext: function () {
 		this.tick = this.draw;
+		this.nextPiece();
 		this.setSpawnTimer();
 	},
 
