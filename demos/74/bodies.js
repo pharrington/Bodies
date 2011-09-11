@@ -431,10 +431,12 @@ function attachEvents() {
 	
 		if (!pressed) {
 			keys[e.keyCode] = {at: now, last: now + keyInterval};
-			keyPress && keyPress(e.keyCode);
+			if (keyPress) {
+				if (keyPress(e.keyCode) === false) {
+					e.preventDefault()
+				}
+			};
 		}
-
-		e.preventDefault();
 	}, false);
 	
 	addEventListener("keyup", function (e) {
