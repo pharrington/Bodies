@@ -159,7 +159,7 @@ GameStatus.Rank = $.inherit(GameStatus.Base, {
 
 		fo = this.game.field.offset;
 
-		RankText.x = this.offset.x + fo.x + 15;
+		RankText.x = this.offset.x + fo.x + 20;
 		RankText.y = this.offset.y + 150;
 		RankText.createGradient($.context);
 		RankText.text = this.rank;
