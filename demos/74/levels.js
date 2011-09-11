@@ -47,10 +47,10 @@ var LevelSystem = {
 };
 
 LevelSystem.Master = $.inherit(LevelSystem.Base, {
-	properties: LevelSystem.Base.properties.concat("keyHoldInterval"),
+	properties: LevelSystem.Base.properties.concat("keyHoldDelay"),
 	startLevel: 0,
 
-	keyHoldInterval: {
+	keyHoldDelay: {
 		0: 14 * 16,
 		500: 8 * 16,
 		900: 6 * 16
