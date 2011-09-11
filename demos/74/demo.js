@@ -603,7 +603,7 @@ var Game = {
 		Left: 37,
 		Right: 39,
 		SoftDrop: 40,
-		HardDrop: 32,
+		HardDrop: 38,
 		Hold: 67,
 		RotateCW: 88,
 		RotateCCW: 90,
