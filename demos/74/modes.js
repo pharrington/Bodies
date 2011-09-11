@@ -66,10 +66,11 @@ Modes.TimeAttack = {
 Modes.DemoAI = {
 	name: "AI",
 	newGame: function () {
-		var game = Modes.newGame("Static", "Master", "TGM");
+		var game = Modes.newGame("Static", "Master", "TGM", "TGM");
 
 		game.mode = this;
 		game.hardLock = true;
+		game.holdPiece = $.noop;
 		game.setInputSource(InputSource.AI);
 
 		return game;
@@ -79,7 +80,7 @@ Modes.DemoAI = {
 Modes.Death = {
 	name: "Death",
 	newGame: function () {
-		var game = Modes.newGame("Death", "TimeAttack", "TGM");
+		var game = Modes.newGame("Death", "TimeAttack", "TGM", "TGM");
 
 		game.mode = this;
 		game.gameStatus = GameStatus.Timer;
