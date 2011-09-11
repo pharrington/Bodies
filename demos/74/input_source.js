@@ -44,17 +44,14 @@ InputSource.Player = $.inherit(InputSource.Base, {
 	keyHold: function (key) {
 		if (this.spawnTimer) { return; }
 		var config = this.Config,
-		    inputs,
 		    left = $.keys[config.Left],
 		    right = $.keys[config.Right];
 
-		if (!left || right.at > left.at) {
-			inputs = ["Right"];
-		} else if (!right || left.at > right.at) {
-			inputs = ["Left"];
+		if (key === config.Right && (!left || right.at > left.at)) {
+			this.input(Inputs.Right);
+		} else if (key === config.Left && (!right || left.at > right.at)) {
+			this.input(Inputs.Left);
 		}
-
-		this.inputSource.acceptMoves(key, inputs);
 	},
 
 	keyPress: function (key) {
