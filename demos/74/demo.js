@@ -571,6 +571,7 @@ var Game = {
 	groundedTimeout: 30,
 	lineClearDelay: 10,
 	spawnDelay: 6,
+	lineClearSpawnDelay: 0,
 	startVelocity: 0.012,
 	timers: null,
 	active: false,
@@ -741,8 +742,10 @@ var Game = {
 		this.setSpawnTimer();
 	},
 
-	setSpawnTimer: function () {
-		this.spawnTimer = this.setTimeout(this.endSpawnNext.bind(this), this.spawnDelay);
+	setSpawnTimer: function (are) {
+		if (are === undefined) { are = this.spawnDelay; }
+
+		this.spawnTimer = this.setTimeout(this.endSpawnNext.bind(this), are);
 	},
 
 	setLineClearTimer: function () {
@@ -756,7 +759,7 @@ var Game = {
 		this.outline.rebuild(this.field.grid);
 		this.outline.refresh();
 		this.field.redraw();
-		this.endSpawnNext();
+		this.setSpawnTimer(this.lineClearSpawnDelay);
 	},
 
 	endSpawnNext: function () {
@@ -792,15 +795,36 @@ var Game = {
 	updateTimers: function () {
 		var timers = this.timers,
 		    timer,
+		    runTimers = true,
 		    i = 0;
 
 		while (i < timers.length) {
 			timer = timers[i];
+
 			if (timer.delay-- === 0) {
 				timer.callback();
 				timers.splice(i, 1);
 			} else {
 				i++;
+			}
+		}
+
+		// run all timers with a delay of 0 (we still want callbacks to run during the event loop)
+		i = 0;
+		while (runTimers && timers.length) {
+			runTimers = false;
+			timer = timers[i];
+
+			if (timer.delay === 0) {
+				timer.callback();
+				timers.splice(i, 1);
+				runTimers = true;
+			} else {
+				i++;
+			}
+
+			if (i === timers.length) {
+				i = 0;
 			}
 		}
 	},
