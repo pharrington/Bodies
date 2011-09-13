@@ -1181,7 +1181,7 @@ var Game = {
 		this.inputSource.refresh(gameElapsed, now);
 		this.eachSink(function (s) { s.refresh(gameElapsed, this.inputBuffer); }, this);
 		this.consumeInput();
-		this.updateMove();
+		this.slopeReset();
 
 		this.dropFX.end(currentPiece);
 		currentPiece.update(gameElapsed);
@@ -1192,7 +1192,7 @@ var Game = {
 		this.locked = false;
 	},
 
-	updateMove: function () {
+	slopeReset: function () {
 		var y = this.currentPiece.gridPosition.y;
 
 		if (this.lastY < y) {
