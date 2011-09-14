@@ -33,6 +33,7 @@ Modes.Master = {
 		game.gameStatus = GameStatus.Rank;
 		game.softLock = true;
 		game.holdPiece = $.noop;
+
 		return game;
 	}
 };
@@ -58,6 +59,8 @@ Modes.TimeAttack = {
 		game.gameStatus = GameStatus.Timer;
 		game.hardLock = true;
 		game.killOnLockAboveField = true;
+		game.holdPiece = $.noop;
+		game.enableGhostPiece = false;
 
 		return game;
 	}

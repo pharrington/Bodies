@@ -115,14 +115,18 @@ LevelSystem.Master = $.inherit(LevelSystem.Base, {
 		500: 20
 	},
 
+	setLevel: function (level) {
+		this.level = Math.min(level, 999);
+	},
+
 	clearLines: function (numCleared) {
-		this.level = Math.min(this.level + numCleared, 999);
+		this.setLevel(this.level + numCleared);
 		this.applyLevel();
 	},
 
 	endSpawnNext: function () {
 		if (((this.level + 1) % 100) && (this.level !== 998)) {
-			this.level++;
+			this.setLevel(this.level + 1);
 		}
 		this.applyLevel();
 	},
@@ -159,7 +163,7 @@ LevelSystem.Static = $.inherit(LevelSystem.Base, {
 	},
 
 	velocity: {
-		1: 0//3 / 250
+		1: 3 / 250
 	}
 });
 

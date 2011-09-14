@@ -126,7 +126,7 @@ var Field = {
 		canvas.width = this.width = this.columns * Piece.blockSize + Piece.spacing;
 		canvas.height = this.height = (this.rows - this.rowOffset) * Piece.blockSize + Piece.spacing;
 		this.context = canvas.getContext("2d");
-		this.context.fillStyle = this.fillColor.toString();
+		this.context.globalAlpha = this.mergeAlpha;
 		this.background.draw(this.context, 0, 0, this.width, this.height);
 		this.canvas = canvas;
 	},
@@ -230,39 +230,73 @@ var Field = {
 		ctx.restore();
 	},
 
-	drawBlock: function (block, x, y) {
+	drawBlock: function (block, x, y, opacity) {
 		var size = Piece.blockSize,
-		    spacing = Piece.spacing;
+		    spacing = Piece.spacing,
+		    ctx = this.context,
+		    dx, dy;
 
 		y -= this.rowOffset;
-		this.background.draw(this.context, x * size, y * size, size + spacing, size + spacing);
-		this.context.drawImage(block, x * size + spacing, y * size + spacing);
+
+		dx = x * size;
+		dy = y * size;
+
+		this.background.drawOffset(ctx, dx + this.offset.x, dy + this.offset.y, dx, dy, size + spacing, size + spacing);
+
+		ctx.save();
+		if (this.fade && opacity !== undefined) {
+			ctx.globalAlpha = Math.max(0, opacity);
+		}
+			
+		ctx.drawImage(block, x * size + spacing, y * size + spacing);
+		ctx.restore();
+	},
+
+	fadeBlocks: function () {
+		var x, y,
+		    rows = this.rows,
+		    cols = this.columns,
+		    grid = this.grid,
+		    step = this.mergeAlpha / 5,
+		    block;
+
+		if (!this.fade) { return; }
+
+		for (y = 0; y < rows; y++) {
+			for (x = 0; x < cols; x++) {
+				block = grid[y][x];
+
+				if (!block) { continue; }
+
+				if (block.fadeDelay) { block.fadeDelay--; }
+
+				if (block.fadeDelay === 0 && block.opacity >= 0) {
+					block.opacity -= step;
+					this.drawBlock(block.image, x, y, block.opacity);
+				}
+			}
+		}
+
 	},
 
 	draw: function () {
+		this.fadeBlocks();
 		$.context.drawImage(this.canvas, this.offset.x, this.offset.y);
 	},
 
 	redraw: function () {
 		var x, y,
 		    block,
-		    offset = this.offset,
-		    context = this.context;
+		    offset = this.offset;
 
 		this.clear();
-		context.save();
-
-		context.globalAlpha = this.mergeAlpha;
-		context.fillStyle = "#000";
 
 		for (y = this.rowOffset; y < this.rows; y++) {
 			for (x = 0; x < this.columns; x++) {
 				block = this.grid[y][x];
-				block && this.drawBlock(block.image, x, y);
+				block && this.drawBlock(block.image, x, y, block.opacity);
 			}
 		}
-
-		context.restore();
 	},
 
 	clear: function () {
@@ -334,8 +368,17 @@ var Field = {
 		context.fillStyle = "#000";
 		context.globalAlpha = this.mergeAlpha;
 		this.applyPiece(piece, function (shape, grid, sx, sy, gx, gy) {
+			var block;
+
 			if (gy >= 0 && shape[sy][sx]) {
-				grid[gy][gx] = {image: piece.block, color: piece.image};
+				block = {image: piece.block, color: piece.image};
+
+				if (this.fade) {
+					block.fadeDelay = 300;
+					block.opacity = this.mergeAlpha;
+				}
+
+				grid[gy][gx] = block;
 				this.drawBlock(piece.block, gx, gy);
 			}
 		});
@@ -566,6 +609,7 @@ var Game = {
 	enableGhostPiece: true,
 	killOnLockAboveField: false,
 	invisible: false,
+	fade: false,
 	lastY: -10,
 
 	groundedTimeout: 30,
@@ -702,6 +746,10 @@ var Game = {
 
 		$.keyPress($.noop);
 		this.active = false;
+		this.fade = false;
+		this.field.fade = false;
+		this.invisible = false;
+		this.field.redraw();
 		this.tick = this.draw;
 		this.clearTimers();
 		this.inputSource.gameOver();
@@ -768,7 +816,7 @@ var Game = {
 		this.tick = this.doFrame;
 		this.levels.endSpawnNext();
 		this.inputSource.endSpawnNext();
-		this.checkGameOver();
+		this.checkGameOver() || this.currentPiece.update(1);
 	},
 
 
@@ -906,7 +954,7 @@ var Game = {
 			field.background.drawOffset($.context, offset.x, offset.y, offset.y, offset.y, field.width, field.height);
 		} else {
 			field.draw();
-			this.outline.draw();
+			this.fade || this.outline.draw();
 		}
 
 		if (piece && !this.spawnTimer) {
@@ -1052,6 +1100,7 @@ var Game = {
 	},
 
 	start: function () {
+		this.currentPiece = null;
 		this.active = false;
 		this.timers = [];
 		this.inputBuffer = 0;
@@ -1075,7 +1124,6 @@ var Game = {
 		this.heldPiece = null;
 		this.drawHoldPiece();
 		this.drawPiecePreview();
-		this.nextPiece();
 
 		this.outline = $.inherit(Outline);
 		this.outline.init(this.field);
@@ -1095,6 +1143,7 @@ var Game = {
 		Countdown.end();
 		$.keyPress(this.keyPress.bind(this));
 
+		this.nextPiece();
 		this.drawPiecePreview();
 		this.tick = this.doFrame;
 		this.active = true;
@@ -1264,6 +1313,9 @@ var PauseMenu = {
 			this.field.clear();
 			this.field.draw();
 		}, false, 0);
+
+		game = game.mode.newGame();
+		$.register(game);
 		game.start();
 	},
 
