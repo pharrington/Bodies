@@ -59,8 +59,6 @@ Modes.TimeAttack = {
 		game.gameStatus = GameStatus.Timer;
 		game.hardLock = true;
 		game.killOnLockAboveField = true;
-		game.holdPiece = $.noop;
-		game.enableGhostPiece = false;
 
 		return game;
 	}
