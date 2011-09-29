@@ -77,6 +77,7 @@ var Field = {
 	grid: null,
 	width: null,
 	height: null,
+	fade: false,
 
 	init: function (game) {
 		this.clearGrid();
@@ -87,7 +88,6 @@ var Field = {
 		}
 
 		this.background = new Background($.resource("background"), this.offset);
-		this.background.drawOffset($.context, 0, 0, 0, 0, $.width, $.height);
 		this.initCanvas();
 		this.drawFrame();
 	},
@@ -127,7 +127,7 @@ var Field = {
 		canvas.height = this.height = (this.rows - this.rowOffset) * Piece.blockSize + Piece.spacing;
 		this.context = canvas.getContext("2d");
 		this.context.globalAlpha = this.mergeAlpha;
-		this.background.draw(this.context, 0, 0, this.width, this.height);
+		this.clear();
 		this.canvas = canvas;
 	},
 
@@ -185,12 +185,12 @@ var Field = {
 
 	eraseRow: function (index) {
 		var size = Piece.blockSize,
-		    y = (index - this.rowOffset) * size,
+		    x = this.offset.x,
+		    y = this.offset.y + (index - this.rowOffset) * size,
 		    spacing = Piece.spacing,
-		    columns = this.columns,
-		    offset = this.offset;
+		    columns = this.columns;
 
-		this.background.drawOffset(this.context, offset.x, offset.y + y, 0, y, size * columns + spacing, size + spacing);
+		$.context.clearRect(x, y, size * columns + spacing, size + spacing);
 	},
 	
 	drawFrame: function () {
@@ -233,23 +233,29 @@ var Field = {
 	drawBlock: function (block, x, y, opacity) {
 		var size = Piece.blockSize,
 		    spacing = Piece.spacing,
-		    ctx = this.context,
+		    offset = this.offset,
+		    ctx = $.context,
 		    dx, dy;
 
 		y -= this.rowOffset;
 
-		dx = x * size;
-		dy = y * size;
+		dx = x * size + offset.x;
+		dy = y * size + offset.y;
 
-		this.background.drawOffset(ctx, dx + this.offset.x, dy + this.offset.y, dx, dy, size + spacing, size + spacing);
+		if (!this.fade) {
+			ctx.drawImage(block, dx + spacing, dy + spacing);
+			return;
+		}
 
-		ctx.save();
-		if (this.fade && opacity !== undefined) {
+		if (opacity < 1) {
+			ctx.clearRect(dx, dy, size + spacing, size + spacing);
 			ctx.globalAlpha = Math.max(0, opacity);
 		}
+
+		if (opacity > 0) {
+			ctx.drawImage(block, dx + spacing, dy + spacing);
+		}
 			
-		ctx.drawImage(block, x * size + spacing, y * size + spacing);
-		ctx.restore();
 	},
 
 	fadeBlocks: function () {
@@ -261,6 +267,8 @@ var Field = {
 		    block;
 
 		if (!this.fade) { return; }
+
+		$.context.save();
 
 		for (y = 0; y < rows; y++) {
 			for (x = 0; x < cols; x++) {
@@ -277,11 +285,12 @@ var Field = {
 			}
 		}
 
+		$.context.restore();
+
 	},
 
 	draw: function () {
 		this.fadeBlocks();
-		$.context.drawImage(this.canvas, this.offset.x, this.offset.y);
 	},
 
 	redraw: function () {
@@ -291,16 +300,21 @@ var Field = {
 
 		this.clear();
 
+		$.context.save();
+		$.context.globalAlpha = this.mergeAlpha;
+
 		for (y = this.rowOffset; y < this.rows; y++) {
 			for (x = 0; x < this.columns; x++) {
 				block = this.grid[y][x];
 				block && this.drawBlock(block.image, x, y, block.opacity);
 			}
 		}
+
+		$.context.restore();
 	},
 
 	clear: function () {
-		this.background.draw(this.context, 0, 0, this.width, this.height);
+		$.context.clearRect(this.offset.x, this.offset.y, this.width, this.height);
 	},
 
 	applyPiece: function (piece, callback) {
@@ -361,11 +375,10 @@ var Field = {
 	},
 
 	merge: function (piece) {
-		var context = this.context;
+		var context = $.context;
 
 		context.save();
 
-		context.fillStyle = "#000";
 		context.globalAlpha = this.mergeAlpha;
 		this.applyPiece(piece, function (shape, grid, sx, sy, gx, gy) {
 			var block;
@@ -379,7 +392,7 @@ var Field = {
 				}
 
 				grid[gy][gx] = block;
-				this.drawBlock(piece.block, gx, gy);
+				this.drawBlock(piece.block, gx, gy, block.opacity);
 			}
 		});
 
@@ -396,11 +409,33 @@ var Field = {
 
 var Outline = {
 	outlineColor: "#eee",
+	clearColor: "#000",
 	occupied: null,
 	rows: null,
 	columns: null,
 
 	Cell: function () {},
+
+	init: function (field) {
+		var x, y;
+
+
+		this.rowOffset = field.rowOffset;
+		this.spacing = field.spacing;
+		this.rows = field.rows;
+		this.columns = field.columns;
+		this.blockSize = field.blockSize;
+		this.offset = field.offset;
+
+		this.occupied = [];
+
+		for (y = 0; y < this.rows; y++) {
+			this.occupied[y] = [];
+			for (x = 0; x < this.columns; x++) {
+				this.occupied[y][x] = new Outline.Cell;
+			}
+		}
+	},
 
 	merge: function (piece) {
 		var sx, sy,
@@ -412,6 +447,7 @@ var Outline = {
 		    adjacent,
 		    cell;
 
+		this.refresh(true);
 		for (sy = 0; sy < 4 && y < this.rows; sy++, y++) {
 			if (y < 0) { continue; }
 
@@ -431,6 +467,8 @@ var Outline = {
 	rebuild: function (grid) {
 		var x, y,
 		    cell;
+
+		this.refresh(true);
 
 		for (y = 0; y < this.rows; y++) {
 			for (x = 0; x < this.columns; x++) {
@@ -509,53 +547,33 @@ var Outline = {
 		}
 	},
 
-	init: function (field) {
-		var canvas = document.createElement("canvas"),
-		    context,
-		    x, y;
-
-		canvas.width = this.width = field.width;
-		canvas.height = this.height = field.height;
-
-		context = canvas.getContext("2d");
-		context.lineCap = "square";
-		context.strokeStyle = this.outlineColor;
-		context.lineWidth = this.spacing = field.spacing;
-
-		this.rowOffset = field.rowOffset;
-		this.rows = field.rows;
-		this.columns = field.columns;
-		this.blockSize = field.blockSize;
-		this.offset = field.offset;
-		this.canvas = canvas;
-		this.context = context;
-
-		this.occupied = [];
-
-		for (y = 0; y < this.rows; y++) {
-			this.occupied[y] = [];
-			for (x = 0; x < this.columns; x++) {
-				this.occupied[y][x] = new Outline.Cell;
-			}
-		}
-	},
-
-	refresh: function () {
+	draw: function (clear) {
 		var x, y,
 		    dx, dy,
+		    ox = this.offset.x,
+		    oy = this.offset.y,
 		    rowOffset = this.rowOffset,
-		    context = this.context,
 		    occupied = this.occupied,
 		    cell,
 		    spacing = this.spacing,
 		    size = this.blockSize,
 		    hspacing = spacing / 2,
-		    top, left, bottom, right;
+		    top, left, bottom, right,
+		    context = $.context;
 
-		context.clearRect(0, 0, this.width, this.height);
+		context.save();
 
-		for (y = rowOffset, dy = 0; y < this.rows; y++, dy += size) {
-			for (x = 0, dx = 0; x < this.columns; x++, dx += size) {
+		context.lineCap = "square";
+		context.lineWidth = spacing;
+
+		if (clear) {
+			context.strokeStyle = this.clearColor;
+		} else {
+			context.strokeStyle = this.outlineColor;
+		}
+
+		for (y = rowOffset, dy = oy; y < this.rows; y++, dy += size) {
+			for (x = 0, dx = ox; x < this.columns; x++, dx += size) {
 				cell = occupied[y][x];
 
 				top = dy + hspacing;
@@ -589,11 +607,11 @@ var Outline = {
 				context.stroke();
 			}
 		}
+
+		context.restore();
 	},
 
-	draw: function () {
-		$.context.drawImage(this.canvas, this.offset.x, this.offset.y);
-	}
+	refresh: $.noop
 };
 
 $.extend(Outline.Cell.prototype, {top: false, right: false, bottom: false, left: false});
@@ -660,6 +678,16 @@ var Game = {
 	mouseDown: $.noop,
 
 	tryRotation: $.noop,
+
+	setFade: function (fade) {
+		if (fade) {
+			this.outline.refresh = $.noop;
+		} else {
+			this.outline.refresh = Outline.draw;
+		}
+
+		this.fade = this.field.fade = fade;
+	},
 
 	checkGrounded: function () {
 		var field = this.field,
@@ -805,8 +833,9 @@ var Game = {
 	endLineClear: function () {
 		this.nextPiece();
 		this.outline.rebuild(this.field.grid);
-		this.outline.refresh();
 		this.field.redraw();
+		this.outline.refresh();
+
 		this.setSpawnTimer(this.lineClearSpawnDelay);
 	},
 
@@ -950,23 +979,13 @@ var Game = {
 		    field = this.field,
 		    offset = field.offset;
 
-		if (this.invisible) {
-			field.background.drawOffset($.context, offset.x, offset.y, offset.y, offset.y, field.width, field.height);
-		} else {
+		if (!this.invisible) {
 			field.draw();
-			this.fade || this.outline.draw();
 		}
 
 		if (piece && !this.spawnTimer) {
-			ctx.save();
-			ctx.rect(offset.x, offset.y, field.width, field.height);
-			ctx.clip();
-
 			this.enableGhostPiece && this.active && this.drawGhost(piece);
 			piece.draw();
-
-			ctx.beginPath();
-			ctx.restore();
 		}
 	},
 
@@ -975,7 +994,7 @@ var Game = {
 			gridPosition: $.inherit(piece.gridPosition),
 			sprite: $.inherit(piece.sprite)
 		    }),
-		    context = $.context;
+		    context = ghost.context;
 
 		this.field.moveToBottom(ghost);
 
@@ -987,16 +1006,15 @@ var Game = {
 
 	drawFrame: function (x, y, w, h, label) {
 		var ctx = $.context,
-		    offset = this.field.offset,
-		    background = this.field.background;
-
+		    offset = this.field.offset;
 
 		x += offset.x;
 		y += offset.y;
 
 		ctx.strokeStyle = "#eee";
 		ctx.lineWidth = 3;
-		background.drawOffset(ctx, x, y, x, y, w, h);
+		ctx.clearRect(x, y, w, h);
+		Piece.context.clearRect(x, y, w, h);
 		ctx.strokeRect(x, y, w, h);
 
 		if (label) {
@@ -1006,7 +1024,7 @@ var Game = {
 			ctx.fillStyle = "#eee";
 			ctx.font = fontSize + "px Orbitron";
 			width = ctx.measureText(label).width + 10;
-			background.drawOffset(ctx, x+5, y-3, x + 5, y - 3, width, fontSize);
+			ctx.clearRect(x + 5, y - 3, width, fontSize);
 			ctx.fillText(label, x + 9, y+12);
 			ctx.restore();
 		}
@@ -1024,7 +1042,7 @@ var Game = {
 
 		piece.sprite.moveTo(x, y);
 
-		piece.draw();
+		piece.draw(true);
 	},
 
 	drawPiecePreview: function () {
@@ -1036,7 +1054,7 @@ var Game = {
 		    offset;
 
 		piece = $.inherit(this.rotationSystem.shapes[this.queueSource.queue[0]]);
-		piece.game = this;
+		piece.init(this);
 
 		offset = (5 - piece.shape.length) / 2 * blockSize;
 
@@ -1115,7 +1133,7 @@ var Game = {
 		this.levels.start(this);
 
 		this.gameStatus.start(this);
-		this.gameStatus.draw();
+		this.gameStatus.drawLabels();
 
 		this.eachSink(function (s) { s.start(this); }, this);
 		this.inputSource.start(this);
@@ -1128,6 +1146,7 @@ var Game = {
 		this.outline = $.inherit(Outline);
 		this.outline.init(this.field);
 
+		this.setFade(false);
 		this.effects.setOffset(this.field.offset);
 
 		$.keyPress($.noop);
@@ -1256,10 +1275,11 @@ var Game = {
 			this.score.refresh(elapsed);
 		}
 
+		$.DirtyRects.update();
 		this.dropFX.refresh(elapsed);
 		this.drawField(this.currentPiece);
 		this.gameStatus.draw();
-		this.effects.refresh(elapsed);
+		//this.effects.refresh(elapsed);
 		this.inputBuffer = 0;
 	},
 
@@ -1317,6 +1337,8 @@ var PauseMenu = {
 		game = game.mode.newGame();
 		$.register(game);
 		game.start();
+
+		this.game = null;
 	},
 
 	quit: function () {

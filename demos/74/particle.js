@@ -95,11 +95,13 @@ $.extend(Particle.prototype, {
 		var p = this.position,
 		    percent = this.active / this.duration;
 
+		/*
 		ctx.fillStyle = this.color;
 		ctx.globalAlpha = 1 - (percent * percent);
 
+		*/
 		ctx.beginPath();
-		ctx.arc(~~p.x, ~~p.y, this.radius, Math.PI * 2, 0, false);
+		ctx.arc(~~p.x, ~~p.y, ~~this.radius, Math.PI * 2, 0, false);
 		ctx.fill();
 	},
 
@@ -332,7 +334,7 @@ $.extend(ParticleSystem.prototype, {
 
 	createParticle: function () {
 		var particle = this.inactiveParticles.shift(),
-		    draw = navigator.userAgent.match(/Chrome/) ? "drawGlow" : "drawCircle";
+		    draw = /*navigator.userAgent.match(/Chrome/) ? "drawGlow" : */"drawCircle";
 
 		if (!particle) {
 			particle = new Particle;

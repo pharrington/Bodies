@@ -27,6 +27,22 @@ ul {
 	list-style-type: none;
 }
 
+#field, #field_background, #field_piece {
+	position: absolute;
+}
+
+#field_piece {
+	z-index: 3;
+}
+
+#field {
+	z-index: 2;
+}
+
+#field_background {
+	z-index:1;
+}
+
 .menu {
 	font-size: 37px;
 	background: url(menuback.png) no-repeat;
@@ -193,4 +209,9 @@ th, td {
 #scores_pagination .nav {
 	margin-right: 10px;
 	cursor: pointer;
+}
+
+.font_preload {
+	opacity: 0;
+	font-family: "ProFontWindows";
 }

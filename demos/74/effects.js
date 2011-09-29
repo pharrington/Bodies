@@ -18,7 +18,7 @@ FX.Fireworks = {
 	},
 
 	init: function (game) {
-		this.particleSystem = new ParticleSystem("blur");
+		this.particleSystem = new ParticleSystem("clear");
 		this.field = game.field;
 		this.setDimensions(this.field.width, this.field.height);
 	},

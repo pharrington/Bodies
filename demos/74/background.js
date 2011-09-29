@@ -2,12 +2,17 @@
 
 function Background(resource, offset) {
 	var canctx = $.createCanvas(resource.width, resource.height);
-	this.canvas = canctx[0];
-	this.context = canctx[1];
+
+	this.canvas = document.getElementById("field_background");
+	this.context = this.canvas.getContext("2d");
+
+	this.canvas.width = resource.width;
+	this.canvas.height = resource.height;
 	this.context.drawImage(resource, 0, 0);
-	this.offset = offset;
 }
 
+/*
+ * Yeah this whole "background" concept needs some thought I guess
 Background.prototype = {
 	canvas: null,
 	context: null,
@@ -41,6 +46,7 @@ Background.prototype = {
 		ctx.globalAlpha = alpha;
 	}
 };
+*/
 
 exports.Background = Background;
 })(window);
