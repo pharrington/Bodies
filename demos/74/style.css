@@ -27,8 +27,12 @@ ul {
 	list-style-type: none;
 }
 
-#field, #field_background, #field_piece {
+canvas {
 	position: absolute;
+}
+
+#field_effects {
+	z-index: 4;
 }
 
 #field_piece {

@@ -72,6 +72,7 @@ Modes.DemoAI = {
 		game.mode = this;
 		game.hardLock = true;
 		game.holdPiece = $.noop;
+		game.gameStatus = GameStatus.Rank;
 		game.setInputSource(InputSource.AI);
 
 		return game;

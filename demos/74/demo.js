@@ -150,7 +150,9 @@ var Field = {
 
 		if (!unanimated) {
 			this.eraseRows(cleared);
+			outline.refresh = $.noop;
 			outline.rebuild(grid);
+			outline.refresh = outline.draw;
 			outline.refresh();
 		}
 
@@ -994,7 +996,7 @@ var Game = {
 			gridPosition: $.inherit(piece.gridPosition),
 			sprite: $.inherit(piece.sprite)
 		    }),
-		    context = ghost.context;
+		    context = Piece.context;
 
 		this.field.moveToBottom(ghost);
 
@@ -1279,7 +1281,7 @@ var Game = {
 		this.dropFX.refresh(elapsed);
 		this.drawField(this.currentPiece);
 		this.gameStatus.draw();
-		//this.effects.refresh(elapsed);
+		this.effects.refresh(elapsed);
 		this.inputBuffer = 0;
 	},
 
