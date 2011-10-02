@@ -47,7 +47,7 @@ var LevelSystem = {
 };
 
 LevelSystem.Master = $.inherit(LevelSystem.Base, {
-	properties: LevelSystem.Base.properties.concat("keyHoldDelay"),
+	properties: LevelSystem.Base.properties.concat("lineClearSpawnDelay", "keyHoldDelay"),
 	startLevel: 0,
 
 	keyHoldDelay: {
@@ -67,6 +67,13 @@ LevelSystem.Master = $.inherit(LevelSystem.Base, {
 		601: 16,
 		701: 12,
 		801: 6
+	},
+
+	lineClearSpawnDelay: {
+		0: 25,
+		600: 16,
+		700: 12,
+		800: 6
 	},
 
 	spawnDelay: {
@@ -108,14 +115,18 @@ LevelSystem.Master = $.inherit(LevelSystem.Base, {
 		500: 20
 	},
 
+	setLevel: function (level) {
+		this.level = Math.min(level, 999);
+	},
+
 	clearLines: function (numCleared) {
-		this.level = Math.min(this.level + numCleared, 999);
+		this.setLevel(this.level + numCleared);
 		this.applyLevel();
 	},
 
 	endSpawnNext: function () {
 		if (((this.level + 1) % 100) && (this.level !== 998)) {
-			this.level++;
+			this.setLevel(this.level + 1);
 		}
 		this.applyLevel();
 	},

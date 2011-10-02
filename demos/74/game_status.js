@@ -60,55 +60,52 @@ var RankText = {
 var GameStatus = {
 	Base: {
 		game: null,
-		background: null,
+		fontSize: 44, // setFont mutates this
 		labelSize: 28,
 		valueSize: 44,
 		fontFamily: "ProFontWindows",
-		width: 180,
-		height: 150,
-		offset: { x: 350, y: 420 },
+		fieldRelativeOffset: { x: 20, y: 420 },
 
 		draw: $.noop,
 
 		start: function (game) {
-			var background;
-
 			this.game = game;
-
-			background = $.inherit(game.field.background);
-			background.offset = {x: background.offset.x + this.offset.x, y: background.offset.y + this.offset.y};
-			this.background = background;
-		},
-
-		clear: function () {
-			var background = this.background;
-
-			background.draw($.context, background.offset.x, background.offset.y, this.width, this.height);
 		},
 
 		setFont: function (size, family) {
 			var ctx = $.context;
 
-			size = size || this.fontSize;
+			size = size;
 			family = family || this.fontFamily;
 
 			ctx.font = size + "px " + family;
+			this.fontSize = size;
 		},
 
-		drawValue: function (label, value, x, y) {
-			var game = this.game,
-			    fo = game.field.offset,
-			    offset = this.offset,
-			    ox = offset.x + fo.x + 5,
-			    oy = offset.y + fo.y + this.labelSize,
+		offset: function () {
+			var o = this.fieldRelativeOffset,
+			    fo = this.game.field.offset;
+
+			return {
+				x: o.x + fo.x,
+				y: o.y + fo.y
+			};
+		},
+
+		drawText: function (text, x, y, dirty) {
+			var offset = this.offset(),
+			    ox = offset.x, oy = offset.y,
 			    ctx = $.context;
 
-			this.setFont(this.labelSize);
-			ctx.fillStyle = "#eee";
-			ctx.fillText(label, ox + x, oy + y);
+			x += ox;
+			y += oy;
 
-			this.setFont(this.valueSize);
-			ctx.fillText(value, ox + x, oy + y + this.labelSize + 2);
+			ctx.fillStyle = "#eee";
+			ctx.fillText(text, x, y);
+
+			if (dirty) {
+				$.DirtyRects.add(ctx, x, y - this.fontSize, ctx.measureText(text).width, this.fontSize);
+			}
 		}
 	}
 };
@@ -118,7 +115,6 @@ GameStatus.Score = $.inherit(GameStatus.Base, {
 		var game = this.game,
 		    fo = game.field.offset;
 
-		this.clear();
 		this.drawValue("Level", game.levels.level, 5, 0);
 		this.drawValue("Score", game.score.score, 5, 70);
 	}
@@ -144,50 +140,54 @@ GameStatus.Rank = $.inherit(GameStatus.Base, {
 		"GM"
 	],
 
-	width: 180,
-	height: 300,
-	offset: { x: 360, y: 220 },
-	elapsedOffset: {x: 0, y: 100},
+	fieldRelativeOffset: { x: 360, y: 220 },
 	textColor: "#fff",
 
-	rank: "",
-
 	start: function () {
-		var fo;
+		var offset;
 
 		GameStatus.Base.start.apply(this, argsArray(arguments));
 
-		fo = this.game.field.offset;
+		offset = this.offset();
 
-		RankText.x = this.offset.x + fo.x + 20;
-		RankText.y = this.offset.y + 150;
+		RankText.x = offset.x + 20;
+		RankText.y = offset.y + 150;
 		RankText.createGradient($.context);
 		RankText.text = this.rank;
+	},
+
+	drawLabels: function () {
+		var ctx = $.context;
+
+		ctx.save();
+		ctx.textAlign = "left";
+
+		this.setFont(this.labelSize, "ProFontWindows");
+		this.drawText("Rank", 10, 10 + this.labelSize);
+		this.drawText("Level", 0, 170 + this.labelSize);
+		this.drawText("Time", 0, 240 + this.labelSize);
+
+		ctx.restore();
 	},
 
 	draw: function () {
 		var game = this.game,
 		    newRank = this.displayMap[game.score.grade],
-		    fo = game.field.offset,
-		    ctx = $.context;
-
-		this.clear();
+		    valueOffset = this.labelSize + this.valueSize;
 
 		$.context.save();
 
-		ctx.textAlign = "left";
-		ctx.fillStyle = this.textColor;
+		$.context.textAlign = "left";
 
-		this.drawValue("Level", game.levels.level, 0, 170);
-		this.drawValue("Time", elapsedToString(game.score.elapsed), 0, 240);
-
-		this.setFont(this.labelSize);
-		ctx.fillText("Rank", fo.x + this.offset.x + 10, fo.y + this.offset.y + this.labelSize + 10);
-
-		this.rank = newRank;
+		/*
 		this.setFont(150);
-		RankText.text = this.rank;
+		RankText.text = newRank;
 		RankText.draw($.context);
+		*/
+
+		this.setFont(this.valueSize);
+		this.drawText(game.levels.level, 0, 170 + valueOffset, true);
+		this.drawText(elapsedToString(game.score.elapsed), 0, 240 + valueOffset, true);
 
 		$.context.restore();
 	}

@@ -17,12 +17,20 @@ var Piece = {
 	initialPosition: null,
 	gridPosition: null,
 	game: null,
+	context: null,
 	delta: 0,
 
 	init: function (game) {
 		this.gridPosition = $.inherit(this.initialPosition);
 		this.game = game;
 		this.offset = game.field.offset;
+
+		if (!Piece.context) {
+			var canvas = document.getElementById("field_piece");
+			canvas.width = $.width;
+			canvas.height = $.height;
+			Piece.context = canvas.getContext("2d");
+		}
 	},
 
 	reset: function () {
@@ -153,8 +161,11 @@ var Piece = {
 		this.sprite.moveTo(x + offset.x, y + offset.y);
 	},
 
-	draw: function () {
-		this.sprite.draw();
+	draw: function (nodirty) {
+		if (!nodirty) {
+			this.sprite.setDirty();
+		}
+		this.sprite.draw(Piece.context);
 	}
 };
 

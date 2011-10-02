@@ -451,6 +451,44 @@ function calculateOffsets() {
 	$.offsetLeft = b.left;
 	$.offsetTop = b.top;
 }
+$.DirtyRects = {
+	list: [],
+
+	add: function (ctx, left, top, width, height, intersect) {
+		var last = this.list[this.list.length - 1];
+
+		if (!intersect || !last || last.context !== ctx) {
+			this.list.push({
+				context: ctx,
+				left: left,
+				top: top,
+				width: width,
+				height: height,
+			});
+		} else {
+			last.left = Math.min(last.left, left);
+			last.top = Math.min(last.top, top);
+			last.width = Math.max(left + width, last.left + last.width) - last.left;
+			last.height = Math.max(top + height, last.top + last.height) - last.top;
+		}
+	},
+
+	update: function (clearOp) {
+		var list = this.list,
+		    rect,
+		    i, len;
+
+		clearOp = clearOp || "clearRect";
+
+		for (i = 0, len = list.length; i < len; i++) {
+			rect = list[i];
+
+			rect.context[clearOp](rect.left, rect.top, rect.width, rect.height);
+		}
+
+		this.list = [];
+	}
+};
 $.Sprite = function (imageName, height, options) {;
 	if (imageName === undefined) { return; }
 	var image,
@@ -474,6 +512,7 @@ $.Sprite = function (imageName, height, options) {;
 		this.steps = 150;
 	}
 
+	this.isDirty = false;
 	this.wall = false;
 	this.precompute = options.precompute;
 	this.foreign = options.foreign;
@@ -499,6 +538,10 @@ $.Sprite.prototype.vx = 0;
 $.Sprite.prototype.vy = 0;
 $.Sprite.prototype.imageOffsetX = 0;
 $.Sprite.prototype.imageOffsetY = 0;
+
+$.Sprite.prototype.setDirty = function () {
+	this.dirty = true;
+};
 
 $.Sprite.prototype.resize = function (width, height) {
 	var image = this.resource;
@@ -604,6 +647,11 @@ $.Sprite.prototype.readPixels = function (callback) {
 $.Sprite.prototype.draw = function (ctx) {
 	ctx = ctx || $.context;
 	ctx.drawImage(this.canvas, this.left, this.top);
+
+	if (this.dirty) {
+		$.DirtyRects.add(ctx, this.left, this.top, this.width, this.height);
+		this.dirty = false;
+	}
 };
 
 $.Sprite.prototype.update = function (dt) {

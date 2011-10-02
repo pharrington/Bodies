@@ -165,7 +165,6 @@ Score.Master = $.inherit(Score.Base, {
 	tetrises: 0,
 	lastSectionEndTime: 0,
 	benchmark: 63000,
-	finishTime: 0,
 	doMRoll: true,
 
 	start: function (game) {
@@ -213,8 +212,30 @@ Score.Master = $.inherit(Score.Base, {
 	won: function () {
 	},
 
-	toMRoll: function () {
-		this.finishTime = this.elapsed;
+	toRoll: function (roll, callback) {
+		var game = this.game,
+		    score = this;
+
+		game.active = false;
+		game.tick = game.draw;
+		$.keyPress($.noop);
+
+		game.clearTimers();
+		game.setTimeout(function () {
+			var nextRoll = $.inherit(roll);
+
+			nextRoll.elapsed = score.elapsed;
+
+			game.field.clearGrid();
+			game.field.redraw();
+			$.keyPress(game.keyPress.bind(game));
+			game.tick = game.doFrame;
+			game.active = true;
+			game.score = nextRoll;
+			
+			game.nextPiece();
+			callback.call(score, game);
+		}, 240);
 	},
 
 	callbacks: [
@@ -267,35 +288,30 @@ Score.Master = $.inherit(Score.Base, {
 			this.tetrises = 0;
 		},
 
-		// do M-Roll
+		// do staff roll
 		function () {
-			if (this.game.levels.level === 999 && this.doMRoll) {
-				var game = this.game,
-				    score = this;
+			var level = this.game.levels.level,
+			    game = this.game,
+			    score = this;
 
-				game.active = false;
-				game.tick = game.draw;
-				$.keyPress($.noop);
-				game.setTimeout(function () {
-					var mroll = $.inherit(Score.TGM2MRoll);
+			if (level < 999) { return; }
 
-					mroll.elapsed = score.elapsed;
-
-					this.field.clearGrid();
-					$.keyPress(this.keyPress.bind(this));
-					this.tick = this.doFrame;
-					this.invisible = true;
-					this.active = true;
-					this.score = mroll;
-				}.bind(game), 240);
-
+			if (this.doMRoll) {
+				this.toRoll(Score.TGM2Roll, function (game) {
+					game.invisible = true;
+				});
+			} else {
+				this.toRoll(Score.StaffRoll, function (game) {
+					game.score.grade = this.grade;
+					game.fade = game.field.fade = true;
+				});
 			}
 		}
 	]
 });
 
-Score.TGM2MRoll = $.inherit(Score.Base, {
-	grade: 32,
+Score.StaffRoll = $.inherit(Score.Base, {
+	grade: 0,
 	survived: 0,
 	save: ["grade", "elapsed"],
 
@@ -312,6 +328,18 @@ Score.TGM2MRoll = $.inherit(Score.Base, {
 	loseCallback: function () {
 		Game.loseCallback.call(this);
 	},
+
+	won: function () {
+		if (this.survived >= 60000) {
+			return true;
+		}
+
+		return false;
+	}
+});
+
+Score.TGM2MRoll = $.inherit(Score.StaffRoll, {
+	grade: 32,
 
 	won: function () {
 		if (this.survived >= 60000) {

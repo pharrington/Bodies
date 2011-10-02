@@ -1,4 +1,8 @@
-var FX = {};
+(function (exports) {
+
+var FX = {},
+    canvas,
+    context;
 
 FX.Fireworks = {
 	duration: 600,
@@ -17,10 +21,20 @@ FX.Fireworks = {
 		green: ["#d0fcbc", "#5bf418", "#08cb03", "#63f453", "#94dd0b", "#fafa0c", "#ffffff", "#ffffff"]
 	},
 
+	imageCache: {},
+
 	init: function (game) {
 		this.particleSystem = new ParticleSystem("blur");
+
 		this.field = game.field;
 		this.setDimensions(this.field.width, this.field.height);
+
+		if (!canvas) {
+			canvas = document.getElementById("field_effects");
+			canvas.width = $.width;
+			canvas.height = $.height;
+			context = canvas.getContext("2d");
+		}
 	},
 
 	addParticle: function (x, y, color) {
@@ -29,10 +43,12 @@ FX.Fireworks = {
 		    angle,
 		    particle,
 		    colors,
-		    color;
+		    color,
+		    cached;
 
 		colors = this.colors[color];
 		color = colors[Math.floor(Math.random() * colors.length)];
+		cache = this.imageCache[color];
 
 		angle = Math.random() * Math.PI * 2;
 
@@ -45,8 +61,16 @@ FX.Fireworks = {
 		particle.setAcceleration(0, this.gravity);
 		particle.setColor(color);
 		particle.radius = 3;
+		particle.dirtyHistoryLength = 8;
+
 		if (Math.random() < 0.35) {
 			particle.delay = Math.random() * 200;
+		}
+
+		if (cached) {
+			particle.canvas = cached;
+		} else {
+			this.imageCache[color] = particle.drawGlow();
 		}
 	},
 
@@ -83,7 +107,7 @@ FX.Fireworks = {
 	},
 
 	refresh: function (dt) {
-		this.particleSystem.update(dt, $.context);
+		this.particleSystem.update($.noop, dt, context);
 	}
 };
 
@@ -109,3 +133,6 @@ FX.Dummy = {
 	start: $.noop,
 	refresh: $.noop
 };
+
+exports.FX = FX;
+})(window);

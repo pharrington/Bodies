@@ -33,6 +33,7 @@ Modes.Master = {
 		game.gameStatus = GameStatus.Rank;
 		game.softLock = true;
 		game.holdPiece = $.noop;
+
 		return game;
 	}
 };
@@ -71,6 +72,7 @@ Modes.DemoAI = {
 		game.mode = this;
 		game.hardLock = true;
 		game.holdPiece = $.noop;
+		game.gameStatus = GameStatus.Rank;
 		game.setInputSource(InputSource.AI);
 
 		return game;

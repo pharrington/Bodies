@@ -1,5 +1,5 @@
 $.inherit = function (proto, attrs) {
-	var maker = $.inherit.maker,
+	var maker = function notObjectDotCreate() {},//$.inherit.maker,
 	    o;
 
 	maker.prototype = proto;
@@ -8,7 +8,7 @@ $.inherit = function (proto, attrs) {
 
 	return o;
 };
-$.inherit.maker = new Function;
+//$.inherit.maker = new Function;
 
 var Inputs = {
 	Left: 0x01,
