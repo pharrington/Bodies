@@ -56,6 +56,7 @@ $.extend(Particle.prototype, {
 	color: null,
 	image: null,
 	gradient: null,
+	percent: 0,
 	delay: 0,
 	duration: 0,
 	radius: 3,
