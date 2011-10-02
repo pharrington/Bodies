@@ -189,6 +189,10 @@ $.extend(Particle.prototype, {
 			return;
 		}
 
+		if (this.duration !== null) {
+			this.percent = this.active / this.duration;
+		}
+
 		this.velocity.iadd(this.acceleration);
 		speed = this.velocity.length();
 		if (speed > this.maxVelocity) {
