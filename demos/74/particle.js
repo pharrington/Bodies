@@ -49,6 +49,7 @@ function Particle() {
 	this.position = new Vector(0, 0);
 	this.velocity = new Vector(0, 0);
 	this.acceleration = new Vector(0, 0);
+	this.dirtyHistory = [];
 }
 
 $.extend(Particle.prototype, {
@@ -63,8 +64,8 @@ $.extend(Particle.prototype, {
 	acceleration: new Vector(0, 0),
 	_nVelocity: new Vector(0, 0),
 	active: null,
-
-	draw: $.noop,
+	dirtyHistory: null,
+	dirtyHistoryLength: 0,
 
 	setVelocity: function (x, y) {
 		var v = this.velocity;
@@ -89,71 +90,91 @@ $.extend(Particle.prototype, {
 		this.color = color;
 	},
 
-	drawCircle: function (ctx) {
-		if (this.delay > 0) { return; }
+	createCanvas: function (size) {
+		var canctx = $.createCanvas(size, size);
 
-		var p = this.position,
-		    percent = this.active / this.duration;
+		this.canvas = canctx[0];
+		this.context = canctx[1];
+	},
 
-		/*
-		ctx.fillStyle = this.color;
-		ctx.globalAlpha = 1 - (percent * percent);
+	drawCircle: function () {
+		var ctx,
+		    radius = this.radius;
 
-		*/
+		this.createCanvas(radius * 2);
+		ctx = this.context;
+		ctx.fillStyle = this.color.toString();
+
 		ctx.beginPath();
-		ctx.arc(~~p.x, ~~p.y, ~~this.radius, Math.PI * 2, 0, false);
+		ctx.arc(radius, radius, radius, Math.PI * 2, 0);
 		ctx.fill();
+
+		return this.canvas;
 	},
 
 	drawGlow: function (ctx) {
-		if (this.delay > 0) { return; }
+		var ctx,
+		    radius = this.radius;
 
-		var p = this.position,
-		    percent = this.active / this.duration;
+		this.createCanvas(radius * 2);
+		ctx = this.context;
 
-		ctx.shadowBlur = this.radius;
-		ctx.shadowColor = this.color;
-		ctx.fillStyle = this.color;
-		ctx.globalAlpha = 1 - (percent * percent);
+		ctx.shadowBlur = radius;
+		ctx.shadowColor = this.color.toString();
+		ctx.fillStyle = this.color.toString();
 
 		ctx.beginPath();
-		ctx.arc(~~p.x, ~~p.y, this.radius, Math.PI * 2, 0);
+		ctx.arc(radius, radius, radius, Math.PI * 2, 0);
 		ctx.fill();
 
-		ctx.shadowBlur = this.radius / 2;
+		ctx.shadowBlur = radius / 2;
 		ctx.fillStyle = "rgba(255, 255, 255, 0.9)";
 		ctx.beginPath();
-		ctx.arc(~~p.x, ~~p.y, this.radius / 2, Math.PI * 2, 0);
+		ctx.arc(radius, radius, radius / 2, Math.PI * 2, 0);
 		ctx.fill();
+
+		return this.canvas;
 	},
 
-	createGradient: function (ctx) {
-		var gradient = ctx.createRadialGradient(0, 0, 1, 0, 0, this.radius);
-	},
-
-	drawGradient: function (ctx) {
+	draw: function (ctx) {
 		if (this.delay > 0) { return; }
 
 		var p = this.position,
-		    x = ~~p.x, y = ~~p.y,
-		    radius = this.radius,
-		    percent = this.active / this.duration,
-		    gradient = ctx.createRadialGradient(x, y, radius / 2, x, y, radius);
+		    percent = this.percent,
+		    alpha = ctx.globalAlpha,
+		    x = p.x >>> 0,
+		    y = p.y >>> 0,
+		    size = this.radius * 2,
+		    historyLength = this.dirtyHistoryLength,
+		    dirtyRects = this.system.dirtyRects,
+		    rect;
 
-		gradient.addColorStop(0, "rgba(255, 255, 255, 0.9)");
-		gradient.addColorStop(1, this.color);
-
-		ctx.fillStyle = gradient;
 		ctx.globalAlpha = 1 - (percent * percent);
+		ctx.drawImage(this.canvas, x, y);
+		ctx.globalAlpha = alpha;
 
-		ctx.beginPath();
-		ctx.arc(x, y, radius, Math.PI * 2, 0);
-		ctx.fill();
+		if (historyLength === 0) {
+			$.DirtyRects.add(ctx, x, y, size, size, true);
+		} else {
+			if (this.dirtyHistory.length === historyLength) {
+				this.dirtyHistory.shift();
+			}
+
+			rect = {x: x, y: y, w: size, h: size};
+			this.dirtyHistory.push(rect);
+
+			while (--historyLength >= 0) {
+				rect = this.dirtyHistory[historyLength];
+				rect && dirtyRects.add(ctx, rect.x, rect.y, rect.w, rect.h, true);
+			}
+
+		}
 	},
 
 	update: function (dt) {
 		var pos = this.position,
-		    tempVelocity = this._nVelocity;
+		    tempVelocity = this._nVelocity,
+		    speed, scale;
 
 		if (this.active === null) { return; }
 
@@ -163,12 +184,18 @@ $.extend(Particle.prototype, {
 		}
 
 		this.active += dt;
-		if (this.active >= this.duration) {
+		if (this.duration !== null && this.active >= this.duration) {
 			this.reset();
 			return;
 		}
 
 		this.velocity.iadd(this.acceleration);
+		speed = this.velocity.length();
+		if (speed > this.maxVelocity) {
+			scale = this.maxVelocity / speed;
+			this.velocity.imul(scale);
+		}
+
 		tempVelocity.x = this.velocity.x;
 		tempVelocity.y = this.velocity.y;
 		tempVelocity.imul(dt);
@@ -262,25 +289,34 @@ function Attractor(p, power) {
 $.extend(Attractor.prototype, {
 	effect: function (particle) {
 		var distance = this.position.sub(particle.position),
-		    length = distance.length();
+		    length = distance.length(),
+		    accel, scale;
 
 		distance.idiv(length * length / this.power);
 		particle.acceleration.iadd(distance);
+
+		accel = particle.acceleration.length();
+
+		if (accel > particle.maxAcceleration) {
+			scale = particle.maxAcceleration / accel;
+			particle.acceleration.imul(scale);
+		}
 	}
 });
 
 function ParticleSystem(preset) {
-	var canctx;
-
 	this.inactiveParticles = [];
 	this.activeParticles = [];
 	this._preallocate(1200);
 	this.setPreset(preset);
+	this.dirtyRects = Object.create($.DirtyRects, {
+		list: {value: []}
+	});
 }
 
 ParticleSystem.Presets = {
 	blur: {
-		fillColor: "rgba(200, 200, 200, 0.6)",
+		fillColor: "rgba(100, 100, 100, 0.6)",
 		composite: "source-in",
 		clearOp: "fillRect"
 	},
@@ -309,14 +345,8 @@ $.extend(ParticleSystem.prototype, {
 	},
 
 	createCanvas: function (w, h) {
-		var canctx;
-
 		this.width = w;
 		this.height = h;
-
-		canctx = $.createCanvas(this.width, this.height);
-		this.canvas = canctx[0];
-		this.context = canctx[1];
 	},
 
 	setPreset: function (str) {
@@ -333,8 +363,7 @@ $.extend(ParticleSystem.prototype, {
 	},
 
 	createParticle: function () {
-		var particle = this.inactiveParticles.shift(),
-		    draw = /*navigator.userAgent.match(/Chrome/) ? "drawGlow" : */"drawCircle";
+		var particle = this.inactiveParticles.shift();
 
 		if (!particle) {
 			particle = new Particle;
@@ -342,29 +371,28 @@ $.extend(ParticleSystem.prototype, {
 
 		this.activeParticles.push(particle);
 		particle.active = 0;
-		particle.draw = Particle.prototype[draw];
+		particle.system = this;
 
 		return particle;
 	},
 
-	update: function (dt, context) {
+	update: function (callback, dt, context) {
 		var particles = this.activeParticles,
 		    particle,
 		    offset = this.offset,
-		    buffer = this.context,
 		    i = particles.length;
 
 		if (!i) { return; }
 
-		buffer.save();
-		buffer.shadowBlur = 0;
-		buffer.globalCompositeOperation = this.composite;
-		buffer.fillColor = this.fillColor;
-		buffer[this.clearOp](0, 0, this.width, this.height);
-		buffer.restore();
+		context.save();
+		context.globalCompositeOperation = this.composite;
+		context.fillStyle = this.fillColor;
+		this.dirtyRects.update(this.clearOp);
+		context.globalCompositeOperation = "lighter";
 
 		while (i--) {
 			particle = particles[i];
+			callback(particle);
 			particle.update(dt);
 
 			if (particle.active === null) {
@@ -373,8 +401,9 @@ $.extend(ParticleSystem.prototype, {
 				continue;
 			}
 
-			particle.draw(buffer);
+			particle.draw(context);
 		}
-		context.drawImage(this.canvas, offset.x, offset.y);
+
+		context.restore();
 	}
 });
