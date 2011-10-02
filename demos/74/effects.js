@@ -35,6 +35,23 @@ FX.Fireworks = {
 			canvas.height = $.height;
 			context = canvas.getContext("2d");
 		}
+
+		this.initImageCache();
+	},
+
+	initImageCache: function () {
+		var color,
+		    particle = new Particle;
+
+		particle.radius = 3;
+		for (color in this.colors) {
+			if (!this.colors.hasOwnProperty(color)) { continue; }
+
+			this.colors[color].forEach(function (shade) {
+				particle.setColor(shade);
+				this.imageCache[shade] = particle.drawGlow();
+			}, this);
+		}
 	},
 
 	addParticle: function (x, y, color) {
@@ -43,12 +60,10 @@ FX.Fireworks = {
 		    angle,
 		    particle,
 		    colors,
-		    color,
-		    cached;
+		    color;
 
 		colors = this.colors[color];
 		color = colors[Math.floor(Math.random() * colors.length)];
-		cache = this.imageCache[color];
 
 		angle = Math.random() * Math.PI * 2;
 
@@ -61,17 +76,13 @@ FX.Fireworks = {
 		particle.setAcceleration(0, this.gravity);
 		particle.setColor(color);
 		particle.radius = 3;
-		particle.dirtyHistoryLength = 8;
+		particle.dirtyHistoryLength = 5;
 
 		if (Math.random() < 0.35) {
 			particle.delay = Math.random() * 200;
 		}
 
-		if (cached) {
-			particle.canvas = cached;
-		} else {
-			this.imageCache[color] = particle.drawGlow();
-		}
+		particle.canvas = this.imageCache[color];
 	},
 
 	start: function (rows) {
