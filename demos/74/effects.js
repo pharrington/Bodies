@@ -122,6 +122,38 @@ FX.Fireworks = {
 	}
 };
 
+FX.Piece = {
+	piece: null,
+	count: 0,
+
+	flash: function (piece) {
+		this.piece = piece;
+		this.count = 6;
+	},
+
+	refresh: function (dt) {
+		var piece = this.piece,
+		    count = this.count,
+		    context = Piece.context,
+		    i;
+
+		if (!piece) { return; }
+		if (count === 2) {
+			this.piece = null;
+			return;
+		}
+	
+		context.save();
+		context.globalCompositeOperation = "lighter";
+		for (i = 0; i < count; i++) {
+			piece.draw();
+		}
+
+		context.restore();
+		this.count--;
+	}
+};
+
 FX.Streak = {
 	start: function (piece) {
 		

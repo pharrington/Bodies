@@ -934,6 +934,7 @@ var Game = {
 		}
 
 		if (!numCleared) {
+			FX.Piece.flash(this.currentPiece);
 			this.spawnNext();
 			this.outline.refresh();
 			this.levels.endPiece();
@@ -1280,6 +1281,7 @@ var Game = {
 		$.DirtyRects.update();
 		this.dropFX.refresh(elapsed);
 		this.drawField(this.currentPiece);
+		FX.Piece.refresh(elapsed);
 		this.gameStatus.draw();
 		this.effects.refresh(elapsed);
 		this.inputBuffer = 0;
