@@ -289,7 +289,7 @@ HighScores.Menu = {
 		if (container.querySelector("." + className)) { return null };
 
 		date = score.date,
-		dateStr = pad00(date.getMonth()) + "-" + pad00(date.getDate()) + "-" + date.getFullYear(),
+		dateStr = pad00(date.getMonth() + 1) + "-" + pad00(date.getDate()) + "-" + date.getFullYear(),
 		node = document.createElement("tr"),
 		dateNode = UI.createNode("td", dateStr),
 		scoreNode = UI.createNode("td", score.displayScore()),
