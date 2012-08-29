@@ -361,6 +361,19 @@ Bodies = $ = {
 		}
 	},
 
+	throttle: function (fn, delay) {
+		var last = 0;
+
+		return function () {
+			var now = Date.now();
+
+			if (now - last >= delay) {
+				last = now;
+				fn.apply(this, argsArray(arguments));
+			}
+		};
+	},
+
 	noop: function () {}
 };
 

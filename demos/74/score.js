@@ -1,6 +1,4 @@
-(function (exports) {
-
-function run(callback) { callback(); }
+(function (window, undefined) {
 
 var Score = {
 	Base: {
@@ -11,7 +9,7 @@ var Score = {
 		softDropY: 0,
 		softDropValue: 0,
 		hardDropValue: 0,
-		save: [],
+		save: null,
 		currentPiece: null,
 		callbacks: [],
 
@@ -47,7 +45,7 @@ var Score = {
 };
 
 Score.Master = $.inherit(Score.Base, {
-	save: ["elapsed", "grade"],
+	save: "grade",
 	grades: [
 		// internal grade 0
 		{decay: 125, clearPoints: [10, 20, 40, 50]},
@@ -313,7 +311,7 @@ Score.Master = $.inherit(Score.Base, {
 Score.StaffRoll = $.inherit(Score.Base, {
 	grade: 0,
 	survived: 0,
-	save: ["grade", "elapsed"],
+	save: "grade",
 
 	refresh: function (elapsed) {
 		if (this.won()) { return; }
@@ -352,37 +350,37 @@ Score.TGM2MRoll = $.inherit(Score.StaffRoll, {
 });
 
 Score.Points = $.inherit(Score.Base, {
-	save: ["elapsed", "score"],
+	save: "score",
+	lineValues: [100, 300, 600, 1600],
+	elapsedFrames: 0,
+	framesLimit: 60,
+	multiplier: 1,
+	multiplierMax: 11,
 
-	hardDrop: function (piece) {
-		this.currentPiece = piece;
-		this.hardDropY = piece.gridPosition.y;
-	},
+	clearLines: function (numCleared) {
+		if (!numCleared && this.elapsedFrames >= this.framesLimit) {
+			this.multiplier = Math.max(1, Math.floor(this.multiplier / 2));
+		}
+		
+		if (this.elapsedFrames < this.framesLimit) {
+			this.multiplier = Math.min(this.multiplierMax, this.multiplier + Math.pow((this.framesLimit - this.elapsedFrames) / this.framesLimit, 2));
+		}
 
-	softDrop: function () {
+		if (numCleared) {
+			this.score += Math.floor(this.multiplier) * this.game.levels.level * this.lineValues[numCleared - 1];
+		}
+
+		this.elapsedFrames = 0;
 	},
 
 	callbacks: [
 		function () {
-			/*
-			var piece = this.currentPiece,
-			    y;
-
-			if (!piece) { return; }
-
-			y = piece.gridPosition.y;
-
-			this.score += (y - this.hardDropY) * this.hardDropValue * this.game.levels.level;
-
-			this.hardDropY = this.softDropY = 0;
-			this.currentPiece = null;
-			*/
+			this.elapsedFrames++;
 		}
 	]
 });
 
 Score.TimeAttack = $.inherit(Score.Base, {
-	save: ["elapsed"],
 	linesLeft: 0,
 
 	start: function (game) {
@@ -394,11 +392,13 @@ Score.TimeAttack = $.inherit(Score.Base, {
 		this.linesLeft = Math.max(this.linesLeft - lines, 0);
 	},
 
+	goal: function () { return this.linesLeft; },
+
 	won: function () {
 		return this.linesLeft === 0;
 	}
 });
 
-exports.Score = Score;
+window.Score = Score;
 
-})(window);
+})(this);

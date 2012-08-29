@@ -1,4 +1,4 @@
-(function (exports) {
+(function (window, undefined) {
 
 function shuffle(ary, rng) {
 	var i = ary.length,
@@ -172,6 +172,6 @@ QueueSource.Replay = $.inherit(QueueSource.Base, {
 	}
 });
 
-exports.QueueSource = QueueSource;
+window.QueueSource = QueueSource;
 
 })(window);

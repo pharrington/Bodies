@@ -1,20 +1,22 @@
+(function (window, undefined) {
+
 var SecretMove = {
 	buffer: null,
 
 	// these are a secret between you and me.
 	codes: [
 		["72,65,76,57,48,48,48", function () {
-			UI.events.master[1] = function () {
+			UI.events.normal[1] = function () {
 				UI.startGame("DemoAI");
 			};
 		}],
 		["86,69,82,83,85,83", function () {
-			UI.events.master[1] = function () {
+			UI.events.normal[1] = function () {
 				Modes.Versus.newGame();
 			};
 		}],
 		["83,72,73,78,66,76,79,67,75,72,69,65,68", function () {
-			UI.events.master[1] = function () {
+			UI.events.normal[1] = function () {
 				UI.startGame("Death");
 			};
 		}]
@@ -47,8 +49,8 @@ var SecretMove = {
 
 var UI = {
 	events: {
-		master: ["click", function () {
-			UI.startGame("Master");
+		normal: ["click", function () {
+			UI.startGame("Normal");
 		}],
 
 		time_attack: ["click", function () {
@@ -61,8 +63,7 @@ var UI = {
 		}],
 
 		high_scores: ["click", function () {
-			HighScores.Menu.init();
-			UI.showOnly("high_scores_menu");
+			UI.highScoresMenu();
 		}],
 
 		resume: ["click", function () {
@@ -90,20 +91,34 @@ var UI = {
 		document.getElementById(id).style.display = "block";
 	},
 
-	showOnly: function (id) {
-		var elements = ["main_menu", "controls_menu", "high_scores_menu", "multiplayer", "field"];
+	showOnly: function (ids) {
+		var elements, id;
+		
+		elements = ["main_menu", "controls_menu", "high_scores_menu", "multiplayer", "field", "field_background", "field_piece", "field_effects", "high_scores_daily_banner"];
 
-		elements.forEach(function (e) {
-			e = document.getElementById(e);
+
+		if (!(ids instanceof Array)) {
+			ids = [ids];
+		}
+
+		elements.forEach(function (id) {
+			e = document.getElementById(id);
 			if (!e) { return; }
 
-			e.style.display = e.id === id ? "block" : "none";
+			if (ids.indexOf(id) === -1) {
+				Util.hide(e);
+				if (id === "high_scores_daily_banner") {
+					HighScores.Banner.cancelShow();
+				}
+			} else {
+				Util.show(e);
+			}
 		});
 
 		SecretMove.remove();
 	},
 
-	fadeTo: function (id, callback) {
+	fadeTo: function (ids, callback) {
 		var callbackDelay = 500,
 		    duration = 1000,
 		    steps = 40,
@@ -119,8 +134,8 @@ var UI = {
 
 			if (time >= duration) {
 				window.setTimeout(function () {
-					UI.showOnly(id);
 					callback();
+					UI.showOnly(ids);
 					Fade.css.opacity = origOpacity;
 					Fade.hide();
 				}, callbackDelay);
@@ -136,22 +151,36 @@ var UI = {
 	},
 
 	mainMenu: function () {
-		UI.showOnly("main_menu");
-		UI.events.master[1] = function () {
-			UI.startGame("Master");
+		UI.showOnly("main_menu", "high_scores_daily_banner");
+		UI.events.normal[1] = function () {
+			UI.startGame("Normal");
 		};
 
 		Modes.Versus.closeSocket();
+		HighScores.Banner.update();
 		SecretMove.init();
 	},
 
-	startGame: function (mode) {
-		var game = Modes[mode].newGame();
+	highScoresMenu: function () {
+		HighScores.Menu.init();
+		UI.showOnly("high_scores_menu");
+	},
+
+	startGame: function (gameOrMode) {
+		var game;
+	       
+		if (typeof gameOrMode === "string") {
+			game = Modes[gameOrMode].newGame();
+		} else {
+			game = gameOrMode;
+		}
 
 		if (!game) { return; }
 
-
-		UI.fadeTo("field", function () {
+		UI.fadeTo(["field", "field_piece", "field_background", "field_effects"], function () {
+			Piece.clear();
+			FX.clear();
+			$.context.clearRect(0, 0, $.width, $.height);
 			$.register(game);
 			game.start();
 		});
@@ -164,12 +193,11 @@ var UI = {
 		for (id in events) {
 			if (!events.hasOwnProperty(id)) { continue; }
 
-			tuple = events[id];
-			(function (t) {
-				document.getElementById(id).addEventListener(t[0], function () {
-					t[1]();
+			(function (tuple) {
+				document.getElementById(id).addEventListener(tuple[0], function () {
+					tuple[1]();
 				}, false);
-			}(tuple));
+			}(events[id]));
 		}
 
 		document.documentElement.addEventListener("click", function (e) {
@@ -183,36 +211,87 @@ var UI = {
 	}
 };
 
-function letterize(node) {
-	var html = "",
-	    text,
-	    i, len;
+var PauseMenu = {
+	game: null,
 
-	text = node.firstChild.nodeValue;
+	_node: null,
+	node: function () {
+		var node = this._node;
 
-	for (i = 0, len = text.length; i < len; i++) {
-		html += "<span>" + text[i] + "</span>";
+		if (node) { return node; }
+
+		node = document.getElementById("pause");
+		this._node = node;
+
+		return node;
+	},
+
+	register: function () {
+		this.node().style.display = "block";
+	},
+
+	hide: function () {
+		this.node().style.display = "none";
+	},
+
+	unpause: function () {
+		this.hide();
+		$.register(this.game);
+	},
+
+	restart: function () {
+		var game = this.game;
+
+		this.unpause();
+
+		game.endGame(function () {
+			this.field.clear();
+			this.field.draw();
+		}, $.noop, 0);
+
+		if (game.replayEntry) {
+			game = Modes.newReplay(game.replayEntry);
+		} else {
+			game = game.mode.newGame();
+		}
+
+		setTimeout(function () {
+			$.register(game);
+			game.start();
+		}, 0);
+
+		this.game = null;
+	},
+
+	quit: function () {
+		var game = this.game;
+
+		this.unpause();
+
+		if (!game.replayEntry) {
+			game.endGame(game.loseCallback, UI.mainMenu.bind(UI), 0);
+		} else {
+			game.endGame(game.loseCallback, 0);
+		}
+	},
+
+	keyHold: $.noop,
+	refresh: $.noop,
+	keyPress: function (key) {
+		if (key === Game.Config.Pause) {
+			this.unpause();
+			return false;
+		}
 	}
+};
 
-	node.innerHTML = html;
-
-	return node.children;
-}
+UI.PauseMenu = PauseMenu;
 
 document.addEventListener("DOMContentLoaded", function () {
-	var selectors = ["#main_menu h1", "#controls_menu h1", "#high_scores_menu h1"],
-	    colors = ["#db0b1e", "#e2950e", "#e2da0e", "#0bdb15", "#0b48db", "#590ee2"],
-	    i, len;
-
-
-	selectors.forEach(function (s) {
-		var letters = letterize(document.querySelector(s));
-
-		for (i = 0, len = letters.length; i < len; i++) {
-			letters[i].style.color = Util.cycle(colors, i);
-		}
-	});
-
-
 	UI.bindEvents();
+	HighScores.Banner.update();
 }, false);
+
+window.UI = UI;
+
+})(this);

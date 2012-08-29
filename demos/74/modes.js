@@ -1,3 +1,5 @@
+(function (window, undefined) {
+
 var WS_STATE = {
 	CONNECTING: 0,
 	OPEN: 1,
@@ -16,9 +18,44 @@ var Modes = {
 		game.setRotationSystem(RotationSystems[rotation]);
 		game.addInputSink(InputSink.LocalStorage);
 		game.setInputSource(InputSource.Player);
-		game.effects = $.inherit(FX.Fireworks);
+		game.effects = $.inherit(FX.Burst);
 		game.dropFX = FX.Streak;
 		game.gameStatus = $.inherit(GameStatus.Score);
+
+		return game;
+	},
+
+	newReplay: function (mode, replayStr) {
+		var game, replay;
+
+		if (typeof mode === "object") {
+			replayStr = mode.replayStr;
+			mode = mode.mode;
+		}
+
+		replay = InputSource.Replay;
+
+		game = Modes[mode].newGame();
+		game.setInputSource(replay);
+
+		if (!replay.loadReplay(atob(replayStr))) {
+			return null;
+		}
+
+		game.endGameCallback = UI.highScoresMenu.bind(UI);
+		game.replayEntry = {mode: mode, replayStr: replayStr};
+
+		return game;
+	}
+};
+
+Modes.Normal = {
+	name: "Normal",
+	newGame: function () {
+		var game = Modes.newGame("Normal", "Points", "TGM", "TGM");
+
+		game.mode = this;
+		game.softLock = true;
 
 		return game;
 	}
@@ -41,7 +78,7 @@ Modes.Master = {
 Modes.Infinity = {
 	name: "Infinity",
 	newGame: function () {
-		var game = Modes.newGame("Points", "Infinity", "SRS", "RandomGenerator");
+		var game = Modes.newGame("Static", "Points", "SRS", "RandomGenerator");
 		game.mode = this;
 		game.hardLock = true;
 		game.killOnLockAboveField = true;
@@ -53,12 +90,11 @@ Modes.Infinity = {
 Modes.TimeAttack = {
 	name: "TimeAttack",
 	newGame: function () {
-		var game = Modes.newGame("Static", "TimeAttack", "SRS", "RandomGenerator");
+		var game = Modes.newGame("Static", "TimeAttack", "TGM", "TGM");
 
 		game.mode = this;
 		game.gameStatus = GameStatus.Timer;
 		game.hardLock = true;
-		game.killOnLockAboveField = true;
 
 		return game;
 	}
@@ -67,12 +103,11 @@ Modes.TimeAttack = {
 Modes.DemoAI = {
 	name: "AI",
 	newGame: function () {
-		var game = Modes.newGame("Static", "Points", "TGM", "TGM");
+		var game = Modes.newGame("Normal", "Points", "TGM", "TGM");
 
 		game.mode = this;
 		game.hardLock = true;
 		game.holdPiece = $.noop;
-		game.gameStatus = GameStatus.Rank;
 		game.setInputSource(InputSource.AI);
 
 		return game;
@@ -219,3 +254,7 @@ InputSink.Network = $.inherit(InputSink.Base, {
 		this.ws.send(moves);
 	}
 });
+
+window.Modes = Modes;
+
+})(this);

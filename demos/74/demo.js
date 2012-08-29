@@ -61,563 +61,6 @@ function pad00(str) {
 	return str;
 }
 
-var Field = {
-	rowOffset: 1,
-	rows: 21,
-	columns: 10,
-	frameWidth: 10,
-	canvas: null,
-	context: null,
-	fillColor: new Color(0, 0, 0),
-	mergeAlpha: 0.7,
-	blockSize: null,
-	spacing: null,
-	offset: {x: 10, y: 10},
-	game: null,
-	grid: null,
-	width: null,
-	height: null,
-	fade: false,
-
-	init: function (game) {
-		this.clearGrid();
-
-		this.game = game;
-		if (game.offset) {
-			this.offset = game.offset;
-		}
-
-		this.background = new Background($.resource("background"), this.offset);
-		this.initCanvas();
-		this.drawFrame();
-	},
-
-	clearGrid: function () {
-		var row, i, j;
-
-		this.grid = [];
-
-		for (i = 0; i < this.rows; i++) {
-			row = [];
-			for (j = 0; j < this.columns; j++) {
-				row.push(false);
-			}
-			this.grid[i] = row;
-		}
-	},
-
-	copy: function (other) {
-		var x, y,
-		    grid = this.grid,
-		    ogrid = other.grid;
-
-		for (y = 0; y < this.rows; y++) {
-			for (x = 0; x < this.columns; x++) {
-				grid[y][x] = ogrid[y][x];
-			}
-		}
-	},
-
-	initCanvas: function () {
-		var canvas = document.createElement("canvas"),
-		    size = this.blockSize = Piece.blockSize,
-		    spacing = this.spacing = Piece.spacing;
-
-		canvas.width = this.width = this.columns * Piece.blockSize + Piece.spacing;
-		canvas.height = this.height = (this.rows - this.rowOffset) * Piece.blockSize + Piece.spacing;
-		this.context = canvas.getContext("2d");
-		this.context.globalAlpha = this.mergeAlpha;
-		this.clear();
-		this.canvas = canvas;
-	},
-
-	filled: function (block) { return block; },
-
-	clearRows: function (unanimated) {
-		var row,
-		    i, len,
-		    cleared = [],
-		    outline = this.game.outline,
-		    grid = this.grid;
-
-		for (i = 0, len = grid.length; i < len; i++) {
-			row = grid[i];
-			if (row.every(Field.filled)) {
-				grid[i] = null;
-				cleared.push({index: i, blocks: row});
-			}
-		}
-
-		if (!unanimated) {
-			this.eraseRows(cleared);
-			outline.refresh = $.noop;
-			outline.rebuild(grid);
-			outline.refresh = outline.draw;
-			outline.refresh();
-		}
-
-		grid.compact();
-
-		while (grid.length !== this.rows) {
-			row = [];
-			for (i = 0; i < this.columns; i++) {
-				row.push(false);
-			}
-			grid.unshift(row);
-		}
-
-		!unanimated && cleared.length && this.animate(cleared);
-		return cleared;
-	},
-
-	animate: function (rows) {
-		var game = this.game,
-		    effects = game.effects;
-
-		game.setLineClearTimer();
-
-		effects.start(rows);
-	},
-
-	eraseRows: function (rows) {
-		rows.forEach(function (row) {
-			this.eraseRow(row.index);
-		}, this);
-	},
-
-	eraseRow: function (index) {
-		var size = Piece.blockSize,
-		    x = this.offset.x,
-		    y = this.offset.y + (index - this.rowOffset) * size,
-		    spacing = Piece.spacing,
-		    columns = this.columns;
-
-		$.context.clearRect(x, y, size * columns + spacing, size + spacing);
-	},
-	
-	drawFrame: function () {
-		var x, y,
-		    width, height,
-		    thickness = this.frameWidth,
-		    from = new Color(0, 0, 0),
-		    to = new Color(255, 255, 255),
-		    ctx = $.context,
-		    color,
-		    i,
-		    blend;
-
-		blend = function (from, to, percent) {
-			var r = from.r + (to.r - from.r) * percent,
-			    g = from.g + (to.g - from.g) * percent,
-			    b = from.b + (to.b - from.b) * percent;
-
-			return new Color(~~r, ~~g, ~~b);
-		};
-
-		x = this.offset.x - thickness / 2;
-		y = this.offset.y - thickness / 2;
-		width = this.width + thickness;
-		height = this.height + thickness;
-
-
-		ctx.save();
-		ctx.lineJoin = "round";
-
-		for (i = thickness; i >= 1; i--) {
-			ctx.lineWidth = i;
-			color = blend(from, to, Math.pow((thickness - i + 1) / thickness, 0.25)).toString();
-			ctx.strokeStyle = color;
-			ctx.strokeRect(x, y, width, height);
-		}
-		ctx.restore();
-	},
-
-	drawBlock: function (block, x, y, opacity) {
-		var size = Piece.blockSize,
-		    spacing = Piece.spacing,
-		    offset = this.offset,
-		    ctx = $.context,
-		    dx, dy;
-
-		y -= this.rowOffset;
-
-		dx = x * size + offset.x;
-		dy = y * size + offset.y;
-
-		if (!this.fade) {
-			ctx.drawImage(block, dx + spacing, dy + spacing);
-			return;
-		}
-
-		if (opacity < 1) {
-			ctx.clearRect(dx, dy, size + spacing, size + spacing);
-			ctx.globalAlpha = Math.max(0, opacity);
-		}
-
-		if (opacity > 0) {
-			ctx.drawImage(block, dx + spacing, dy + spacing);
-		}
-			
-	},
-
-	fadeBlocks: function () {
-		var x, y,
-		    rows = this.rows,
-		    cols = this.columns,
-		    grid = this.grid,
-		    step = this.mergeAlpha / 5,
-		    block;
-
-		if (!this.fade) { return; }
-
-		$.context.save();
-
-		for (y = 0; y < rows; y++) {
-			for (x = 0; x < cols; x++) {
-				block = grid[y][x];
-
-				if (!block) { continue; }
-
-				if (block.fadeDelay) { block.fadeDelay--; }
-
-				if (block.fadeDelay === 0 && block.opacity >= 0) {
-					block.opacity -= step;
-					this.drawBlock(block.image, x, y, block.opacity);
-				}
-			}
-		}
-
-		$.context.restore();
-
-	},
-
-	draw: function () {
-		this.fadeBlocks();
-	},
-
-	redraw: function () {
-		var x, y,
-		    block,
-		    offset = this.offset;
-
-		this.clear();
-
-		$.context.save();
-		$.context.globalAlpha = this.mergeAlpha;
-
-		for (y = this.rowOffset; y < this.rows; y++) {
-			for (x = 0; x < this.columns; x++) {
-				block = this.grid[y][x];
-				block && this.drawBlock(block.image, x, y, block.opacity);
-			}
-		}
-
-		$.context.restore();
-	},
-
-	clear: function () {
-		$.context.clearRect(this.offset.x, this.offset.y, this.width, this.height);
-	},
-
-	applyPiece: function (piece, callback) {
-		var x, y,
-		    i, j,
-		    shape = piece.shape,
-		    len = shape.length,
-		    grid = this.grid;
-
-		outer:
-		for (i = 0, y = piece.gridPosition.y; i < len; i++, y++) {
-			for (j = 0, x = piece.gridPosition.x; j < len; j++, x++) {
-				if (callback.call(this, shape, grid, j, i, x, y) === false) {
-					break outer;
-				}
-			}
-		}
-	},
-
-	collision: function (piece) {
-		var sx, sy,
-		    gx, gy,
-		    shape = piece.shape,
-		    len = shape.length,
-		    grid = this.grid,
-		    rows = this.rows,
-		    cols = this.columns;
-
-		for (sy = 0, gy = piece.gridPosition.y; sy < len; sy++, gy++) {
-			for (sx = 0, gx = piece.gridPosition.x; sx < len; sx++, gx++) {
-				if (shape[sy][sx] && (gy >= rows || gx < 0 || gx >= cols || (gy >= 0 && grid[gy][gx]))) {
-					return true;
-				}
-			}
-		}
-
-		return false;
-	},
-
-	oob: function (piece) {
-		var sx, sy,
-		    gx, gy,
-		    shape = piece.shape,
-		    len = shape.length,
-		    grid = this.grid,
-		    rows = this.rows,
-		    cols = this.columns;
-
-		for (sy = 0, y = piece.gridPosition.y; sy < len; sy++, y++) {
-			for (sx = 0, x = piece.gridPosition.x; sx < len; sx++, x++) {
-				if (shape[sy][sx] && (gy >= rows || gy <= -3 || gx < 0 || gx >= cols)) {
-					return true;
-				}
-			}
-		}
-
-		return false;
-	},
-
-	merge: function (piece) {
-		var context = $.context;
-
-		context.save();
-
-		context.globalAlpha = this.mergeAlpha;
-		this.applyPiece(piece, function (shape, grid, sx, sy, gx, gy) {
-			var block;
-
-			if (gy >= 0 && shape[sy][sx]) {
-				block = {image: piece.block, color: piece.image};
-
-				if (this.fade) {
-					block.fadeDelay = 300;
-					block.opacity = this.mergeAlpha;
-				}
-
-				grid[gy][gx] = block;
-				this.drawBlock(piece.block, gx, gy, block.opacity);
-			}
-		});
-
-		context.restore();
-	},
-
-	moveToBottom: function (piece) {
-		while (!this.collision(piece)) {
-			piece.moveDown();
-		}
-		piece.moveUp();
-	}
-};
-
-var Outline = {
-	outlineColor: "#eee",
-	clearColor: "#000",
-	occupied: null,
-	rows: null,
-	columns: null,
-
-	Cell: function () {},
-
-	init: function (field) {
-		var x, y;
-
-
-		this.rowOffset = field.rowOffset;
-		this.spacing = field.spacing;
-		this.rows = field.rows;
-		this.columns = field.columns;
-		this.blockSize = field.blockSize;
-		this.offset = field.offset;
-
-		this.occupied = [];
-
-		for (y = 0; y < this.rows; y++) {
-			this.occupied[y] = [];
-			for (x = 0; x < this.columns; x++) {
-				this.occupied[y][x] = new Outline.Cell;
-			}
-		}
-	},
-
-	merge: function (piece) {
-		var sx, sy,
-		    shape = piece.shape,
-		    gx = piece.gridPosition.x,
-		    gy = piece.gridPosition.y,
-		    x = gx, y = gy,
-		    occupied = this.occupied,
-		    adjacent,
-		    cell;
-
-		this.refresh(true);
-		for (sy = 0; sy < 4 && y < this.rows; sy++, y++) {
-			if (y < 0) { continue; }
-
-			for (sx = 0, x = gx; sx < 4 && x < this.columns; sx++, x++) {
-				if (!shape[sy] || !shape[sy][sx]) { continue; }
-
-				cell = occupied[y][x];
-
-				this._mergeTop(cell, x, y);
-				this._mergeRight(cell, x, y);
-				this._mergeBottom(cell, x, y);
-				this._mergeLeft(cell, x, y);
-			}
-		}
-	},
-
-	rebuild: function (grid) {
-		var x, y,
-		    cell;
-
-		this.refresh(true);
-
-		for (y = 0; y < this.rows; y++) {
-			for (x = 0; x < this.columns; x++) {
-				cell = this.occupied[y][x];
-
-				cell.bottom = cell.top = cell.left = cell.right = false;
-			}
-		}
-
-		for (y = 0; y < this.rows; y++) {
-
-			if (!grid[y]) { continue; }
-
-			for (x = 0; x < this.columns; x++) {
-				if (grid[y][x]) {
-					cell = this.occupied[y][x];
-
-					this._mergeTop(cell, x, y);
-					this._mergeRight(cell, x, y);
-					this._mergeBottom(cell, x, y);
-					this._mergeLeft(cell, x, y);
-				}
-			}
-		}
-	},
-
-	_mergeTop: function (cell, x, y) {
-		var adjacent;
-
-		if (y > 0) {
-			adjacent = this.occupied[y - 1][x];
-			if (adjacent.bottom) {
-				adjacent.bottom = false;
-			} else {
-				cell.top = true;
-			}
-		}
-	},
-
-	_mergeRight: function (cell, x, y) {
-		var adjacent;
-
-		if (x < this.columns - 1) {
-			adjacent = this.occupied[y][x + 1];
-			if (adjacent.left) {
-				adjacent.left = false;
-			} else {
-				cell.right = true;
-			}
-		}
-	},
-
-	_mergeBottom: function (cell, x, y) {
-		var adjacent;
-
-		if (y < this.rows - 1) {
-			adjacent = this.occupied[y + 1][x];
-			if (adjacent.top) {
-				adjacent.top = false;
-			} else {
-				cell.bottom = true;
-			}
-		}
-	},
-
-	_mergeLeft: function (cell, x, y) {
-		var adjacent;
-
-		if (x > 0) {
-			adjacent = this.occupied[y][x - 1];
-			if (adjacent.right) {
-				adjacent.right = false;
-			} else {
-				cell.left = true;
-			}
-		}
-	},
-
-	draw: function (clear) {
-		var x, y,
-		    dx, dy,
-		    ox = this.offset.x,
-		    oy = this.offset.y,
-		    rowOffset = this.rowOffset,
-		    occupied = this.occupied,
-		    cell,
-		    spacing = this.spacing,
-		    size = this.blockSize,
-		    hspacing = spacing / 2,
-		    top, left, bottom, right,
-		    context = $.context;
-
-		context.save();
-
-		context.lineCap = "square";
-		context.lineWidth = spacing;
-
-		if (clear) {
-			context.strokeStyle = this.clearColor;
-		} else {
-			context.strokeStyle = this.outlineColor;
-		}
-
-		for (y = rowOffset, dy = oy; y < this.rows; y++, dy += size) {
-			for (x = 0, dx = ox; x < this.columns; x++, dx += size) {
-				cell = occupied[y][x];
-
-				top = dy + hspacing;
-				bottom = top + size;
-				left = dx + hspacing;
-				right = left + size;
-
-				context.beginPath();
-
-				if (cell.top) {
-					context.moveTo(left, top);
-					context.lineTo(right, top);
-				}
-
-				if (cell.right) {
-					context.moveTo(right, top);
-					context.lineTo(right, bottom);
-				}
-
-				if (cell.bottom) {
-					context.moveTo(right, bottom);
-					context.lineTo(left, bottom);
-				}
-
-				if (cell.left) {
-					context.moveTo(left, bottom);
-					context.lineTo(left, top);
-				}
-
-				context.closePath();
-				context.stroke();
-			}
-		}
-
-		context.restore();
-	},
-
-	refresh: $.noop
-};
-
-$.extend(Outline.Cell.prototype, {top: false, right: false, bottom: false, left: false});
-
 var Game = {
 	duration: 0,
 	elapsed: 0,
@@ -644,6 +87,10 @@ var Game = {
 	keyHoldDelay: 170, // DAS (Delayed Auto Shift)
 	keyHoldInterval: 10, // ARR (Auto Repeat Rate)
 	refreshInterval: 16,
+	endGameDelay: 3500,
+	wonEndGameDelay: 5000,
+	gameOverFXDelay: 700,
+	wonFXDelay: 500,
 	locked: false,
 
 	inputBuffer: 0,
@@ -683,7 +130,7 @@ var Game = {
 
 	setFade: function (fade) {
 		if (fade) {
-			this.outline.refresh = $.noop;
+			this.outline.refresh = this.outline.draw = $.noop;
 		} else {
 			this.outline.refresh = Outline.draw;
 		}
@@ -747,31 +194,56 @@ var Game = {
 		return won;
 	},
 
-	winCallback: function () {
-		this.field.clear();
-		this.field.draw();
-		$.refresh($.noop, 1000);
-		UI.mainMenu();
-	},
+	winCallback: $.noop,
 
 	loseCallback: function () {
-		this.field.clear();
-		this.field.draw();
-		$.refresh($.noop, 1000);
-		UI.mainMenu();
+		FX.DropColumns.end();
+	},
+
+	endGameCallback: function () {
+		this.saveReplay();
 	},
 
 	gameOver: function () {
-		this.endGame(this.loseCallback, true);
+		var piece = this.currentPiece,
+		    field = this.field;
+
+		setTimeout(function () {
+			field.merge(piece);
+			FX.DropColumns.start(field);
+			field.draw = $.noop;
+			piece.draw = $.noop;
+		}, this.gameOverFXDelay);
+
+		this.endGame(this.loseCallback);
 	},
 
 	won: function () {
-		this.endGame(this.winCallback, true);
+		var field = this.field;
+
+		setTimeout(function () {
+			var count = 10,
+			    interval = 300,
+			    i,
+			    width = field.width,
+			    height = field.height,
+			    x, y;
+
+			for (i = 0; i < count; i++) {
+				x = Math.random() * (width * 0.8) + width * 0.2;
+				y = Math.random() * (height * 0.5) + height * 0.1;
+
+				FX.Fireworks.createParticles(x, y, interval * i);
+			}
+		
+		}, this.wonFXDelay);
+
+		this.endGame(this.winCallback, this.endGameCallback, this.wonEndGameDelay);
 	},
 
-	endGame: function (callback, saveReplay, delay) {
+	endGame: function (callback, endGameCallback, delay) {
 		if (delay === undefined) {
-			delay = 2000;
+			delay = this.endGameDelay;
 		}
 
 		$.keyPress($.noop);
@@ -784,9 +256,19 @@ var Game = {
 		this.clearTimers();
 		this.inputSource.gameOver();
 		this.queueSource.gameOver();
-		saveReplay && this.saveReplay();
 
-		setTimeout(callback.bind(this), delay);
+		setTimeout(function () {
+			this.field.clear();
+			this.field.draw();
+			$.refresh($.noop, 1000);
+			callback.call(this);
+
+			if (typeof endGameCallback === "function" ) {
+				endGameCallback();
+			} else {
+				this.endGameCallback();
+			}
+		}.bind(this), delay);
 	},
 
 	ejectUp: function (piece) {
@@ -814,10 +296,10 @@ var Game = {
 		this.inputSource.nextPiece();
 	},
 
-	spawnNext: function () {
+	spawnNext: function (are) {
 		this.tick = this.draw;
 		this.nextPiece();
-		this.setSpawnTimer();
+		this.setSpawnTimer(are);
 	},
 
 	setSpawnTimer: function (are) {
@@ -934,7 +416,7 @@ var Game = {
 		}
 
 		if (!numCleared) {
-			FX.Piece.flash(this.currentPiece);
+			FX.Piece.start(this.currentPiece);
 			this.spawnNext();
 			this.outline.refresh();
 			this.levels.endPiece();
@@ -955,7 +437,7 @@ var Game = {
 		this.inputSource.endPiece();
 
 		if (!this.heldPiece) {
-			this.spawnNext();
+			this.spawnNext(0);
 		} else {
 			this.currentPiece = this.heldPiece;
 		}
@@ -1021,11 +503,11 @@ var Game = {
 		ctx.strokeRect(x, y, w, h);
 
 		if (label) {
-			var width, fontSize = 28;
+			var width, fontSize = 20;
 
 			ctx.save();
 			ctx.fillStyle = "#eee";
-			ctx.font = fontSize + "px Orbitron";
+			ctx.font = fontSize + "px 'Press Start 2P'";
 			width = ctx.measureText(label).width + 10;
 			ctx.clearRect(x + 5, y - 3, width, fontSize);
 			ctx.fillText(label, x + 9, y+12);
@@ -1131,6 +613,11 @@ var Game = {
 		this.field = $.inherit(Field);
 		this.field.init(this);
 		this.effects.init(this);
+		FX.Fireworks.init();
+
+		this.outline = $.inherit(Outline);
+		this.outline.init(this.field);
+		this.setFade(false);
 
 		this.score.start(this);
 		this.levels.start(this);
@@ -1143,13 +630,10 @@ var Game = {
 		this.queueSource.start(this);
 
 		this.heldPiece = null;
-		this.drawHoldPiece();
 		this.drawPiecePreview();
+		this.drawHoldPiece();
 
-		this.outline = $.inherit(Outline);
-		this.outline.init(this.field);
-
-		this.setFade(false);
+		FX.context(); // initialize the FX canvas if it hasn't been already
 		this.effects.setOffset(this.field.offset);
 
 		$.keyPress($.noop);
@@ -1282,8 +766,10 @@ var Game = {
 		this.dropFX.refresh(elapsed);
 		this.drawField(this.currentPiece);
 		FX.Piece.refresh(elapsed);
+		FX.DropColumns.refresh(elapsed);
 		this.gameStatus.draw();
 		this.effects.refresh(elapsed);
+		FX.Fireworks.refresh(elapsed);
 		this.inputBuffer = 0;
 	},
 
@@ -1292,73 +778,12 @@ var Game = {
 			return;
 		}
 
-		HighScores.save(this);
+		ScoreEntry.show(this);
 	},
 
 	pause: function () {
-		PauseMenu.game = this;
-		$.register(PauseMenu);
-	}
-};
-
-var PauseMenu = {
-	game: null,
-
-	_node: null,
-	node: function () {
-		var node = this._node;
-
-		if (node) { return node; }
-
-		node = document.getElementById("pause");
-		this._node = node;
-
-		return node;
-	},
-
-	register: function () {
-		this.node().style.display = "block";
-	},
-
-	hide: function () {
-		this.node().style.display = "none";
-	},
-
-	unpause: function () {
-		this.hide();
-		$.register(this.game);
-	},
-
-	restart: function () {
-		var game = this.game;
-
-		this.unpause();
-		game.endGame(function () {
-			this.field.clear();
-			this.field.draw();
-		}, false, 0);
-
-		game = game.mode.newGame();
-		$.register(game);
-		game.start();
-
-		this.game = null;
-	},
-
-	quit: function () {
-		var game = this.game;
-
-		this.unpause();
-		game.endGame(game.loseCallback, false, 0);
-	},
-
-	keyHold: $.noop,
-	refresh: $.noop,
-	keyPress: function (key) {
-		if (key === Game.Config.Pause) {
-			this.unpause();
-			return false;
-		}
+		UI.PauseMenu.game = this;
+		$.register(UI.PauseMenu);
 	}
 };
 

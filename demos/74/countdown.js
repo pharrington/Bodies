@@ -1,3 +1,5 @@
+(function (window, undefined) {
+
 var Countdown = {
 	_node: null,
 	node: function () {
@@ -40,3 +42,7 @@ var Countdown = {
 		this.node().style.display = "none";
 	}
 };
+
+window.Countdown = Countdown;
+
+})(this);

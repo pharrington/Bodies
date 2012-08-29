@@ -1,4 +1,4 @@
-(function (exports) {
+(function (window) {
 
 var Shapes = {
 	PieceList: ["I", "T", "O", "Z", "S", "L", "J"],
@@ -234,7 +234,7 @@ function tryRotation(rotation) {
 	}
 })();
 
-exports.RotationSystems.SRS = {
+window.RotationSystems.SRS = {
 	shapes: Shapes,
 	tryRotation: tryRotation
 };

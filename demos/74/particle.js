@@ -148,7 +148,13 @@ $.extend(Particle.prototype, {
 		    size = this.radius * 2,
 		    historyLength = this.dirtyHistoryLength,
 		    dirtyRects = this.system.dirtyRects,
-		    rect;
+		    rect,
+		    canvas = ctx.canvas;
+
+		if (x >= canvas.width ||
+		    x + size <= 0 ||
+		    y >= canvas.height ||
+		    y + size <= 0) { return; }
 
 		ctx.globalAlpha = 1 - (percent * percent);
 		ctx.drawImage(this.canvas, x, y);

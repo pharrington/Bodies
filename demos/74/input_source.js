@@ -1,5 +1,7 @@
+(function (window, undefined) {
+
 $.inherit = function (proto, attrs) {
-	var maker = function notObjectDotCreate() {},//$.inherit.maker,
+	var maker = function notObjectDotCreate() {},
 	    o;
 
 	maker.prototype = proto;
@@ -8,7 +10,6 @@ $.inherit = function (proto, attrs) {
 
 	return o;
 };
-//$.inherit.maker = new Function;
 
 var Inputs = {
 	Left: 0x01,
@@ -188,3 +189,7 @@ InputSource.Replay = $.inherit(InputSource.Base, {
 		}
 	}
 });
+
+window.InputSource = InputSource;
+window.Inputs = Inputs;
+})(this);

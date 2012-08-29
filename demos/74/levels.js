@@ -1,4 +1,8 @@
-(function () {
+(function (window, undefined) {
+
+function clamp(value, min, max) {
+	return Math.min(Math.max(min, value), max);
+}
 
 var LevelSystem = {
 	Base: {
@@ -9,6 +13,7 @@ var LevelSystem = {
 		endPiece: $.noop,
 		endSpawnNext: $.noop,
 		clearLines: $.noop,
+		levelUpCallback: $.noop,
 
 		start: function (game) {
 			this.level = this.startLevel;
@@ -32,6 +37,8 @@ var LevelSystem = {
 
 				this.set(p, table[level]);
 			}, this);
+
+			this.levelUpCallback();
 		},
 
 		set: function (property, value) {
@@ -131,17 +138,118 @@ LevelSystem.Master = $.inherit(LevelSystem.Base, {
 		this.applyLevel();
 	},
 
-	applyLevel: function () {
+	levelUpCallback: function () {
 		if (this.level >= 100) {
 			this.game.enableGhostPiece = false;
 		}
+	}
+});
 
-		LevelSystem.Base.applyLevel.call(this);
+LevelSystem.Normal = $.inherit(LevelSystem.Base, {
+	properties: LevelSystem.Base.properties.concat("keyHoldDelay"),
+
+	clearedLines: 0,
+
+	keyHoldDelay: {
+		1: 170,
+		19: 128,
+		20: 96
+	},
+
+	spawnDelay: {
+		1: 15,
+		15: 10
+	},
+
+	groundedTimeout: {
+		1: 30,
+		18: 23,
+		20: 18
+	},
+
+	lineClearDelay: {
+		1: 40,
+		15: 25
+	},
+
+	levelGoals: {
+		1: 10,
+		2: 10,
+		3: 10,
+		4: 12,
+		5: 14,
+		6: 16,
+		7: 18,
+		8: 20,
+		9: 22,
+		10: 25,
+		11: 28,
+		12: 31,
+		13: 34,
+		14: 37,
+		15: 40
+	},
+
+	velocity: {
+		1: 4 / 256,
+		2: 8 / 256,
+		3: 10 / 256,
+		4: 12 / 256,
+		5: 16 / 256,
+		6: 24 / 256,
+		7: 36 / 256,
+		8: 48 / 256,
+		9: 96 / 256,
+		10: 128 / 256,
+		11: 150 / 256,
+		12: 170 / 256,
+		13: 192 / 256,
+		14: 224 / 256,
+		15: 1,
+		16: 2,
+		17: 3,
+		18: 5,
+		19: 20
+	},
+
+	
+	goal: function () {
+		var level = this.level,
+		    goal = this.levelGoals[level];
+
+		while (goal === undefined && level >= 0) {
+			goal = this.levelGoals[level--];
+		}
+
+		return goal;
+	},
+
+	clearLines: function (numCleared) {
+		var goal = this.goal();
+
+		this.clearedLines += numCleared;
+
+		if (this.clearedLines >= goal) {
+			this.clearedLines -= goal;
+			this.level++;
+			this.applyLevel();
+		}
+	},
+
+	levelUpCallback: function () {
+		switch (this.level) {
+		case 20:
+			this.game.setFade(true);
+			break;
+		case 21:
+			this.game.won();
+			break;
+		default:
+		}
 	}
 });
 
 LevelSystem.Static = $.inherit(LevelSystem.Base, {
-	//properties: LevelSystem.Base.properties.concat("keyHoldDelay", "keyHoldInterval"),
 	spawnDelay: {
 		1: 0
 	},
@@ -186,4 +294,4 @@ LevelSystem.Death = $.inherit(LevelSystem.Base, {
 });
 
 window.LevelSystem = LevelSystem;
-})();
+})(this);

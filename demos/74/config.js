@@ -1,4 +1,4 @@
-(function (exports) {
+(function (window) {
 
 var ConfigMenu = {
 	options: {
@@ -204,5 +204,5 @@ function objectEach(obj, callback) {
 
 window.addEventListener("load", load, false);
 
-exports.ConfigMenu = ConfigMenu;
+window.ConfigMenu = ConfigMenu;
 })(window);

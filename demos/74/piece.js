@@ -1,4 +1,4 @@
-(function (exports) {
+(function (window) {
 
 var Piece = {
 	Direction: { Left: -1, Right: 1},
@@ -31,6 +31,12 @@ var Piece = {
 			canvas.height = $.height;
 			Piece.context = canvas.getContext("2d");
 		}
+	},
+
+	clear: function () {
+		if (!Piece.context) { return; }
+
+		Piece.context.clearRect(0, 0, $.width, $.height);
 	},
 
 	reset: function () {
@@ -130,7 +136,7 @@ var Piece = {
 	moveLeft: function () { this.move(Piece.Direction.Left); },
 	moveRight: function () { this.move(Piece.Direction.Right); },
 
-	update: function (dt) {
+	update: function (dt, updateSprite) {
 		var g = this.gridPosition,
 		    offset = this.offset,
 		    size = this.blockSize,
@@ -158,7 +164,9 @@ var Piece = {
 		x = g.x * size;
 
 		this.velocity = game.velocity;
-		this.sprite.moveTo(x + offset.x, y + offset.y);
+		if (updateSprite !== false) {
+			this.sprite.moveTo(x + offset.x, y + offset.y);
+		}
 	},
 
 	draw: function (nodirty) {
@@ -169,6 +177,6 @@ var Piece = {
 	}
 };
 
-exports.Piece = Piece;
+window.Piece = Piece;
 
 })(window);

@@ -1,3 +1,5 @@
+(function (window, undefined) {
+
 var AI = {
 	base: null,
 	states: [],
@@ -10,14 +12,6 @@ var AI = {
 		HOLES: -8,
 		BUMPINESS: 0
 	},
-
-	/*
-	POWERS: {
-		MAXHEIGHT: 2,
-		WELLS: 3,
-		HOLES: 6
-	},
-	*/
 
 	POWERS: {
 		MAXHEIGHT: 1,
@@ -67,8 +61,6 @@ var AI = {
 	},
 
 	weighHoles: function (holes) {
-		//holes = Math.min(holes, 2);
-
 		return Math.pow(holes * 2, this.POWERS.HOLES) * this.WEIGHTS.HOLES;
 	},
 
@@ -338,3 +330,7 @@ var AI = {
 		this.base = null;
 	},
 };
+
+window.AI = AI;
+
+})(this);

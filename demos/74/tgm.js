@@ -1,4 +1,4 @@
-(function (exports) {
+(function (window) {
 
 var Shapes = {
 	PieceList: ["I", "T", "O", "Z", "S", "L", "J"],
@@ -207,7 +207,7 @@ function tryRotation(rotation) {
 	}
 })();
 
-exports.RotationSystems.TGM = {
+window.RotationSystems.TGM = {
 	shapes: Shapes,
 	tryRotation: tryRotation
 };

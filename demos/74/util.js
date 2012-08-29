@@ -1,6 +1,6 @@
-(function (exports) {
+(function (window, undefined) {
 
-exports.Util = {
+var Util = {
 	cycle: function (array, index) {
 		var len = array.length;
 
@@ -8,7 +8,51 @@ exports.Util = {
 		if (index < 0) { index += len }
 
 		return array[index];
+	},
+
+	cacheNode: function (selector) {
+		var node;
+
+		return function () {
+			if (!node) { 
+				node = document.querySelector(selector);
+			}
+			return node;
+		};
+	},
+
+	buildQueryString: function (obj) {
+		var
+			property,
+			queryString;
+
+		queryString = "?";
+
+		for (property in obj) {
+			if (!obj.hasOwnProperty(property)) { return; }
+
+
+			queryString += encodeURIComponent(property) + "=" + encodeURIComponent(obj[property]) + "&";
+		}
+
+		return queryString;
+	},
+
+	show: function (node) {
+		var classes = node.classList;
+
+		classes.add("show");
+		classes.remove("hidden");
+	},
+
+	hide: function (node) {
+		var classes = node.classList;
+
+		classes.remove("show");
+		classes.add("hidden");
 	}
 };
 
-})(window);
+window.Util = Util;
+
+})(this);

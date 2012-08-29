@@ -1,4 +1,10 @@
-(function (exports) {
+var
+	SCORE_API_REPLAY_URL    = "http://amrita:4567/replay",
+	SCORE_API_UPLOAD_URL    = "http://amrita:4567/score",
+	SCORE_API_SHOW_URL      = "http://amrita:4567/scores",
+	SCORE_API_DAILYBEST_URL = "http://amrita:4567/dailybest";
+
+(function (window) {
 
 var gradeMap = [
 	"9", "8", "7", "6", "5",
@@ -32,8 +38,53 @@ function sortBy(attribute, a, b) {
 	return b[attribute] - a[attribute];
 }
 
-function Paginator(source) {
+function dailyBest(mode, callback) {
+	remoteDailyBest(mode, callback);
+}
+
+function remoteDailyBest(mode, callback) {
+	var request = new XMLHttpRequest;
+
+	request.onreadystatechange = function () {
+		if (request.readyState !== 4) { return; }
+
+		var score = HighScores.Score.createFromObject(JSON.parse(request.responseText));
+		callback(score);
+	};
+
+	request.open("GET", SCORE_API_DAILYBEST_URL);
+	request.send();
+}
+
+function localDailyBest(mode, callback) {
+	var hiscores = HighScores.Menu.scoreList[mode]().filter(function (score) {
+		var today = new Date(),
+		    date = score.getDate();
+
+		return date.getDate() === today.getDate() &&
+			date.getMonth() === today.getMonth() &&
+			date.getFullYear() === today.getFullYear();
+	});
+
+	callback(hiscores[0]);
+}
+
+function updateSavedName(name) {
+	var savedName = localStorage[HighScores.prefix + "name"];
+
+	if (savedName !== name) {
+		localStorage[HighScores.prefix + "name"] = name;
+	}
+}
+
+function defaultPlayerName(name) {
+	var name = localStorage[HighScores.prefix + "name"];
+
+	return name ? name : "Player 1";
+}
+function Paginator(source, update) {
 	this.source = source;
+	this.update = update;
 	this.createEvents();
 	this.createUI();
 	this.setPage(1);
@@ -42,6 +93,7 @@ function Paginator(source) {
 Paginator.prototype = {
 	source: function () { return []; },
 	page: null,
+	displayPages: false,
 	perPage: 10,
 
 	selector: "#scores_pagination",
@@ -65,7 +117,7 @@ Paginator.prototype = {
 	},
 
 	setPage: function (page) {
-		this.page = clamp(1, this.pages(), page);
+		this.page = page;
 		this.update();
 	},
 
@@ -94,15 +146,17 @@ Paginator.prototype = {
 			} else {
 				this.setPage(parseInt(page, 10));
 			}
-		}.bind(this));
+		}.bind(this), true);
 	},
 
 	createUI: function () {
 		var ui = this.render(this.prevTemplate, {nav: this.navClass}),
 		    i;
 
-		for (i = 1; i <= Math.min(10, this.pages()); i++) {
-			ui += this.render(this.pageTemplate, {page: i, nav: this.navClass});
+		if (this.displayPages) {
+			for (i = 1; i <= Math.min(10, this.pages()); i++) {
+				ui += this.render(this.pageTemplate, {page: i, nav: this.navClass});
+			}
 		}
 
 		ui += this.render(this.nextTemplate, {nav: this.navClass});
@@ -128,22 +182,39 @@ Paginator.prototype = {
 	}
 };
 
+function loadLocalReplay(key, callback) {
+	var entry = localStorage[key];
+
+	if (entry) {
+		entry = JSON.parse(entry);
+		callback(entry.mode, entry.replay);
+	}
+}
+
+function loadRemoteReplay(key, callback) {
+	var request = new XMLHttpRequest;
+
+	request.onreadystatechange = function () {
+		if (request.readyState !== 4) { return; }
+
+		var replay, mode;
+
+	        replay = request.responseText;
+		mode = "Normal";
+
+		callback(mode, replay);
+	};
+
+	request.open("GET", SCORE_API_REPLAY_URL + Util.buildQueryString({"key": key}));
+	request.send();
+}
+
 var HighScores = {
 	cached: null,
-	prefix: "blocksonblastv2.",
+	prefix: "blocksonblastv2.replay",
 
-	save: function (game) {
-		var mode = game.mode,
-		    entry = {
-			mode: mode.name,
-			replay: btoa(InputSink.LocalStorage.save())
-		    };
-
-		game.score.save.forEach(function (property) {
-			entry[property] = game.score[property];
-		});
-
-		localStorage[this.prefix + "replay" + Date.now()] = JSON.stringify(entry);
+	save: function (score) {
+		localStorage[this.prefix + score.getDate().valueOf()] = JSON.stringify(score);
 		this.cached = null;
 	},
 
@@ -156,68 +227,184 @@ var HighScores = {
 		for (var i = 0, len = localStorage.length; i < len; i++) {
 			key = localStorage.key(i);
 
-			if (key.indexOf(this.prefix + "replay") !== 0) { continue; }
+			if (key.indexOf(this.prefix) !== 0) { continue; }
 
-			scores.push(new HighScores.Score(key));
+			scores.push(HighScores.Score.createFromKey(key));
 		}
 
 		return this.cached = scores;
 	}
 };
 
-HighScores.Score = function (key) {
-	var date,
-	    property,
-	    decoded;
+var ScoreDisplays = {
+	Normal: function () {
+		return this.score;
+	},
 
-	date = key.match(/\d+$/)[0];
-	if (date) {
-		date = new Date(parseInt(date, 10));
+	Master: function () {
+		return gradeMap[this.score];
+	},
+
+	Infinity: function () {
+		return this.score;
+	},
+
+	TimeAttack: function () {
+		var ms, s, m,
+		    e = this.elapsed;
+
+		m = ~~(e / 60000);
+		e -= m * 60000;
+
+		s = ~~(e / 1000);
+		e -= s * 1000;
+
+		return pad00(m) + ":" + pad00(s);
 	}
-
-	decoded = JSON.parse(localStorage[key]);
-	for (property in decoded) {
-		if (!decoded.hasOwnProperty(property)) { continue; }
-		this[property] = decoded[property];
-	}
-
-	this.key = key;
-	this.date = date;
-	this.displayScore = this.displays[this.mode];
 };
 
-HighScores.Score.prototype = {
-	displayScore: $.noop,
-	displays: {
-		Master: function () {
-			return gradeMap[this.grade];
-		},
+HighScores.Score = $.extend(function () {}, {
+	createFromObject: function (obj) {
+		if (!obj) { return null; }
 
-		Infinity: function () {
-			return this.score;
-		},
+		var score, property;
 
-		TimeAttack: function () {
-			var ms, s, m,
-			    e = this.elapsed;
+		score = new HighScores.Score;
 
-			m = ~~(e / 60000);
-			e -= m * 60000;
-
-			s = ~~(e / 1000);
-			e -= s * 1000;
-
-			return pad00(m) + ":" + pad00(s);
+		for (property in obj) {
+			if (!obj.hasOwnProperty(property)) { continue; }
+			score[property] = obj[property];
 		}
+
+		score.displayScore = ScoreDisplays[score.mode];
+
+		return score;
+	},
+
+	createFromKey: function (key) {
+		var score, property, decoded;
+
+		score = new HighScores.Score;
+
+		try {
+			decoded = JSON.parse(localStorage[key]);
+			for (property in decoded) {
+				if (!decoded.hasOwnProperty(property)) { continue; }
+				score[property] = decoded[property];
+			}
+
+			score.key = key;
+			score.displayScore = ScoreDisplays[score.mode];
+		} catch (e) {
+			if (e instanceof SyntaxError) {
+				score = null;
+			} else {
+				throw e;
+			}
+		}
+
+		return score;
+	},
+
+	createFromGame: function (game) {
+		var mode, date, entry, scoreSystem;
+	       
+		scoreSystem = game.score;
+		mode = game.mode;
+		date = Date.now();
+		entry = {
+			mode: mode.name,
+			date: date,
+			replay: btoa(InputSink.LocalStorage.save())
+		};
+
+		if (scoreSystem.save) {
+			entry.score = scoreSystem[scoreSystem.save];
+		}
+
+		entry.elapsed = scoreSystem.elapsed;
+
+		return HighScores.Score.createFromObject(entry);
+	},
+
+});
+
+HighScores.Score.prototype = {
+	properties: ["key", "date", "player"],
+	score: 0,
+	elapsed: 0,
+	key: null,
+	date: null,
+	player: null,
+
+	displayScore: $.noop,
+	save: $.noop,
+
+	getDate: function () {
+		return new Date(parseInt(this.date, 10));
+	},
+
+	getPlayer: function () {
+		if (!this.player) {
+			return defaultPlayerName();
+		}
+
+		else {
+			return this.player;
+		}
+	},
+
+	saveLocal: function () {
+		var obj, property, properties;
+
+		obj = {};
+
+		for (property in this) {
+			if (!this.hasOwnProperty(property)) { continue; }
+
+			obj[property] = this[property];
+		}
+
+		this.properties.forEach(function (property) {
+			obj[property] = this[property];
+		}, this);
+
+		localStorage[this.prefix + this.getDate().valueOf()] = JSON.stringify(obj);
+	},
+
+	saveRemote: function () {
+		var formData, property, request;
+
+		formData = new FormData;
+
+		for (property in this) {
+			if (!this.hasOwnProperty(property)) { continue; }
+
+			formData.append(property, this[property]);
+		}
+
+		this.properties.forEach(function (property) {
+			formData.append(property, this[property]);
+		}, this);
+
+		request = new XMLHttpRequest;
+		request.open("POST", SCORE_API_UPLOAD_URL);
+		request.send(formData);
 	}
 };
 
 HighScores.Menu = {
 	scores: null,
 	container: null,
-	mode: "Master",
+	mode: "Normal",
 
 	scoreList: {
+		Normal: function () {
+			return HighScores.getLocal()
+				.filter(filterMode.partial("Normal"))
+				.sort(sortBy.partial("score"));
+		},
+
 		Master: function () {
 			return HighScores.getLocal()
 				.filter(filterMode.partial("Master"))
@@ -234,47 +421,72 @@ HighScores.Menu = {
 
 	init: function () {
 		if (!this.scores) {
-			this.scores = new Paginator(this.scoreList[this.mode]);
-			this.scores.update = this.update.bind(this);
+			this.scores = new Paginator($.noop, this.updateRemote.bind(this));
 		}
 
 		this.container = document.getElementById("high_scores_menu").querySelector("tbody");
-		this.container.addEventListener("click", this.replay, true);
-		this.update();
+		this.container.addEventListener("click", function (e) {
+			var target, key;
+
+			target = e.target;
+			key = target.parentNode.className.replace(this.prefix, "");
+
+			if (target.classNode === "no_replay") { return; }
+
+			this.playReplay(key, function () {
+				target.textContent = "No Replay";
+				target.className = "no_replay";
+			});
+		}.bind(this), true);
 	},
 
-	update: function () {
+	updateLocal: function () {
 		this.container.innerHTML = "";
 		this.scores.slice().map(this.scoreToNode.partial(this.container)).compact().forEach(function (node) {
 			this.container.appendChild(node);
 		}, this);
 	},
 
-	replay: function (e) {
-		var game = Modes.Master.newGame(),
-		    replayStr,
-		    entry,
-		    target = e.target,
-		    key = HighScores.prefix + target.parentNode.className,
-		    replay = InputSource.Replay;
+	updateRemote: function () {
+		var request = new XMLHttpRequest, page, perPage;
 
-		if (target.className === "no_replay") { return; }
-
-		entry = JSON.parse(localStorage[key]);
-		replayStr = entry.replay;
-
-		game = Modes[entry.mode].newGame();
-		game.setInputSource(replay);
-
-		if (!replay.loadReplay(atob(replayStr))) {
-			target.firstChild.nodeValue = "No Replay";
-			target.className = "no_replay";
-			return;
+		if (this.scores) {
+			page = this.scores.page;
+			perPage = this.scores.perPage;
+		} else {
+			page = 1;
+			perPage = 10;
 		}
+			
+		request.onreadystatechange = function () {
+			if (request.readyState !== 4) { return; }
 
-		$.register(game);
-		game.start();
-		UI.showOnly("field");
+			JSON.parse(request.responseText)
+				.map(HighScores.Score.createFromObject)
+				.map(this.scoreToNode.partial(this.container))
+				.forEach(function (node) {
+					this.container.appendChild(node);
+				}, this);
+		}.bind(this);
+
+		request.open("GET", SCORE_API_SHOW_URL + Util.buildQueryString({page: page, per_page: perPage}));
+		request.send();
+	},
+
+	playReplay: function (key, failure) {
+		loadRemoteReplay(key, function (mode, replayStr) {
+			var game;
+
+			game = Modes.newReplay(mode, replayStr);
+
+			if (!game) {
+				failure();
+				return;
+			}
+
+			UI.startGame(game);
+		});
+
 	},
 
 	scoreToNode: function (container, score) {
@@ -284,20 +496,22 @@ HighScores.Menu = {
 		    dateNode,
 		    scoreNode,
 		    replayNode,
-		    className = score.key.replace(HighScores.prefix, "");
+		    className = this.prefix + score.key;
 
 		if (container.querySelector("." + className)) { return null };
 
-		date = score.date,
-		dateStr = pad00(date.getMonth() + 1) + "-" + pad00(date.getDate()) + "-" + date.getFullYear(),
-		node = document.createElement("tr"),
-		dateNode = UI.createNode("td", dateStr),
-		scoreNode = UI.createNode("td", score.displayScore()),
-		replayNode = UI.createNode("td", "Play Replay"),
+		date = score.getDate();
+		dateStr = pad00(date.getMonth() + 1) + "-" + pad00(date.getDate()) + "-" + date.getFullYear();
+		node = document.createElement("tr");
+		playerNode = UI.createNode("td", score.getPlayer());
+		dateNode = UI.createNode("td", dateStr);
+		scoreNode = UI.createNode("td", score.displayScore());
+		replayNode = UI.createNode("td", "Play Replay");
 
 		replayNode.className = "replay";
 		node.className = className;
 
+		node.appendChild(playerNode);
 		node.appendChild(dateNode);
 		node.appendChild(scoreNode);
 		node.appendChild(replayNode);
@@ -306,5 +520,74 @@ HighScores.Menu = {
 	}
 };
 
-exports.HighScores = HighScores;
+HighScores.Banner = {
+	showTimer: null,
+
+	cancelShow: function () {
+		window.clearTimeout(this.showTimer);
+	},
+	
+	update: function () {
+		var scoreNode = document.getElementById("high_scores_daily_banner_score"),
+		    playerNode = document.getElementById("high_scores_daily_banner_player"),
+		    container = document.getElementById("high_scores_daily_banner");
+
+		this.showTimer = setTimeout(function () {
+			dailyBest("Normal", function (score) {
+				if (!score) { return; }
+
+				Util.show(container);
+				scoreNode.textContent = score.displayScore();
+				playerNode.textContent = score.getPlayer();
+				container.onclick = function () { HighScores.Menu.playReplay(score.key) };
+			});
+		}, 1000);
+	}
+};
+
+var ScoreEntry = {
+	node: Util.cacheNode("#score_entry"),
+	scoreNode: Util.cacheNode("#score_entry_score"),
+	nameNode: Util.cacheNode("#score_entry_name"),
+	formNode: Util.cacheNode("#score_entry_form"),
+	attached: false,
+	score: null,
+
+	attachEvents: function () {
+		if (this.attached) { return; }
+
+		this.formNode().addEventListener("submit", this.save.bind(this), false);
+	},
+
+	show: function (game) {
+		var score, cl;
+
+		score = HighScores.Score.createFromGame(game);
+		this.scoreNode().textContent = score.displayScore();
+		this.nameNode().value = score.getPlayer();
+		this.score = score;
+		Util.show(this.node());
+		this.nameNode().focus();
+
+		this.attachEvents();
+	},
+
+	hide: function () {
+		Util.hide(this.node());
+		UI.mainMenu();
+	},
+
+	save: function (e) {
+		e.preventDefault();
+
+		this.score.player = this.nameNode().value;
+		updateSavedName(this.score.getPlayer());
+		this.score.saveRemote();
+		this.hide();
+	}
+}
+
+window.HighScores = HighScores;
+window.ScoreEntry = ScoreEntry;
+
 })(window);

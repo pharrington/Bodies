@@ -1,3 +1,5 @@
+(function (window, undefined) {
+
 var InputSink = {
 	Base: {
 		game: null,
@@ -53,3 +55,6 @@ InputSink.LocalStorage = $.inherit(InputSink.Base, {
 			}, "");
 	}
 });
+
+window.InputSink = InputSink;
+})(this);

@@ -1,4 +1,6 @@
-(function () {
+(function (window, undefined) {
+
+var fontface = "\"Press Start 2P\"";
 
 function argsArray(args) {
 	return Array.prototype.slice.call(args);
@@ -16,57 +18,17 @@ function elapsedToString(e) {
 		return pad00(m) + ":" + pad00(s) + ":" + pad00(~~(e / 10));
 }
 
-var RankText = {
-	text: "",
-	size: 120,
-	face: "ProFontWindows",
-	start: new Color(255, 255, 0),
-	end: new Color(255, 255, 255),
-	gradient: null,
-	backGradient: null,
-	offset: 5,
-	x: 0,
-	y: 0,
-
-	createGradient: function (ctx) {
-		var gradient, backGradient;
-	       
-		gradient = ctx.createLinearGradient(0, this.y - this.size, 0, this.y);
-
-		gradient.addColorStop(0, this.start.toString());
-		gradient.addColorStop(1, this.end.toString());
-
-		backGradient = ctx.createLinearGradient(0, this.y - this.size + this.offset, 0, this.y + this.offset);
-		backGradient.addColorStop(1, "rgb(255, 255, 255)");
-		backGradient.addColorStop(0, "rgb(30, 30, 30)");
-
-		this.gradient = gradient;
-		this.backGradient = backGradient;
-	},
-
-	draw: function (ctx) {
-		ctx.shadowColor = "#fff";
-		ctx.shadowBlur = 8;
-		ctx.fillStyle = this.backGradient;
-		ctx.fillText(this.text, this.x + this.offset, this.y + this.offset);
-
-		ctx.shadowBlur = 15;
-		ctx.fillStyle = this.gradient;
-		ctx.fillText(this.text, this.x, this.y);
-
-		ctx.shadowBlur = 0;
-	}
-};
 var GameStatus = {
 	Base: {
 		game: null,
 		fontSize: 44, // setFont mutates this
-		labelSize: 28,
-		valueSize: 44,
-		fontFamily: "ProFontWindows",
-		fieldRelativeOffset: { x: 20, y: 420 },
+		labelSize: 16,
+		valueSize: 28,
+		fontFamily: fontface,
+		fieldRelativeOffset: { x: 20, y: 450 },
 
 		draw: $.noop,
+		drawLabels: $.noop,
 
 		start: function (game) {
 			this.game = game;
@@ -104,22 +66,119 @@ var GameStatus = {
 			ctx.fillText(text, x, y);
 
 			if (dirty) {
-				$.DirtyRects.add(ctx, x, y - this.fontSize, ctx.measureText(text).width, this.fontSize);
+				$.DirtyRects.add(ctx, x - 1, y - this.fontSize, ctx.measureText(text).width + 1, this.fontSize);
 			}
 		}
 	}
 };
 
 GameStatus.Score = $.inherit(GameStatus.Base, {
+	fieldRelativeOffset: { x: 360, y: 250 },
+	drawLabels: function () {
+		var ctx = $.context;
+
+		ctx.save();
+		ctx.textAlign = "left";
+
+		this.setFont(this.labelSize, fontface);
+		this.drawText("Level", 0, 170 + this.labelSize);
+		this.drawText("Score", 0, 230 + this.labelSize);
+		this.drawText("Goal", 0, 290 + this.labelSize);
+
+		ctx.restore();
+	},
+
 	draw: function () {
 		var game = this.game,
-		    fo = game.field.offset;
+		    valueOffset = this.labelSize + this.valueSize + 8,
+		    levelSystem = game.levels;
 
-		this.drawValue("Level", game.levels.level, 5, 0);
-		this.drawValue("Score", game.score.score, 5, 70);
+		$.context.save();
+		$.context.textAlign = "left";
+
+		this.setFont(this.valueSize);
+		this.drawText(levelSystem.level, 0, 170 + valueOffset, true);
+		this.drawText(game.score.score, 0, 230 + valueOffset, true);
+		this.drawText(levelSystem.goal() - levelSystem.clearedLines, 0, 290 + valueOffset, true);
+
+		$.context.restore();
 	}
 });
 
+GameStatus.Timer = $.inherit(GameStatus.Base, {
+	textColor: "#fff",
+	fieldRelativeOffset: { x: 360, y: 250 },
+
+	drawLabels: function () {
+		var ctx = $.context;
+
+		ctx.save();
+		ctx.textAlign = "left";
+
+		this.setFont(this.labelSize, fontface);
+		this.drawText("Goal", 0, 170 + this.labelSize);
+		this.drawText("Time", 0, 230 + this.labelSize);
+
+		ctx.restore();
+	},
+
+	draw: function () {
+		var game = this.game,
+		    valueOffset = this.labelSize + this.valueSize + 8,
+		    scoreSystem = game.score;
+
+		$.context.save();
+		$.context.textAlign = "left";
+
+		this.setFont(this.valueSize);
+		this.drawText(scoreSystem.goal(), 0, 170 + valueOffset, true);
+		this.drawText(elapsedToString(scoreSystem.elapsed), 0, 230 + valueOffset, true);
+
+		$.context.restore();
+	}
+});
+
+var RankText = {
+	text: "",
+	size: 120,
+	face: fontface,
+	start: new Color(255, 255, 0),
+	end: new Color(255, 255, 255),
+	gradient: null,
+	backGradient: null,
+	offset: 5,
+	x: 0,
+	y: 0,
+
+	createGradient: function (ctx) {
+		var gradient, backGradient;
+	       
+		gradient = ctx.createLinearGradient(0, this.y - this.size, 0, this.y);
+
+		gradient.addColorStop(0, this.start.toString());
+		gradient.addColorStop(1, this.end.toString());
+
+		backGradient = ctx.createLinearGradient(0, this.y - this.size + this.offset, 0, this.y + this.offset);
+		backGradient.addColorStop(1, "rgb(255, 255, 255)");
+		backGradient.addColorStop(0, "rgb(30, 30, 30)");
+
+		this.gradient = gradient;
+		this.backGradient = backGradient;
+	},
+
+	draw: function (ctx) {
+		ctx.shadowColor = "#fff";
+		ctx.shadowBlur = 8;
+		ctx.fillStyle = this.backGradient;
+		ctx.fillText(this.text, this.x + this.offset, this.y + this.offset);
+
+		ctx.shadowBlur = 15;
+		ctx.fillStyle = this.gradient;
+		ctx.fillText(this.text, this.x, this.y);
+
+		ctx.shadowBlur = 0;
+	}
+};
 GameStatus.Rank = $.inherit(GameStatus.Base, {
 	displayMap: [
 		"9", "8", "7", "6", "5",
@@ -162,7 +221,7 @@ GameStatus.Rank = $.inherit(GameStatus.Base, {
 		ctx.save();
 		ctx.textAlign = "left";
 
-		this.setFont(this.labelSize, "ProFontWindows");
+		this.setFont(this.labelSize, fontface);
 		this.drawText("Rank", 10, 10 + this.labelSize);
 		this.drawText("Level", 0, 170 + this.labelSize);
 		this.drawText("Time", 0, 240 + this.labelSize);
@@ -176,7 +235,6 @@ GameStatus.Rank = $.inherit(GameStatus.Base, {
 		    valueOffset = this.labelSize + this.valueSize;
 
 		$.context.save();
-
 		$.context.textAlign = "left";
 
 		/*
@@ -193,25 +251,5 @@ GameStatus.Rank = $.inherit(GameStatus.Base, {
 	}
 });
 
-GameStatus.Timer = $.inherit(GameStatus.Base, {
-	textColor: "#fff",
-
-	draw: function () {
-		var game = this.game,
-		    ctx = $.context;
-		
-		this.clear();
-
-		ctx.save();
-
-		ctx.textAlign = "left";
-
-		this.drawValue("Lines Left", game.score.linesLeft, 0, 0);
-		this.drawValue("Time", elapsedToString(game.score.elapsed), 0, 70);
-
-		ctx.restore();
-	}
-});
-
 window.GameStatus = GameStatus;
-})();
+})(this);

@@ -1,3 +1,5 @@
+(function (window, undefined) {
+
 Function.prototype.curry = function () {
 	var a = arguments, f = this;
 
@@ -282,7 +284,7 @@ function Point(x, y) {
 }
 
 Point.create = function (p) {
-	return new Point(p.x, p.y);
+	return new Point(~~p.x, ~~p.y);
 };
 
 Point.prototype.equals = function (other) {
@@ -469,7 +471,7 @@ Piece.prototype.clipImage = function (context, edges, drawImage) {
 	context.clip();
 	if (drawImage) {
 		context.drawImage(this.image, 0, 0);
-		context.stroke();
+		//context.stroke();
 	}
 
 	context.restore();
@@ -567,8 +569,13 @@ Piece.prototype.reset = function (edges, other) {
 	this.clip();
 };
 
-Piece.prototype.testPoint = function (point) {
-	return this.context.isPointInPath(point.x - this.x, point.y - this.y);
+Piece.prototype.testPoint = function (x, y) {
+	if (x.x !== undefined && x.y !== undefined) {
+		y = x.y;
+		x = x.x;
+	}
+
+	return this.context.isPointInPath(x - this.x, y - this.y);
 };
 
 /* not really a stack, just a convenient way to draw the most recently selected pieces last */
@@ -576,22 +583,32 @@ function DrawStack() {
 	this.items = [];
 }
 
-DrawStack.prototype.moveToTop = function (item) {
-	var items = this.items,
-	    index = items.indexOf(item);
-	if (index === -1 || (index === items.length - 1)) { return; }
-	items.splice(index, 1);
-	items.push(item);
-};
+DrawStack.prototype = {
+	moveToTop: function (item) {
+		var items = this.items,
+		    index = items.indexOf(item);
+		if (index === -1 || (index === items.length - 1)) { return; }
+		items.splice(index, 1);
+		items.push(item);
+	},
 
-DrawStack.prototype.push = function (item) {
-	this.items.push(item);
-};
+	push: function (item) {
+		this.items.push(item);
+	},
 
-DrawStack.prototype.draw = function () {
-	var items = this.items;
-	for (var i = 0; i < items.length; i++) {
-		items[i].draw();
+	draw: function () {
+		var items = this.items;
+		for (var i = 0; i < items.length; i++) {
+			items[i].draw();
+		}
+	},
+
+	remove: function (item) {
+		this.items.deleteItem(item);
+	},
+
+	length: function () {
+		return this.items.length;
 	}
 };
 
@@ -629,7 +646,8 @@ function snap(piece, others) {
 				    distance(endpoints2[0], endpoints1.last()) < threshold) {
 					o.merge(piece, k, i);
 					stack.moveToTop(o);
-					stack.items.deleteItem(piece);
+					stack.remove(piece);
+
 					return;
 				}
 			}
@@ -646,9 +664,9 @@ function cutImage(image) {
 	for (var y = 0; y < jigsaw.rows; y++) {
 		for (var x = 0; x < jigsaw.columns; x++) {
 			piece = jigsaw.cutPiece(image, x, y);
-			piece.moveTo(random(0, $.width - piece.width), random(0, $.height - piece.height));
 			Configuration.rotate && piece.rotateTo(Math.PI / 2 * ~~random(0, 4));
 			piece.updateEdges();
+			piece.moveTo(random(0, $.width - piece.width), random(0, $.height - piece.height));
 			piece.draw();
 			pieces.push(piece);
 		}
@@ -692,51 +710,56 @@ function redrawRegion(clip) {
 	$.context.restore();
 }
 
-window.addEventListener("load", function () {
-	$.init("board", Configuration.width, Configuration.height);
-	$.context.fillStyle = Configuration.bgcolor;
-	$.context.fillRect(0, 0, $.width, $.height);
-	fetchImages();
+var PuzzlePlayer = {
+	refresh: $.noop,
 
-	$.mouseDown(function (x, y, e) {
-		var point = new Rect(x, y, x+1, y+1),
-		    items = stack.items,
-		    moveable;
+	withPieceAt: function (callback, x, y) {
+		var items = stack.items, i;
 
-		for (var j = items.length - 1; j >= 0; j--) {
-			if (items[j].testPoint(point)) {
-				// select this piece
-				selectedPiece = items[j];
-
-				// rotate piece on right click
-				if (e.button === 2) {
-					selectedPiece.rotate(Math.PI / 2);
-					stack.moveToTop(selectedPiece);
-					redraw();
-					selectedPiece = null;
-					return;
-				}
-				selectedPiece.mx = x - selectedPiece.x;
-				selectedPiece.my = y - selectedPiece.y;
-				stack.moveToTop(selectedPiece);
-				redrawRegion(selectedPiece);
+		for (i = items.length - 1; i >= 0; i--) {
+			if (items[i].testPoint(x, y)) {
+				callback(items[i]);
 				return;
 			}
 		}
-	});
+	},
 
-	$.mouseUp(function (x, y) {
+	mouseDown: function (x, y, e) {
+		this.withPieceAt(function (piece) {
+			selectedPiece = piece;
+
+			// rotate piece on right click
+			if (e.button === 2) {
+				selectedPiece.rotate(Math.PI / 2);
+				stack.moveToTop(selectedPiece);
+				redraw();
+				selectedPiece = null;
+				return;
+			}
+			selectedPiece.mx = x - selectedPiece.x;
+			selectedPiece.my = y - selectedPiece.y;
+			stack.moveToTop(selectedPiece);
+			redrawRegion(selectedPiece);
+		}, x, y);
+	},
+
+	mouseUp: function (x, y) {
 		if (!selectedPiece) { return; }
 
 		selectedPiece.updateEdges();
 		snap(selectedPiece, stack.items);
 		redraw();
+
+		if (stack.length() === 1) {
+			$.register(PuzzleWinAnimation);
+		}
+
 		selectedPiece.mx = 0;
 		selectedPiece.my = 0;
 		selectedPiece = null;
-	});
+	},
 
-	$.mouseMove(function (x, y) {
+	mouseMove: $.throttle(function (x, y) {
 		var clip;
 
 		if (!selectedPiece) { return; }
@@ -754,7 +777,25 @@ window.addEventListener("load", function () {
 		clip.bottom = Math.ceil(Math.max(clip.bottom, selectedPiece.bottom));
 
 		redrawRegion(clip);
-	});
+	}, 16)
+};
+
+var PuzzleWinAnimation = {
+	mouseMove: $.noop,
+	mouseDown: $.noop,
+	mouseUp: $.noop,
+
+	refresh: function () {
+	}
+};
+
+window.addEventListener("load", function () {
+	$.init("board", Configuration.width, Configuration.height);
+	$.context.fillStyle = Configuration.bgcolor;
+	$.context.fillRect(0, 0, $.width, $.height);
+	fetchImages();
+
+	$.register(PuzzlePlayer);
 
 	$.start();
 
@@ -774,8 +815,14 @@ window.addEventListener("load", function () {
 				}
 				element.className += " selected";
 				url = element.getAttribute("data-url");
-				url && $.loadImage("puzzleSource", url);
+				if (url) {
+					$.loadImage("puzzleSource", url);
+					$.register(PuzzlePlayer);
+				}
 			}
 		}
 	}, false);
 }, false);
+
+window.jsonFlickrApi = jsonFlickrApi;
+})(this);
