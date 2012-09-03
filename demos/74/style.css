@@ -346,3 +346,10 @@ th, td {
 #score_entry_name:focus {
 	outline: none;
 }
+
+.loading_icon {
+	position: absolute;
+	right: 380px;
+	top: 100px;
+	z-index: 100;
+}
