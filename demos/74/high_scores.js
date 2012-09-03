@@ -26,6 +26,8 @@ var gradeMap = [
 	"GM+"
 ];
 
+var loadingIcon = Util.cacheNode("#squareloader");
+
 function clamp(min, max, value) {
 	return Math.max(Math.min(max, value), min);
 }
@@ -82,6 +84,17 @@ function defaultPlayerName(name) {
 
 	return name ? name : "Player 1";
 }
+
+function showLoadingAnim() {
+	Util.show(loadingIcon());
+}
+
+function hideLoadingAnim() {
+	setTimeout(function() {
+		Util.hide(loadingIcon());
+	}, 100);
+}
+
 function Paginator(source, update) {
 	this.source = source;
 	this.update = update;
@@ -118,7 +131,6 @@ Paginator.prototype = {
 
 	setPage: function (page) {
 		this.page = page;
-		this.update();
 	},
 
 	slice: function () {
@@ -143,8 +155,10 @@ Paginator.prototype = {
 
 			if (page === "next" || page === "prev") {
 				this[page]();
+				this.update();
 			} else {
 				this.setPage(parseInt(page, 10));
+				this.update();
 			}
 		}.bind(this), true);
 	},
@@ -390,13 +404,43 @@ HighScores.Score.prototype = {
 		request = new XMLHttpRequest;
 		request.open("POST", SCORE_API_UPLOAD_URL);
 		request.send(formData);
+	},
+
+	
+	toNode: function () {
+		var date,
+		    dateStr,
+		    node,
+		    dateNode,
+		    scoreNode,
+		    replayNode,
+		    className = this.prefix + this.key;
+
+		date = this.getDate();
+		dateStr = pad00(date.getMonth() + 1) + "-" + pad00(date.getDate()) + "-" + date.getFullYear();
+		node = document.createElement("tr");
+		playerNode = UI.createNode("td", this.getPlayer());
+		dateNode = UI.createNode("td", dateStr);
+		scoreNode = UI.createNode("td", this.displayScore());
+		replayNode = UI.createNode("td", "Play Replay");
+
+		replayNode.className = "replay";
+		node.className = className;
+
+		node.appendChild(playerNode);
+		node.appendChild(dateNode);
+		node.appendChild(scoreNode);
+		node.appendChild(replayNode);
+
+		return node;
 	}
 };
 
 HighScores.Menu = {
 	scores: null,
-	container: null,
 	mode: "Normal",
+	attached: false,
+	container: Util.cacheNode("#high_scores_menu tbody"),
 
 	scoreList: {
 		Normal: function () {
@@ -419,13 +463,10 @@ HighScores.Menu = {
 		}
 	},
 
-	init: function () {
-		if (!this.scores) {
-			this.scores = new Paginator($.noop, this.updateRemote.bind(this));
-		}
+	attachEvents: function () {
+		if (this.attached) { return; }
 
-		this.container = document.getElementById("high_scores_menu").querySelector("tbody");
-		this.container.addEventListener("click", function (e) {
+		this.container().addEventListener("click", function (e) {
 			var target, key;
 
 			target = e.target;
@@ -438,17 +479,29 @@ HighScores.Menu = {
 				target.className = "no_replay";
 			});
 		}.bind(this), true);
+
+		this.attached = true;
+	},
+
+	init: function () {
+		if (!this.scores) {
+			this.scores = new Paginator($.noop, this.updateRemote.bind(this));
+		}
+
+		this.attachEvents();
+		this.scores.update();
 	},
 
 	updateLocal: function () {
-		this.container.innerHTML = "";
-		this.scores.slice().map(this.scoreToNode.partial(this.container)).compact().forEach(function (node) {
-			this.container.appendChild(node);
+		this.container().innerHTML = "";
+		this.scores.slice().map(this.scoreToNode.partial(this.container())).compact().forEach(function (node) {
+			this.container().appendChild(node);
 		}, this);
 	},
 
 	updateRemote: function () {
-		var request = new XMLHttpRequest, page, perPage;
+		var request = new XMLHttpRequest,
+			page, perPage;
 
 		if (this.scores) {
 			page = this.scores.page;
@@ -458,19 +511,31 @@ HighScores.Menu = {
 			perPage = 10;
 		}
 			
+		showLoadingAnim();
+
 		request.onreadystatechange = function () {
 			if (request.readyState !== 4) { return; }
 
+			var container = this.container();
+
 			JSON.parse(request.responseText)
-				.map(HighScores.Score.createFromObject)
-				.map(this.scoreToNode.partial(this.container))
-				.forEach(function (node) {
-					this.container.appendChild(node);
+				.forEach(function (record) {
+					var score = HighScores.Score.createFromObject(record);
+
+					if (!this.containsScore(score)) {
+						container.appendChild(score.toNode());
+					}
 				}, this);
+
+			hideLoadingAnim();
 		}.bind(this);
 
 		request.open("GET", SCORE_API_SHOW_URL + Util.buildQueryString({page: page, per_page: perPage}));
 		request.send();
+	},
+
+	containsScore: function (score) {
+		return !!this.container().querySelector("." + score.prefix + score.key);
 	},
 
 	playReplay: function (key, failure) {
@@ -487,36 +552,6 @@ HighScores.Menu = {
 			UI.startGame(game);
 		});
 
-	},
-
-	scoreToNode: function (container, score) {
-		var date,
-		    dateStr,
-		    node,
-		    dateNode,
-		    scoreNode,
-		    replayNode,
-		    className = this.prefix + score.key;
-
-		if (container.querySelector("." + className)) { return null };
-
-		date = score.getDate();
-		dateStr = pad00(date.getMonth() + 1) + "-" + pad00(date.getDate()) + "-" + date.getFullYear();
-		node = document.createElement("tr");
-		playerNode = UI.createNode("td", score.getPlayer());
-		dateNode = UI.createNode("td", dateStr);
-		scoreNode = UI.createNode("td", score.displayScore());
-		replayNode = UI.createNode("td", "Play Replay");
-
-		replayNode.className = "replay";
-		node.className = className;
-
-		node.appendChild(playerNode);
-		node.appendChild(dateNode);
-		node.appendChild(scoreNode);
-		node.appendChild(replayNode);
-
-		return node;
 	}
 };
 
