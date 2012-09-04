@@ -1,3 +1,4 @@
+(function (window, undefined) {
 /* Note: ~~ (double bitwise invert) is used to round floats towards zero
  * its only trivially faster than Math.floor for positive numbers, but easier to type :\
  */
@@ -808,3 +809,7 @@ addEventListener("load", function () {
 	$.loaded(Game.loaded);
 	$.start();
 }, false);
+
+window.Game = Game;
+
+})(this);
