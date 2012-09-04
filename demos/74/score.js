@@ -368,6 +368,7 @@ Score.Points = $.inherit(Score.Base, {
 
 		if (numCleared) {
 			this.score += Math.floor(this.multiplier) * this.game.levels.level * this.lineValues[numCleared - 1];
+			ColorFlasher.start();
 		}
 
 		this.elapsedFrames = 0;

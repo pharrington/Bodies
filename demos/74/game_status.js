@@ -15,8 +15,40 @@ function elapsedToString(e) {
 		s = ~~(e / 1000);
 		e -= s * 1000;
 
-		return pad00(m) + ":" + pad00(s) + ":" + pad00(~~(e / 10));
+		return Util.pad00(m) + ":" + Util.pad00(s) + ":" + Util.pad00(~~(e / 10));
 }
+
+var ColorFlasher = {
+	duration: 500,
+	color: "#eee",
+	baseColor: "#eee",
+	flashColor: "#00d",
+	interval: 20,
+	elapsed: 0,
+	lastUpdate: 0,
+
+	start: function () {
+		this.elapsed = 0;
+		this.lastUpdate = 0;
+		this.color = this.baseColor;
+	},
+
+	update: function (elapsed) {
+		if (this.elapsed >= this.duration) {
+			this.color = this.baseColor;
+			return;
+		}
+
+		this.elapsed += elapsed;
+
+		if (this.elapsed - this.lastUpdate >= this.interval) {
+			this.color = this.flashColor;
+			this.lastUpdate = this.elapsed;
+		} else {
+			this.color = this.baseColor;
+		}
+	}
+};
 
 var GameStatus = {
 	Base: {
@@ -54,15 +86,19 @@ var GameStatus = {
 			};
 		},
 
-		drawText: function (text, x, y, dirty) {
+		drawText: function (text, x, y, dirty, color) {
 			var offset = this.offset(),
-			    ox = offset.x, oy = offset.y,
-			    ctx = $.context;
+				ox = offset.x, oy = offset.y,
+				ctx = $.context;
+
+			if (!color) {
+				color = "#eee";
+			}
 
 			x += ox;
 			y += oy;
 
-			ctx.fillStyle = "#eee";
+			ctx.fillStyle = color;
 			ctx.fillText(text, x, y);
 
 			if (dirty) {
@@ -88,7 +124,7 @@ GameStatus.Score = $.inherit(GameStatus.Base, {
 		ctx.restore();
 	},
 
-	draw: function () {
+	draw: function (elapsed) {
 		var game = this.game,
 		    valueOffset = this.labelSize + this.valueSize + 8,
 		    levelSystem = game.levels;
@@ -96,9 +132,11 @@ GameStatus.Score = $.inherit(GameStatus.Base, {
 		$.context.save();
 		$.context.textAlign = "left";
 
+		ColorFlasher.update(elapsed);
+
 		this.setFont(this.valueSize);
 		this.drawText(levelSystem.level, 0, 170 + valueOffset, true);
-		this.drawText(game.score.score, 0, 230 + valueOffset, true);
+		this.drawText(game.score.score, 0, 230 + valueOffset, true, ColorFlasher.color);
 		this.drawText(levelSystem.goal() - levelSystem.clearedLines, 0, 290 + valueOffset, true);
 
 		$.context.restore();
@@ -252,4 +290,6 @@ GameStatus.Rank = $.inherit(GameStatus.Base, {
 });
 
 window.GameStatus = GameStatus;
+window.ColorFlasher = ColorFlasher;
+
 })(this);

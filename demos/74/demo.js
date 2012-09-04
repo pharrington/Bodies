@@ -759,7 +759,7 @@ var Game = {
 		this.drawField(this.currentPiece);
 		FX.Piece.refresh(elapsed);
 		FX.DropColumns.refresh(elapsed);
-		this.gameStatus.draw();
+		this.gameStatus.draw(elapsed);
 		this.effects.refresh(elapsed);
 		FX.Fireworks.refresh(elapsed);
 		this.inputBuffer = 0;
