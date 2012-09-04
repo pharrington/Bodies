@@ -94,7 +94,7 @@ function hideLoadingAnim() {
 	setTimeout(function() {
 		Fade.hide();
 		Util.hide(loadingIcon());
-	}, 200);
+	}, 100);
 }
 
 function Paginator(source, update) {
