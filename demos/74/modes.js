@@ -109,6 +109,7 @@ Modes.DemoAI = {
 		game.hardLock = true;
 		game.holdPiece = $.noop;
 		game.setInputSource(InputSource.AI);
+		game.endGameCallback = UI.mainMenu.bind(UI);
 
 		return game;
 	}
