@@ -87,12 +87,14 @@ function defaultPlayerName(name) {
 
 function showLoadingAnim() {
 	Util.show(loadingIcon());
+	Fade.show();
 }
 
 function hideLoadingAnim() {
 	setTimeout(function() {
+		Fade.hide();
 		Util.hide(loadingIcon());
-	}, 100);
+	}, 200);
 }
 
 function Paginator(source, update) {
