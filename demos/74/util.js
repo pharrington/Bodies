@@ -50,6 +50,15 @@ var Util = {
 
 		classes.remove("show");
 		classes.add("hidden");
+	},
+
+	pad00: function (str) {
+		str = "" + str;
+		while (str.length < 2) {
+			str = "0" + str;
+		}
+
+		return str;
 	}
 };
 

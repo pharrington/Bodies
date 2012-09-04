@@ -53,15 +53,6 @@ $.timed = function (obj, elapsed, callback, complete) {
 	}
 };
 
-function pad00(str) {
-	str = "" + str;
-	while (str.length < 2) {
-		str = "0" + str;
-	}
-
-	return str;
-}
-
 var Game = {
 	duration: 0,
 	elapsed: 0,

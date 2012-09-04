@@ -273,7 +273,7 @@ var ScoreDisplays = {
 		s = ~~(e / 1000);
 		e -= s * 1000;
 
-		return pad00(m) + ":" + pad00(s);
+		return Util.pad00(m) + ":" + Util.pad00(s);
 	}
 };
 
@@ -417,7 +417,7 @@ HighScores.Score.prototype = {
 		    className = this.prefix + this.key;
 
 		date = this.getDate();
-		dateStr = pad00(date.getMonth() + 1) + "-" + pad00(date.getDate()) + "-" + date.getFullYear();
+		dateStr = Util.pad00(date.getMonth() + 1) + "-" + Util.pad00(date.getDate()) + "-" + date.getFullYear();
 		node = document.createElement("tr");
 		playerNode = UI.createNode("td", this.getPlayer());
 		dateNode = UI.createNode("td", dateStr);
