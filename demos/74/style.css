@@ -128,7 +128,7 @@ canvas {
 	cursor: pointer;
 }
 
-.menu li:hover {
+.menu.active li:hover {
 	cursor: pointer;
 	color: #e38c35;
 }
