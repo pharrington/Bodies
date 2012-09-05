@@ -1,6 +1,11 @@
 (function (window) {
 
+var menuNode = Util.cacheNode("#controls_menu");
+
 var ConfigMenu = {
+	attached: false,
+	activeControl: null,
+
 	options: {
 		"Left": ["Left"],
 		"Right": ["Right"],
@@ -95,15 +100,18 @@ var ConfigMenu = {
 		li.appendChild(valueElement);
 		container.appendChild(li);
 
-		li.addEventListener("click", function () {
+		li.addEventListener("click", function (e) {
+			/* if a control is already active, do nothing
+			 * the #control_menu's click event does the cleanup
+			 */
 			if ($this.activeControl) {
-				$this.updateActive();
 				return;
 			}
 
 			li.className += " " + "active";
 			valueText.nodeValue = "...";
 
+			menuNode().classList.remove("active");
 			$this.activeControl = {
 				node: li,
 				valueText: valueText,
@@ -112,7 +120,8 @@ var ConfigMenu = {
 				node: li
 			};
 
-			$this.bindEvents();
+			e.stopPropagation();
+			$this.attachControlEvents();
 		}, false);
 	},
 
@@ -122,11 +131,15 @@ var ConfigMenu = {
 		c.value = e.keyCode;
 		this.updateValue(c);
 		this.trigger(c.node.nextSibling);
+
 		e.preventDefault();
 	},
 
 	trigger: function (node) {
-		if (!node) { return; }
+		if (!node) {
+			menuNode().classList.add("active");
+			return;
+		}
 
 		var e;
 
@@ -154,7 +167,7 @@ var ConfigMenu = {
 		save();
 	},
 
-	bindEvents: function () {
+	attachControlEvents: function () {
 		document.documentElement.addEventListener("keydown", this.keyDown, false);
 	},
 
@@ -173,6 +186,19 @@ var ConfigMenu = {
 
 			this.createControl(option, options[option], container);
 		}
+
+		this.attachEvents();
+	},
+
+	attachEvents: function () {
+		if (this.attached) { return; }
+
+		menuNode().addEventListener("click", function (e) {
+			this.updateActive();
+			menuNode().classList.add("active");
+		}.bind(this), false);
+
+		this.attached = true;
 	}
 };
 
