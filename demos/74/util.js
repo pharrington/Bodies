@@ -42,6 +42,7 @@ var Util = {
 		var classes = node.classList;
 
 		classes.add("show");
+		classes.add("active");
 		classes.remove("hidden");
 	},
 
@@ -49,6 +50,7 @@ var Util = {
 		var classes = node.classList;
 
 		classes.remove("show");
+		classes.remove("active");
 		classes.add("hidden");
 	},
 
