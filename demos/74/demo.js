@@ -256,7 +256,7 @@ var Game = {
 			callback.call(this);
 
 			if (typeof endGameCallback === "function" ) {
-				endGameCallback();
+				endGameCallback.call(this);
 			} else {
 				this.endGameCallback();
 			}
@@ -414,6 +414,7 @@ var Game = {
 			this.levels.endPiece();
 		} else {
 			this.levels.clearLines(numCleared);
+			ColorFlasher.start();
 		}
 
 		this.score.clearLines(numCleared);
