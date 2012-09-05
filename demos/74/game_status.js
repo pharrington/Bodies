@@ -144,7 +144,6 @@ GameStatus.Score = $.inherit(GameStatus.Base, {
 });
 
 GameStatus.Timer = $.inherit(GameStatus.Base, {
-	textColor: "#fff",
 	fieldRelativeOffset: { x: 360, y: 250 },
 
 	drawLabels: function () {
@@ -160,7 +159,7 @@ GameStatus.Timer = $.inherit(GameStatus.Base, {
 		ctx.restore();
 	},
 
-	draw: function () {
+	draw: function (elapsed) {
 		var game = this.game,
 		    valueOffset = this.labelSize + this.valueSize + 8,
 		    scoreSystem = game.score;
@@ -168,8 +167,10 @@ GameStatus.Timer = $.inherit(GameStatus.Base, {
 		$.context.save();
 		$.context.textAlign = "left";
 
+		ColorFlasher.update(elapsed);
+
 		this.setFont(this.valueSize);
-		this.drawText(scoreSystem.goal(), 0, 170 + valueOffset, true);
+		this.drawText(scoreSystem.goal(), 0, 170 + valueOffset, true, ColorFlasher.color);
 		this.drawText(elapsedToString(scoreSystem.elapsed), 0, 230 + valueOffset, true);
 
 		$.context.restore();
@@ -238,7 +239,6 @@ GameStatus.Rank = $.inherit(GameStatus.Base, {
 	],
 
 	fieldRelativeOffset: { x: 360, y: 220 },
-	textColor: "#fff",
 
 	start: function () {
 		var offset;
