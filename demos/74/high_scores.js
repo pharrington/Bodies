@@ -1,9 +1,3 @@
-var
-	SCORE_API_REPLAY_URL    = "http://amrita:4567/replay",
-	SCORE_API_UPLOAD_URL    = "http://amrita:4567/score",
-	SCORE_API_SHOW_URL      = "http://amrita:4567/scores",
-	SCORE_API_DAILYBEST_URL = "http://amrita:4567/dailybest";
-
 (function (window) {
 
 var gradeMap = [
