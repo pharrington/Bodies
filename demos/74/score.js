@@ -368,7 +368,6 @@ Score.Points = $.inherit(Score.Base, {
 
 		if (numCleared) {
 			this.score += Math.floor(this.multiplier) * this.game.levels.level * this.lineValues[numCleared - 1];
-			ColorFlasher.start();
 		}
 
 		this.elapsedFrames = 0;
@@ -382,6 +381,7 @@ Score.Points = $.inherit(Score.Base, {
 });
 
 Score.TimeAttack = $.inherit(Score.Base, {
+	save: "elapsed",
 	linesLeft: 0,
 
 	start: function (game) {
