@@ -227,7 +227,7 @@ function loadRemoteReplay(key, callback) {
 
 var HighScores = {
 	cached: null,
-	prefix: "blocksonblastv2.replay",
+	prefix: "blocksonblast_replay",
 
 	save: function (score) {
 		localStorage[this.prefix + score.getDate().valueOf()] = JSON.stringify(score);
@@ -385,7 +385,7 @@ HighScores.Score.prototype = {
 			obj[property] = this[property];
 		}, this);
 
-		localStorage[this.prefix + this.getDate().valueOf()] = JSON.stringify(obj);
+		localStorage[HighScores.prefix + this.getDate().valueOf()] = JSON.stringify(obj);
 	},
 
 	saveRemote: function () {
@@ -416,7 +416,7 @@ HighScores.Score.prototype = {
 		    dateNode,
 		    scoreNode,
 		    replayNode,
-		    className = this.prefix + this.key;
+		    className = HighScores.prefix + this.key;
 
 		date = this.getDate();
 		dateStr = Util.pad00(date.getMonth() + 1) + "-" + Util.pad00(date.getDate()) + "-" + date.getFullYear();
@@ -472,9 +472,9 @@ HighScores.Menu = {
 			var target, key;
 
 			target = e.target;
-			key = target.parentNode.className.replace(this.prefix, "");
+			key = target.parentNode.className.replace(HighScores.prefix, "");
 
-			if (target.classNode === "no_replay") { return; }
+			if (!target.classList.contains("replay")) { return; }
 
 			this.playReplay(key, function () {
 				target.textContent = "No Replay";
@@ -513,21 +513,25 @@ HighScores.Menu = {
 			perPage = 10;
 		}
 			
+		this.container().innerHTML = "";
 		showLoadingAnim();
 
 		request.onreadystatechange = function () {
 			if (request.readyState !== 4) { return; }
 
-			var container = this.container();
+			var container = this.container(),
+				response = JSON.parse(request.responseText);
 
-			JSON.parse(request.responseText)
-				.forEach(function (record) {
-					var score = HighScores.Score.createFromObject(record);
+			this.scores.page = response.page;
+			this.scores.perPage = response.per_page;
 
-					if (!this.containsScore(score)) {
-						container.appendChild(score.toNode());
-					}
-				}, this);
+			response.scores.forEach(function (record) {
+				var score = HighScores.Score.createFromObject(record);
+
+				if (!this.containsScore(score)) {
+					container.appendChild(score.toNode());
+				}
+			}, this);
 
 			hideLoadingAnim();
 		}.bind(this);
