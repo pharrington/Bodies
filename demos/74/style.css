@@ -64,7 +64,7 @@ canvas {
 
 .menu {
 	font-size: 32px;
-	background: url(titlescreen/background.png) no-repeat;
+	background: url(assets/titlescreen/background.png) no-repeat;
 	min-height: 700px;
 }
 

@@ -782,9 +782,9 @@ var Game = {
 
 function loadImages() {
 	["orange", "red", "yellow", "green", "cyan", "blue", "purple"].forEach(function (color) {
-		$.loadImage(color, "blocks/bubbly/" + color + ".png");
+		$.loadImage(color, "assets/blocks/bubbly/" + color + ".png");
 	});
-	$.loadImage("background", "backgrounds/space.jpg");
+	$.loadImage("background", "assets/backgrounds/space.jpg");
 }
 
 function initBlock(piece) {
