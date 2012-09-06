@@ -1,0 +1,53 @@
+PREFIX = ""
+JS = %w[alea-0.9/mash alea-0.9/alea config-vars fade bodies util particle effects background input_source queue_source state_sink game_status levels score high_scores modes ui config ai countdown piece rotation_systems tgm srs field outline demo]
+ALL = "#{PREFIX}all.js"
+MINIFIED = "#{PREFIX}all-min.js"
+COMBINED = "#{PREFIX}combined-min.js"
+COMPRESSOR = "ext/yuicompressor-2.4.7/build/yuicompressor-2.4.7.jar"
+TEMPLATE = "index.erb"
+
+def filename js_module
+  "#{PREFIX}#{js_module}.js"
+end
+
+def create_index(index, development = false)
+  require "erb"
+
+  js_files = JS.collect { |js| filename(js) }
+  File.open(index, "w") do |f|
+    f.write(ERB.new(File.read(TEMPLATE)).result(binding))
+  end
+end
+
+desc "concatenated sources"
+file ALL do
+  File.open(ALL, "w") do |f|
+    JS.each do |js|
+      # if replace "config-vars" with "config-vars-production" so the production appropriate variables are in the combined+minified javascript
+      js += "-production" if js == "config-vars"
+      f.write(File.read(filename(js)))
+      f.write(";")
+    end
+  end
+end
+
+desc "minified sources"
+file MINIFIED => ALL do
+  sh "java -jar #{COMPRESSOR} -o #{MINIFIED} #{ALL}"
+end
+
+desc "development file with seperated, unminified source files"
+file "index-dev.html" => TEMPLATE do
+  create_index "index-dev.html", true
+end
+
+desc "production file with seperated, unminified source files"
+file "index.html" => [TEMPLATE, MINIFIED] do
+  create_index "index.html"
+end
+
+task :clean do
+  sh "rm -f #{[ALL, MINIFIED, COMBINED, "index.html", "index-dev.html"].join(" ")}"
+end
+
+task :default => [:clean, "index-dev.html", "index.html"]

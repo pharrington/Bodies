@@ -1,0 +1,96 @@
+<!doctype html>
+<html>
+<head>
+<title>Blocks on Blast - Fast Paced Tetris clone</title>
+<link href='http://fonts.googleapis.com/css?family=Press+Start+2P' rel='stylesheet' type='text/css'>
+<link rel=stylesheet href=style.css>
+<% if development %>
+	<%= js_files.inject("") do |output, script|
+		output + "<script src=#{script}></script>\n"
+	end %>
+<% else %>
+<script src=all-min.js></script>
+<% end %>
+</head>
+<body>
+<canvas id=field_background class="hidden"></canvas>
+<canvas id=field_piece class="hidden"></canvas>
+<canvas id=field_effects class="hidden"></canvas>
+<canvas id=field class="hidden"></canvas>
+<div id=pause class="hidden">
+	<div class=container>
+		<h1>Pause</h1>
+		<ul>
+			<li id=resume>Resume</li>
+			<li id=restart>Restart</li>
+			<li id=quit>Quit</li>
+		</ul>
+	</div>
+</div>
+<div id=main_menu class="menu show active">
+	<h1>Blocks on Blast - Tetris clone</h1>
+	<img src=assets/titlescreen/bob.png class="main_menu_header">
+	<ul class="main_menu_itemlist submenu_text">
+		<li id=normal class="main_menu_item">Normal Mode</li>
+		<li id=time_attack class="main_menu_item">Time Attack</li>
+		<li id=high_scores class="main_menu_item">High Scores</li>
+		<li id=controls class="main_menu_item">Controls</li>
+	</ul>
+</div>
+
+<div id=controls_menu class="menu submenu hidden">
+	<h1>Edit Controls</h1>
+	<img src="assets/titlescreen/editcontrols.png">
+	<ul class="submenu_text">
+	</ul>
+	<a class="back_to_main">Back to Main Menu</a>
+</div>
+
+<div id=high_scores_menu class="menu submenu hidden">
+	<h1>High Scores</h1>
+	<img src="assets/titlescreen/highscores.png">
+	<table class="submenu_text">
+		<thead>
+			<tr>
+				<th>Player</th>
+				<th>Date</th>
+				<th>Score</th>
+			</tr>
+		</thead>
+		<tbody>
+		</tbody>
+		<tfoot>
+			<tr>
+				<td id=scores_pagination colspan=4></td>
+			</tr>
+		</tfoot>
+	</table>
+	<a class="back_to_main">Back to Main Menu</a>
+</div>
+<div id=high_scores_daily_banner class="hidden">
+	<h2 class="banner_header">Today's Best</h2>
+	<div class="banner_line">
+		<div id=high_scores_daily_banner_score class="banner_label"> </div>
+		<div id=high_scores_daily_banner_player class="banner_value"> </div>
+	</div>
+</div>
+
+<div id="score_entry" class="hidden">
+	<form id="score_entry_form" method="post">
+		<h2 id="score_entry_header" class="banner_header">Your Score:<span id="score_entry_score"></span></h2>
+		<div class="banner_line">Enter Your Name</div>
+		<input type="text" id="score_entry_name">
+	</form>
+</div>
+
+<div id=multiplayer class="hidden">
+	<div id=searching>
+		<p>Searching</p>
+	</div>
+
+	<a class="back_to_main">Back to Main Menu</a>
+</div>
+<img src="assets/square-loading-icon.gif" id="squareloader" class="loading_icon hidden">
+<span class=font_preload>a</span>
+</body>
+</html>
