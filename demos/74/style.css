@@ -264,7 +264,7 @@ th, td {
 #high_scores_daily_banner {
 	display: block;
 	position: absolute;
-	left: 650px;
+        right: 40px;
 	top: 40px;
 	max-width: 400px;
 	max-height: 54px;
