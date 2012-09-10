@@ -90,11 +90,17 @@ Modes.Infinity = {
 Modes.TimeAttack = {
 	name: "TimeAttack",
 	newGame: function () {
-		var game = Modes.newGame("Static", "TimeAttack", "TGM", "TGM");
+		var loseCallback, game = Modes.newGame("Static", "TimeAttack", "TGM", "TGM");
 
 		game.mode = this;
 		game.gameStatus = GameStatus.Timer;
 		game.hardLock = true;
+
+		loseCallback = game.loseCallback;
+		game.loseCallback = function () {
+			loseCallback.call(this);
+			this.endGameCallback = UI.mainMenu.bind(UI);
+		};
 
 		return game;
 	}
