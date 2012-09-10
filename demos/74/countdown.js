@@ -3,14 +3,14 @@
 var Countdown = {
 	_node: null,
 	node: function () {
-		var node = this._node;
+		var node = this._node, container = document.getElementById("center_content");
 
 		if (node) { return node; }
 
 		this._node = node = document.createElement("div");
 		node.appendChild(document.createTextNode(""));
 		node.className = "countdown";
-		document.body.appendChild(node);
+		container.appendChild(node);
 
 		return node;
 	},
