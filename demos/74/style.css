@@ -16,7 +16,7 @@ html {
 
 body {
 	min-height: 100%;
-	margin: 50px 0 0 125px;
+	margin: 50px 0 0 0;
 	overflow: hidden;
 	font-family: "Press Start 2P", sans-serif;
 	cursor: default;
@@ -352,4 +352,9 @@ th, td {
 	right: 380px;
 	top: 70px;
 	z-index: 1001;
+}
+
+#center_content {
+	width: 1000px;
+        margin: 0 auto;
 }
