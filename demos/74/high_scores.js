@@ -207,12 +207,9 @@ function loadRemoteReplay(key, callback) {
 	request.onreadystatechange = function () {
 		if (request.readyState !== 4) { return; }
 
-		var replay, mode;
+		var replay = request.responseText;
 
-	        replay = request.responseText;
-		mode = "Normal";
-
-		callback(mode, replay);
+		callback(replay);
 	};
 
 	request.open("GET", SCORE_API_REPLAY_URL + Util.buildQueryString({"key": key}));
@@ -422,6 +419,8 @@ HighScores.Score.prototype = {
 
 		replayNode.className = "replay";
 		node.className = className;
+		node.setAttribute("data-key", this.key);
+		node.setAttribute("data-mode", this.mode);
 
 		node.appendChild(playerNode);
 		node.appendChild(dateNode);
@@ -437,6 +436,7 @@ HighScores.Menu = {
 	mode: "Normal",
 	attached: false,
 	container: Util.cacheNode("#high_scores_menu tbody"),
+	modeSelectNode: Util.cacheNode("#high_scores_mode_select"),
 
 	scoreList: {
 		Normal: function () {
@@ -463,17 +463,26 @@ HighScores.Menu = {
 		if (this.attached) { return; }
 
 		this.container().addEventListener("click", function (e) {
-			var target, key;
+			var target, key, mode;
 
 			target = e.target;
-			key = target.parentNode.className.replace(HighScores.prefix, "");
+			key = target.parentNode.getAttribute("data-key");
+			mode = target.parentNode.getAttribute("data-mode");
 
 			if (!target.classList.contains("replay")) { return; }
 
-			this.playReplay(key, function () {
+			this.playReplay(key, mode, function () {
 				target.textContent = "No Replay";
 				target.className = "no_replay";
 			});
+		}.bind(this), true);
+
+		this.modeSelectNode().addEventListener("click", function (e) {
+			var mode = e.target.getAttribute("data-mode");
+
+			if (!mode) { return; }
+
+			this.updateRemote(mode);
 		}.bind(this), true);
 
 		this.attached = true;
@@ -495,9 +504,13 @@ HighScores.Menu = {
 		}, this);
 	},
 
-	updateRemote: function () {
+	updateRemote: function (mode) {
 		var request = new XMLHttpRequest,
 			page, perPage;
+
+		if (!mode) {
+			mode = "Normal";
+		}
 
 		if (this.scores) {
 			page = this.scores.page;
@@ -530,7 +543,7 @@ HighScores.Menu = {
 			hideLoadingAnim();
 		}.bind(this);
 
-		request.open("GET", SCORE_API_SHOW_URL + Util.buildQueryString({page: page, per_page: perPage}));
+		request.open("GET", SCORE_API_SHOW_URL + Util.buildQueryString({page: page, per_page: perPage, mode: mode}));
 		request.send();
 	},
 
@@ -538,8 +551,8 @@ HighScores.Menu = {
 		return !!this.container().querySelector("." + score.prefix + score.key);
 	},
 
-	playReplay: function (key, failure) {
-		loadRemoteReplay(key, function (mode, replayStr) {
+	playReplay: function (key, mode, failure) {
+		loadRemoteReplay(key, function (replayStr) {
 			var game;
 
 			game = Modes.newReplay(mode, replayStr);
@@ -574,7 +587,7 @@ HighScores.Banner = {
 				Util.show(container);
 				scoreNode.textContent = score.displayScore();
 				playerNode.textContent = score.getPlayer();
-				container.onclick = function () { HighScores.Menu.playReplay(score.key) };
+				container.onclick = function () { HighScores.Menu.playReplay(score.key, score.mode) };
 			});
 		}, 1000);
 	}

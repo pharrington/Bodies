@@ -76,13 +76,6 @@ canvas {
 	display: none;
 }
 
-.menu caption {
-	font-size: 64px;
-	margin-bottom: 75px;
-	font-weight: bold;
-	text-align: left;
-}
-
 .submenu_text, .back_to_main {
 	color: #fff;
 	text-shadow:
@@ -356,5 +349,15 @@ th, td {
 
 #center_content {
 	width: 1000px;
-        margin: 0 auto;
+	margin: 0 auto;
+}
+
+#high_scores_mode_select {
+	margin: 0 0 30px 0;
+}
+
+.high_scores_mode {
+	font-size: 20px;
+	font-weight: bold;
+	margin: 0 20px 0 0;
 }
