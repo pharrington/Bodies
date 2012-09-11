@@ -121,6 +121,10 @@ canvas {
 	cursor: pointer;
 }
 
+.back_to_main:hover {
+	color: #e38c35;
+}
+
 .menu.active li:hover {
 	cursor: pointer;
 	color: #e38c35;
@@ -168,6 +172,10 @@ th, td {
 
 .replay {
 	cursor: pointer;
+}
+
+.replay:hover {
+	color: #e38c35;
 }
 
 .countdown {
@@ -231,12 +239,16 @@ th, td {
 }
 
 #scores_pagination {
-	padding-top: 20px;
+	padding-top: 45px;
 	text-align: center;
 }
 
 #scores_pagination .nav {
 	cursor: pointer;
+}
+
+#scores_pagination .nav:hover {
+	color: #e38c35;
 }
 
 .previous_page {
@@ -353,11 +365,16 @@ th, td {
 }
 
 #high_scores_mode_select {
-	margin: 0 0 30px 0;
+	margin: 0 0 45px 0;
 }
 
 .high_scores_mode {
 	font-size: 20px;
 	font-weight: bold;
 	margin: 0 20px 0 0;
+	cursor: pointer;
+}
+
+.high_scores_mode.selected {
+	color: #f00;
 }
