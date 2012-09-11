@@ -243,6 +243,14 @@ var HighScores = {
 		this.cached = null;
 	},
 
+	defaultMode: function () {
+		return localStorage[this.prefix + "mode"] || "Normal";
+	},
+
+	setDefaultMode: function (mode) {
+		localStorage[this.prefix + "mode"] = mode;
+	},
+
 	getLocal: function () {
 		var key,
 		    scores = [];
@@ -500,7 +508,7 @@ HighScores.Menu = {
 
 			if (!mode) { return; }
 
-			this.setDefaultMode(mode);
+			HighScores.setDefaultMode(mode);
 			this.updateRemote(mode);
 		}.bind(this), true);
 
@@ -516,14 +524,6 @@ HighScores.Menu = {
 		this.scores.update();
 	},
 
-	defaultMode: function () {
-		return localStorage[this.prefix + "mode"] || "Normal";
-	},
-
-	setDefaultMode: function (mode) {
-		localStorage[this.prefix + "mode"] = mode;
-	},
-
 	updateLocal: function () {
 		this.container().innerHTML = "";
 		this.scores.slice().map(this.scoreToNode.partial(this.container())).compact().forEach(function (node) {
@@ -536,7 +536,7 @@ HighScores.Menu = {
 			page, perPage;
 
 		if (!mode) {
-			mode = this.defaultMode();
+			mode = HighScores.defaultMode();
 		}
 
 		if (this.scores) {
@@ -609,7 +609,7 @@ HighScores.Banner = {
 		    container = document.getElementById("high_scores_daily_banner");
 
 		this.showTimer = setTimeout(function () {
-			dailyBest(HighScores.Menu.defaultMode(), function (score) {
+			dailyBest(HighScores.defaultMode(), function (score) {
 				if (!score) { return; }
 
 				Util.show(container);
