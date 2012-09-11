@@ -48,7 +48,7 @@ function remoteDailyBest(mode, callback) {
 		callback(score);
 	};
 
-	request.open("GET", SCORE_API_DAILYBEST_URL);
+	request.open("GET", SCORE_API_DAILYBEST_URL + Util.buildQueryString({mode: mode}));
 	request.send();
 }
 
@@ -89,6 +89,24 @@ function hideLoadingAnim() {
 		Fade.hide();
 		Util.hide(loadingIcon());
 	}, 100);
+}
+
+function highlightMode(mode) {
+	var modeNodes = document.getElementsByClassName("high_scores_mode"),
+	    node,
+	    classList,
+	    i, len = modeNodes.length;
+
+	for (i = 0; i < len; i++) {
+		node = modeNodes[i];
+		classList = node.classList;
+
+		if (node.getAttribute("data-mode") !== mode) {
+			classList.remove("selected");
+		} else {
+			classList.add("selected");
+		}
+	}
 }
 
 function Paginator(source, update) {
@@ -482,6 +500,7 @@ HighScores.Menu = {
 
 			if (!mode) { return; }
 
+			this.setDefaultMode(mode);
 			this.updateRemote(mode);
 		}.bind(this), true);
 
@@ -497,6 +516,14 @@ HighScores.Menu = {
 		this.scores.update();
 	},
 
+	defaultMode: function () {
+		return localStorage[this.prefix + "mode"] || "Normal";
+	},
+
+	setDefaultMode: function (mode) {
+		localStorage[this.prefix + "mode"] = mode;
+	},
+
 	updateLocal: function () {
 		this.container().innerHTML = "";
 		this.scores.slice().map(this.scoreToNode.partial(this.container())).compact().forEach(function (node) {
@@ -509,7 +536,7 @@ HighScores.Menu = {
 			page, perPage;
 
 		if (!mode) {
-			mode = "Normal";
+			mode = this.defaultMode();
 		}
 
 		if (this.scores) {
@@ -540,6 +567,7 @@ HighScores.Menu = {
 				}
 			}, this);
 
+			highlightMode(mode);
 			hideLoadingAnim();
 		}.bind(this);
 
@@ -581,7 +609,7 @@ HighScores.Banner = {
 		    container = document.getElementById("high_scores_daily_banner");
 
 		this.showTimer = setTimeout(function () {
-			dailyBest("Normal", function (score) {
+			dailyBest(HighScores.Menu.defaultMode(), function (score) {
 				if (!score) { return; }
 
 				Util.show(container);
