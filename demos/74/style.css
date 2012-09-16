@@ -116,7 +116,7 @@ canvas {
 }
 
 .back_to_main {
-	margin-top: 15px;
+	margin: 15px 0 0 60px;
 	display: block;
 	cursor: pointer;
 }
