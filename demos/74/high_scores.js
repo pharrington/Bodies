@@ -292,7 +292,7 @@ var ScoreDisplays = {
 		s = ~~(e / 1000);
 		e -= s * 1000;
 
-		return Util.pad00(m) + ":" + Util.pad00(s);
+		return Util.pad00(m) + ":" + Util.pad00(s) + "." + e;
 	}
 };
 
