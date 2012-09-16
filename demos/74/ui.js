@@ -231,7 +231,9 @@ var PauseMenu = {
 	},
 
 	hide: function () {
-		this.node().style.display = "none";
+		setTimeout(function () {
+			this.node().style.display = "none";
+		}.bind(this), 0);
 	},
 
 	unpause: function () {
