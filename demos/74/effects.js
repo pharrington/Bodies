@@ -39,6 +39,7 @@ FX.Burst = {
 	imageCache: {},
 
 	init: function (game) {
+		FX.clear();
 		if (this.particleSystem) { return; }
 
 		this.particleSystem = new ParticleSystem("blur");
