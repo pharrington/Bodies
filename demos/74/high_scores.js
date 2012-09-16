@@ -125,7 +125,7 @@ Paginator.prototype = {
 
 	selector: "#scores_pagination",
 	navClass: "nav",
-	prevTemplate: "<a class='{nav} previous_page' data-page=prev>Back</a>",
+	prevTemplate: "<a class='{nav} previous_page' data-page=prev>Previous</a>",
 	nextTemplate: "<a class='{nav} next_page' data-page=next>Next</a>",
 	pageTemplate: "<a class='{nav}' data-page={page}>{page}</a>",
 
