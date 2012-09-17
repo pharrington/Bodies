@@ -164,6 +164,7 @@ td {
 		1px 1px 1px #000,
 		2px 2px 1px #000,
 		-1px 1px 1px #000;
+	white-space: nowrap;
 }
 
 th, td {
