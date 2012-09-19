@@ -263,14 +263,6 @@ var Game = {
 		}.bind(this), delay);
 	},
 
-	ejectUp: function (piece) {
-		var field = this.field;
-
-		while (field.collision(piece) && piece.gridPosition.y >= -2) {
-			piece.moveUp();
-		}
-	},
-
 	nextPiece: function () {
 		var shape = this.rotationSystem.shapes[this.queueSource.next()];
 
@@ -723,14 +715,15 @@ var Game = {
 	},
 
 	play: function (elapsed, now) {
-		var currentPiece = this.currentPiece,
-		    gameElapsed = this.refreshInterval + 1;
+		var currentPiece, gameElapsed = this.refreshInterval + 1;
 
+		/* the current piece may change during input handling */
 		this.inputSource.refresh(gameElapsed, now);
 		this.eachSink(function (s) { s.refresh(gameElapsed, this.inputBuffer); }, this);
 		this.consumeInput();
 		this.slopeReset();
 
+		currentPiece = this.currentPiece;
 		this.dropFX.end(currentPiece);
 		currentPiece.update(gameElapsed);
 

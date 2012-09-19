@@ -136,6 +136,14 @@ var Piece = {
 	moveLeft: function () { this.move(Piece.Direction.Left); },
 	moveRight: function () { this.move(Piece.Direction.Right); },
 
+	ejectUp: function () {
+		var field = this.game.field, g = this.gridPosition;
+
+		while (field.collision(this) && g.y >= -field.rowOffset) {
+			g.y--;
+		}
+	},
+
 	update: function (dt, updateSprite) {
 		var g = this.gridPosition,
 		    offset = this.offset,
@@ -155,9 +163,7 @@ var Piece = {
 				g.y += this.scale;
 			}
 
-			if (field.collision(this)) {
-				g.y--;
-			}
+			this.ejectUp();
 		}
 
 		y = (g.y - field.rowOffset) * size;
